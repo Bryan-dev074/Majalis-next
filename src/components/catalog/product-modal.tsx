@@ -117,38 +117,39 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
   return (
     <div
       ref={rootRef}
-      className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto"
+      className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto py-4 md:items-center md:py-8"
       role="dialog"
       aria-modal="true"
       aria-label={perfume.nombre}
     >
       {/* Velo */}
       <div
-        className="modal-veil absolute inset-0 bg-obsidian/92 backdrop-blur-xl"
+        className="modal-veil fixed inset-0 bg-obsidian/95 backdrop-blur-xl"
         onClick={onClose}
       />
 
       {/* Contenedor */}
       <div
         ref={innerRef}
-        className="relative z-10 my-8 w-full max-w-5xl px-4"
+        className="relative z-10 w-full max-w-5xl px-3 md:px-4"
       >
-        <div className="glass-luxe overflow-hidden rounded-sm md:grid md:grid-cols-2">
-          {/* Imagen */}
-          <div className="relative aspect-[3/4] md:aspect-auto md:min-h-[600px]">
+        <div className="overflow-hidden rounded-sm border border-gold/20 bg-coal/95 shadow-[0_0_80px_-20px_rgba(212,175,55,0.3)] md:grid md:grid-cols-2">
+          {/* Imagen — en móvil tiene altura fija visible */}
+          <div className="relative h-72 w-full md:h-auto md:min-h-[600px]">
             <Image
               src={perfume.url_imagen}
               alt={perfume.nombre}
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
-              className="modal-image object-cover"
+              className="modal-image object-cover object-top"
               priority
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-obsidian/70 via-transparent to-transparent" />
+            {/* Gradiente inferior para integrar con el panel de texto */}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-coal/90 md:bg-gradient-to-t md:from-obsidian/60 md:via-transparent md:to-transparent" />
 
             {/* Sello de oferta */}
             {enOferta && (
-              <div className="absolute left-5 top-5">
+              <div className="absolute left-4 top-4">
                 <div className="seal-offer">
                   <span className="flex flex-col items-center leading-none">
                     <span className="font-semibold text-[0.8rem]">
@@ -161,37 +162,48 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
             )}
 
             {/* Marca */}
-            <div className="absolute right-5 top-5 border border-gold/20 bg-obsidian/70 px-3 py-1.5 text-[0.6rem] uppercase tracking-regal text-ivory/80 backdrop-blur-sm">
+            <div className="absolute right-4 top-4 border border-gold/30 bg-obsidian/80 px-3 py-1.5 text-[0.6rem] uppercase tracking-regal text-ivory/90 backdrop-blur-sm">
               {perfume.marca}
             </div>
+
+            {/* Botón cerrar en móvil — encima de la imagen */}
+            <button
+              onClick={onClose}
+              className="absolute right-4 bottom-4 flex h-9 w-9 items-center justify-center rounded-full border border-gold/30 bg-obsidian/80 text-ivory/80 backdrop-blur-sm transition-colors hover:text-gold-champagne md:hidden"
+              aria-label="Cerrar"
+            >
+              <X className="h-4 w-4" strokeWidth={1.5} />
+            </button>
           </div>
 
           {/* Detalle */}
-          <div className="flex flex-col p-8 md:p-12">
+          <div className="flex flex-col overflow-y-auto p-6 md:max-h-[600px] md:p-10">
             <div className="flex items-start justify-between">
-              <p className="modal-eyebrow eyebrow">
+              <p className="modal-eyebrow eyebrow text-[0.6rem]">
                 {perfume.categoria.join(" · ")}
               </p>
+              {/* Botón cerrar en desktop */}
               <button
                 onClick={onClose}
-                className="text-ivory/50 transition-colors hover:text-gold-champagne"
+                className="hidden text-ivory/50 transition-colors hover:text-gold-champagne md:block"
                 aria-label="Cerrar"
               >
                 <X className="h-5 w-5" strokeWidth={1.25} />
               </button>
             </div>
 
-            <h2 className="modal-title mt-4 font-display text-4xl leading-tight text-ivory md:text-5xl">
+            <h2 className="modal-title mt-3 font-display text-3xl leading-tight text-ivory md:text-4xl lg:text-5xl">
               {perfume.nombre}
             </h2>
-            <p className="modal-desc mt-5 text-sm leading-relaxed text-ivory/60">
+            {/* Descripción con mejor contraste */}
+            <p className="modal-desc mt-4 text-sm leading-relaxed text-ivory/85 md:text-base">
               {perfume.descripcion}
             </p>
 
             {/* Volumen + stock */}
-            <div className="mt-5 flex items-center gap-4 text-[0.65rem] uppercase tracking-regal text-ivory/40">
+            <div className="mt-4 flex items-center gap-4 text-xs uppercase tracking-regal text-ivory/60">
               <span>{perfume.volumen_ml} ml</span>
-              <span className="h-3 w-px bg-gold/20" />
+              <span className="h-3 w-px bg-gold/30" />
               <span>
                 {agotado
                   ? "Agotado temporalmente"
@@ -200,17 +212,17 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
             </div>
 
             {/* Precio */}
-            <div className="modal-price mt-6 flex items-end gap-4">
+            <div className="modal-price mt-5 flex items-end gap-4">
               {enOferta && (
-                <span className="price-strike">
+                <span className="price-strike text-sm">
                   {formatGs(perfume.precio_regular)}
                 </span>
               )}
-              <span className="font-display text-4xl text-gold-gradient">
+              <span className="font-display text-3xl text-gold-gradient md:text-4xl">
                 {formatGs(precio)}
               </span>
               {enOferta && (
-                <span className="mb-2 flex items-center gap-1 text-[0.6rem] uppercase tracking-regal text-gold/70">
+                <span className="mb-1 flex items-center gap-1 text-[0.65rem] uppercase tracking-regal text-gold/80">
                   <Sparkles className="h-3 w-3" /> Oferta exclusiva
                 </span>
               )}
@@ -218,23 +230,23 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
 
             {/* Selector cantidad + CTA */}
             {!agotado && (
-              <div className="modal-cta mt-8 flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-1 rounded-full border border-gold/20 p-1">
+              <div className="modal-cta mt-6 flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-1 rounded-full border border-gold/25 bg-obsidian/40 p-1">
                   <button
                     onClick={() => setCantidad((c) => Math.max(1, c - 1))}
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-ivory/70 transition-colors hover:bg-gold/10 hover:text-gold-champagne"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-ivory/80 transition-colors hover:bg-gold/10 hover:text-gold-champagne"
                     aria-label="Restar"
                   >
                     <Minus className="h-3.5 w-3.5" />
                   </button>
-                  <span className="w-8 text-center text-sm text-ivory">
+                  <span className="w-8 text-center text-sm font-medium text-ivory">
                     {cantidad}
                   </span>
                   <button
                     onClick={() =>
                       setCantidad((c) => Math.min(perfume.stock_disponible, c + 1))
                     }
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-ivory/70 transition-colors hover:bg-gold/10 hover:text-gold-champagne"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-ivory/80 transition-colors hover:bg-gold/10 hover:text-gold-champagne"
                     aria-label="Sumar"
                   >
                     <Plus className="h-3.5 w-3.5" />
@@ -259,7 +271,7 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
                 href={buildWhatsAppUrl(perfume.nombre, WHATSAPP_NUMBER)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="modal-cta mt-3 flex items-center justify-center gap-2 rounded-full border border-[#25D366]/30 py-3 text-[0.65rem] uppercase tracking-regal text-[#25D366] transition-all hover:border-[#25D366] hover:bg-[#25D366]/5 hover:shadow-[0_0_24px_-6px_rgba(37,211,102,0.6)]"
+                className="modal-cta mt-3 flex items-center justify-center gap-2 rounded-full border border-[#25D366]/40 py-3 text-[0.7rem] font-medium uppercase tracking-regal text-[#25D366] transition-all hover:border-[#25D366] hover:bg-[#25D366]/5 hover:shadow-[0_0_24px_-6px_rgba(37,211,102,0.6)]"
               >
                 <MessageCircle className="h-4 w-4" strokeWidth={1.5} />
                 Pedir ahora por WhatsApp
@@ -272,7 +284,7 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="modal-cta mt-3 flex items-center justify-center gap-2 rounded-full border border-gold/20 py-3 text-[0.62rem] uppercase tracking-regal text-ivory/55 transition-all hover:border-gold/50 hover:text-gold-champagne"
+                className="modal-cta mt-3 flex items-center justify-center gap-2 rounded-full border border-gold/25 py-3 text-[0.65rem] uppercase tracking-regal text-ivory/70 transition-all hover:border-gold/50 hover:text-gold-champagne"
               >
                 <Bell className="h-4 w-4" strokeWidth={1.5} />
                 Solicitar notificación de reingreso
@@ -280,19 +292,19 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
             )}
 
             {/* Notas olfativas — desglose cinemático en 3 capas */}
-            <div ref={notasRef} className="mt-10 border-t border-gold/10 pt-8">
-              <h3 className="eyebrow mb-6">Pirámide olfativa</h3>
-              <div className="space-y-6">
+            <div ref={notasRef} className="mt-8 border-t border-gold/15 pt-6">
+              <h3 className="eyebrow mb-5 text-[0.65rem]">Pirámide olfativa</h3>
+              <div className="space-y-5">
                 {CAPAS.map((capa) => {
                   const notas = perfume.notas_olfativas[capa.key] ?? [];
                   return (
                     <div key={capa.key} className="nota-capa">
-                      <div className="mb-3 flex items-baseline gap-3">
-                        <span className="font-lapidary text-sm tracking-regal text-gold">
+                      <div className="mb-2 flex items-baseline gap-3">
+                        <span className="font-lapidary text-sm font-medium tracking-regal text-gold">
                           {capa.label}
                         </span>
-                        <span className="h-px flex-1 bg-gold/10" />
-                        <span className="text-[0.6rem] italic text-ivory/35">
+                        <span className="h-px flex-1 bg-gold/15" />
+                        <span className="hidden text-[0.6rem] italic text-ivory/50 md:inline">
                           {capa.descripcion}
                         </span>
                       </div>
@@ -300,11 +312,11 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
                         {notas.map((n, i) => (
                           <span
                             key={`${n}-${i}`}
-                            className="nota-chip group flex items-center gap-2 rounded-full border border-gold/15 bg-ivory/[0.02] px-3 py-1.5 text-xs text-ivory/70 transition-all hover:border-gold/40 hover:text-gold-champagne"
+                            className="nota-chip group flex items-center gap-1.5 rounded-full border border-gold/20 bg-ivory/[0.04] px-3 py-1.5 text-xs font-medium text-ivory/85 transition-all hover:border-gold/50 hover:text-gold-champagne"
                           >
                             <NoteIcon
                               nota={n}
-                              className="h-4 w-4 text-gold/70"
+                              className="h-3.5 w-3.5 text-gold/80"
                             />
                             {n}
                           </span>

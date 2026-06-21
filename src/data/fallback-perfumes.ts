@@ -5,6 +5,7 @@ import { Perfume } from "@/types/database";
  * Garantiza que el sitio siempre se renderice con catálogo completo,
  * incluso en un despliegue automático donde la base aún no tenga datos.
  * Refleja exactamente el seed de `schema.sql`.
+ * Imágenes: Fragrantica (fimgs.net) — fotos reales de cada botella.
  */
 export const FALLBACK_PERFUMES: Perfume[] = [
   {
@@ -19,7 +20,7 @@ export const FALLBACK_PERFUMES: Perfume[] = [
     volumen_ml: 100,
     activo: true,
     url_imagen:
-      "https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=900&auto=format&fit=crop",
+      "https://fimgs.net/mdimg/perfume-thumbs/375x500.46814.jpg",
     descripcion:
       "Un bouquet amaderado de oud rosa que evoca los palacios de Arabia. Cálido, especiado y profundamente real.",
     notas_olfativas: {
@@ -45,7 +46,7 @@ export const FALLBACK_PERFUMES: Perfume[] = [
     volumen_ml: 100,
     activo: true,
     url_imagen:
-      "https://images.unsplash.com/photo-1585232004423-244e0e6904e3?q=80&w=900&auto=format&fit=crop",
+      "https://fimgs.net/mdimg/perfume-thumbs/375x500.64948.jpg",
     descripcion:
       "Oud para la grandeza. Una declaración de poder olfativo, intenso y luminoso, inspirado en las grandes obras de la perfumería árabe.",
     notas_olfativas: {
@@ -71,7 +72,7 @@ export const FALLBACK_PERFUMES: Perfume[] = [
     volumen_ml: 105,
     activo: true,
     url_imagen:
-      "https://images.unsplash.com/photo-1523293182086-7651a899d37f?q=80&w=900&auto=format&fit=crop",
+      "https://fimgs.net/mdimg/perfume-thumbs/375x500.34696.jpg",
     descripcion:
       "El rey de los cítricos ahumados. Fresco en la apertura, seco y magnético en el fondo, con una estela legendaria.",
     notas_olfativas: {
@@ -97,7 +98,7 @@ export const FALLBACK_PERFUMES: Perfume[] = [
     volumen_ml: 90,
     activo: true,
     url_imagen:
-      "https://images.unsplash.com/photo-1616949755610-8c9bbc08f138?q=80&w=900&auto=format&fit=crop",
+      "https://fimgs.net/mdimg/perfume-thumbs/375x500.80722.jpg",
     descripcion:
       "Crema de vainilla y orquídea. Floral, dulce y envolvente, una caricia olfativa de elegancia femenina.",
     notas_olfativas: {
@@ -123,7 +124,7 @@ export const FALLBACK_PERFUMES: Perfume[] = [
     volumen_ml: 100,
     activo: true,
     url_imagen:
-      "https://images.unsplash.com/photo-1615162620596-3c32dc4a72d7?q=80&w=900&auto=format&fit=crop",
+      "https://fimgs.net/mdimg/perfume-thumbs/375x500.72821.jpg",
     descripcion:
       "Especiado, picante y masculino. Una lectura moderna de los elixires con cuerpo, cálido en invierno y magnético de noche.",
     notas_olfativas: {
@@ -149,7 +150,7 @@ export const FALLBACK_PERFUMES: Perfume[] = [
     volumen_ml: 100,
     activo: true,
     url_imagen:
-      "https://images.unsplash.com/photo-1541643600914-78b084683601?q=80&w=900&auto=format&fit=crop",
+      "https://fimgs.net/mdimg/perfume-thumbs/375x500.75805.jpg",
     descripcion:
       "Canela, dátiles y praliné. Un gourmand especiado que envuelve como un manto real. La celebración del dulzor oriental.",
     notas_olfativas: {
@@ -175,7 +176,7 @@ export const FALLBACK_PERFUMES: Perfume[] = [
     volumen_ml: 100,
     activo: true,
     url_imagen:
-      "https://images.unsplash.com/photo-1595425281289-99d2a7263652?q=80&w=900&auto=format&fit=crop",
+      "https://fimgs.net/mdimg/perfume-thumbs/375x500.46890.jpg",
     descripcion:
       "Acuático, ciruela y canela. Una bestia de verano: fresco en la apertura, profundo y persistente en el seco.",
     notas_olfativas: {
@@ -201,7 +202,7 @@ export const FALLBACK_PERFUMES: Perfume[] = [
     volumen_ml: 100,
     activo: true,
     url_imagen:
-      "https://images.unsplash.com/photo-1630575015524-a4b1f11164d7?q=80&w=900&auto=format&fit=crop",
+      "https://fimgs.net/mdimg/perfume-thumbs/375x500.65414.jpg",
     descripcion:
       "Vainilla, manzana y lavanda. Un elixir nocturno burbujeante, dulce y seductor, ideal para las horas doradas.",
     notas_olfativas: {
@@ -227,7 +228,7 @@ export const FALLBACK_PERFUMES: Perfume[] = [
     volumen_ml: 100,
     activo: true,
     url_imagen:
-      "https://images.unsplash.com/photo-1589364054330-63314475d200?q=80&w=900&auto=format&fit=crop",
+      "https://fimgs.net/mdimg/perfume-thumbs/375x500.70465.jpg",
     descripcion:
       "Versátil, elegante y fresco. Una firma olfativa moderna y limpia, perfecta para el uso diario con carácter.",
     notas_olfativas: {
@@ -253,7 +254,7 @@ export const FALLBACK_PERFUMES: Perfume[] = [
     volumen_ml: 100,
     activo: true,
     url_imagen:
-      "https://images.unsplash.com/photo-1590606500749-88a02232980c?q=80&w=900&auto=format&fit=crop",
+      "https://fimgs.net/mdimg/perfume-thumbs/375x500.68271.jpg",
     descripcion:
       "Grosellas negras y musgo de roble. Un extracto puro, verde y magnético, con proyección de bestia.",
     notas_olfativas: {
@@ -279,7 +280,7 @@ export const FALLBACK_PERFUMES: Perfume[] = [
     volumen_ml: 100,
     activo: true,
     url_imagen:
-      "https://images.unsplash.com/photo-1557171554-9e569a6304d2?q=80&w=900&auto=format&fit=crop",
+      "https://fimgs.net/mdimg/perfume-thumbs/375x500.25826.jpg",
     descripcion:
       "Madera ahumada, azúcar y oud. El príncipe del oud dulce: accesible en precio, real en carácter.",
     notas_olfativas: {
