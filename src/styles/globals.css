@@ -48,6 +48,7 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
+    font-size: 17px; /* base ligeramente más grande para mejor legibilidad */
   }
 
   ::selection {

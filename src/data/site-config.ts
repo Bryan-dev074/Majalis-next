@@ -23,7 +23,7 @@ export function buildWaLink(mensaje: string, numero: string = WHATSAPP_NUMBER): 
 
 export interface RedSocial {
   /** Tipo para el estilo del ícono (clase social-luxe). */
-  tipo: "instagram" | "facebook" | "whatsapp";
+  tipo: "instagram" | "facebook" | "tiktok";
   /** URL completa de tu perfil/número. */
   url: string;
   /** Etiqueta accesible. */
@@ -46,9 +46,9 @@ export const REDES_SOCIALES: RedSocial[] = [
     label: "Facebook",
   },
   {
-    tipo: "whatsapp",
-    url: buildWaLink(WHATSAPP_MENSAJE_FLOTANTE),
-    label: "WhatsApp",
+    tipo: "tiktok",
+    url: "https://tiktok.com/@sultan.oud.elixir", // 👈 TU TIKTOK
+    label: "TikTok",
   },
 ];
 

@@ -49,14 +49,14 @@ export function Hero() {
       <div className="relative z-10 mt-16 max-w-4xl">
         <p
           data-hero
-          className="eyebrow mb-8 justify-center"
+          className="eyebrow mb-8 justify-center !text-gold !opacity-100"
         >
           La esencia de la realeza · Dubai → Paraguay
         </p>
 
         <h1
           data-hero
-          className="font-display text-6xl leading-[0.95] text-ivory md:text-8xl"
+          className="font-display text-6xl leading-[0.95] text-ivory md:text-8xl drop-shadow-[0_4px_24px_rgba(0,0,0,0.6)]"
         >
           Sultan Oud
           <br />
@@ -67,7 +67,7 @@ export function Hero() {
 
         <p
           data-hero
-          className="mx-auto mt-8 max-w-xl text-balance text-base font-light leading-relaxed text-ivory/55 md:text-lg"
+          className="mx-auto mt-8 max-w-xl text-balance text-lg font-light leading-relaxed text-ivory/80 md:text-xl"
         >
           Importadores directos de Dubai. La colección más exclusiva de
           fragancias árabes, ahora al alcance de tu mano en todo el
@@ -92,14 +92,14 @@ export function Hero() {
 
           {/* Sello de confianza */}
           <div
-            className="flex items-center gap-3 rounded-full border border-gold/25 bg-obsidian/40 px-6 py-3.5 backdrop-blur-md"
+            className="flex items-center gap-3 rounded-full border border-gold/40 bg-obsidian/60 px-6 py-3.5 backdrop-blur-md"
             title="Pago al recibir en todo Paraguay"
           >
             <ShieldCheck
-              className="h-4 w-4 text-gold-light"
+              className="h-5 w-5 text-gold-light"
               strokeWidth={1.5}
             />
-            <span className="text-[0.62rem] uppercase tracking-regal text-ivory/75">
+            <span className="text-xs font-semibold uppercase tracking-regal text-ivory/90">
               Pago al recibir
             </span>
           </div>
@@ -108,12 +108,12 @@ export function Hero() {
         {/* Indicador de scroll */}
         <div
           data-hero
-          className="mt-20 flex flex-col items-center gap-2 text-ivory/30"
+          className="mt-20 flex flex-col items-center gap-2 text-ivory/70"
         >
-          <span className="text-[0.55rem] uppercase tracking-imperial">
+          <span className="text-xs uppercase tracking-imperial font-medium">
             Desplázate
           </span>
-          <ArrowDown className="h-3.5 w-3.5 animate-bounce" strokeWidth={1} />
+          <ArrowDown className="h-4 w-4 animate-bounce text-gold-light" strokeWidth={1.5} />
         </div>
       </div>
     </header>

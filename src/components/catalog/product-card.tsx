@@ -85,15 +85,16 @@ export function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
           </div>
         )}
 
-        {/* CTA al hover — solo si hay stock */}
+        {/* CTA al hover — centrado verticalmente en la imagen para no tapar
+            ni el badge "Envío Inmediato" (abajo) ni el sello de oferta (arriba) */}
         {!agotado && (
-          <div className="absolute inset-x-0 bottom-0 flex translate-y-4 items-center justify-center gap-3 p-4 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
+          <div className="absolute inset-0 flex translate-y-2 items-center justify-center gap-3 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 agregar(perfume);
               }}
-              className="btn-luxe flex items-center gap-2 !px-5 !py-2.5 !text-[0.6rem]"
+              className="btn-luxe flex items-center gap-2 !px-5 !py-2.5 !text-[0.65rem]"
             >
               <Plus className="h-3.5 w-3.5" strokeWidth={2} />
               Agregar
@@ -103,7 +104,7 @@ export function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
                 e.stopPropagation();
                 onAbrirDetalle(perfume);
               }}
-              className="btn-ghost-luxe !px-4 !py-2.5 !text-[0.6rem]"
+              className="btn-ghost-luxe !px-4 !py-2.5 !text-[0.65rem]"
             >
               Detalles
             </button>
@@ -114,24 +115,24 @@ export function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
       {/* Info */}
       <div className="flex flex-1 flex-col justify-between p-5 text-center">
         <div>
-          <h3 className="font-display text-xl leading-tight text-ivory">
+          <h3 className="font-display text-2xl leading-tight text-ivory">
             {perfume.nombre}
           </h3>
-          <p className="mt-1 text-[0.55rem] uppercase tracking-regal text-gold/70">
+          <p className="mt-1.5 text-[0.6rem] uppercase tracking-regal text-gold">
             {perfume.categoria[1] ?? perfume.categoria[0]}
           </p>
         </div>
 
-        {/* Precio — tratamiento elegante de oferta */}
-        <div className="mt-4 flex items-end justify-center gap-3">
+        {/* Precio — tratamiento elegante de oferta, más notorio */}
+        <div className="mt-5 flex items-end justify-center gap-3">
           {enOferta && (
-            <span className="price-strike">{formatGs(perfume.precio_regular)}</span>
+            <span className="price-strike !text-sm text-ivory/50">{formatGs(perfume.precio_regular)}</span>
           )}
-          <span className="font-display text-2xl text-gold-gradient">
+          <span className="font-display text-3xl text-gold-gradient drop-shadow-[0_0_12px_rgba(212,175,55,0.25)]">
             {formatGs(precio)}
           </span>
           {enOferta && (
-            <Sparkles className="mb-1 h-3.5 w-3.5 text-gold-light opacity-70" />
+            <Sparkles className="mb-1.5 h-4 w-4 text-gold-light opacity-80" />
           )}
         </div>
       </div>

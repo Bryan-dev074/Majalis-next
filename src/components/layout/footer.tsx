@@ -1,6 +1,6 @@
 "use client";
 
-import { Instagram, Facebook, MessageCircle } from "lucide-react";
+import { Instagram, Facebook } from "lucide-react";
 import { REDES_SOCIALES } from "@/data/site-config";
 
 /**
@@ -8,29 +8,38 @@ import { REDES_SOCIALES } from "@/data/site-config";
  * Las redes sociales se configuran en `src/data/site-config.ts`.
  */
 
+/** Ícono de TikTok (no existe en lucide-react). */
+function TikTokIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5.8 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+    </svg>
+  );
+}
+
 const ICONOS: Record<string, React.ElementType> = {
   instagram: Instagram,
   facebook: Facebook,
-  whatsapp: MessageCircle,
+  tiktok: TikTokIcon,
 };
 
 export function Footer() {
   return (
     <footer
       id="atelier"
-      className="relative z-10 border-t border-gold/10 bg-coal/80 backdrop-blur-md"
+      className="relative z-10 border-t border-gold/20 bg-coal/80 backdrop-blur-md"
     >
       <div className="mx-auto max-w-7xl px-6 py-16 md:px-10">
         {/* Bloque superior — promesa de marca */}
         <div className="mb-14 grid gap-10 md:grid-cols-4">
           <div className="md:col-span-2">
-            <h2 className="font-lapidary text-2xl tracking-regal text-ivory">
+            <h2 className="font-lapidary text-3xl tracking-regal text-ivory">
               SULTAN OUD
             </h2>
-            <p className="text-elixir-shimmer font-display italic text-sm tracking-imperial">
+            <p className="text-elixir-shimmer font-display italic text-base tracking-imperial">
               Elixir · Paraguay
             </p>
-            <p className="mt-5 max-w-md text-sm leading-relaxed text-ivory/55">
+            <p className="mt-5 max-w-md text-base leading-relaxed text-ivory/75">
               Traemos las fragancias más codiciadas del Medio Oriente
               directamente desde Dubai. Autenticidad garantizada, entrega
               discreta y el respaldo del pago al recibir en todo el país.
@@ -38,8 +47,8 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="eyebrow mb-5">Navegación</h3>
-            <ul className="space-y-3 text-sm text-ivory/55">
+            <h3 className="eyebrow mb-5 !text-gold !opacity-100">Navegación</h3>
+            <ul className="space-y-3 text-base text-ivory/75">
               {[
                 { label: "Colección", id: "catalogo" },
                 { label: "Importación de Dubai", id: "importacion" },
@@ -62,8 +71,8 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="eyebrow mb-5">Atelier</h3>
-            <ul className="space-y-3 text-sm text-ivory/55">
+            <h3 className="eyebrow mb-5 !text-gold !opacity-100">Atelier</h3>
+            <ul className="space-y-3 text-base text-ivory/75">
               <li>Importación directa · Dubai → Paraguay</li>
               <li>Pago al recibir · Todo el territorio</li>
               <li>Entrega discreta y coordinada</li>
@@ -77,7 +86,7 @@ export function Footer() {
         {/* Bloque inferior — marca + redes + legal */}
         <div className="flex flex-col items-center justify-between gap-8 md:flex-row">
           <div className="text-center md:text-left">
-            <p className="text-[0.65rem] uppercase tracking-imperial text-ivory/40">
+            <p className="text-xs uppercase tracking-imperial text-ivory/65">
               Pago al recibir en todo Paraguay
             </p>
           </div>
@@ -102,7 +111,7 @@ export function Footer() {
           </div>
 
           <div className="text-center md:text-right">
-            <p className="text-[0.65rem] uppercase tracking-regal text-ivory/30">
+            <p className="font-display text-sm tracking-regal text-gold-gradient">
               © {new Date().getFullYear()} Sultan Oud Elixir
             </p>
           </div>

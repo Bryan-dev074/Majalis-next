@@ -128,10 +128,10 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
           className="group flex flex-col items-start"
           aria-label="Inicio Sultan Oud Elixir"
         >
-          <span className="font-lapidary text-base md:text-lg tracking-regal text-ivory group-hover:text-gold-champagne transition-colors">
+          <span className="font-lapidary text-lg md:text-2xl tracking-regal text-ivory drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] transition-colors group-hover:text-gold-champagne">
             SULTAN OUD
           </span>
-          <span className="text-elixir-shimmer font-display italic text-xs md:text-sm tracking-imperial">
+          <span className="text-elixir-shimmer font-display italic text-sm md:text-base tracking-imperial">
             Elixir
           </span>
         </button>

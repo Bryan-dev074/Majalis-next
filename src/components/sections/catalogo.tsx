@@ -67,10 +67,11 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
       const matchMarca = marcaActiva === "todas" || p.marca === marcaActiva;
       const matchFamilia =
         familiaActiva === "todas" || p.categoria.includes(familiaActiva);
-      // Ofertas de Envío Inmediato: stock local (no Dropi) + en oferta
-      const matchOferta =
-        !ofertasExpress ||
-        (p.en_oferta && !p.es_dropi && !(p.sku?.startsWith("DROPI-") ?? false));
+      // "Envío Inmediato": SOLO productos locales (es_dropi=false).
+      // No exige que estén en oferta — es el botón de los productos de entrega express.
+      const esLocal =
+        !p.es_dropi && !(p.sku?.startsWith("DROPI-") ?? false);
+      const matchOferta = !ofertasExpress || esLocal;
       const matchQuery =
         !q ||
         p.nombre.toLowerCase().includes(q) ||
@@ -113,12 +114,12 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
           </p>
         </div>
 
-        {/* Botón destacado: Ofertas de Envío Inmediato */}
-        <div className="mb-3 flex justify-center" data-reveal>
+        {/* Botón destacado: Envío Inmediato */}
+        <div className="mb-5 flex justify-center" data-reveal>
           <button
             onClick={() => {
               setOfertasExpress((v) => !v);
-              // Al activarse, limpiar marca/familia para que el foco quede en ofertas
+              // Al activarse, limpiar marca/familia para que el foco quede en envío inmediato
               if (!ofertasExpress) {
                 setMarcaActiva("todas");
                 setFamiliaActiva("todas");
@@ -146,7 +147,7 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
                 strokeWidth={2}
               />
               <span className="leading-tight">
-                {ofertasExpress ? "Mostrando Envío Inmediato" : "Ofertas de Envío Inmediato"}
+                {ofertasExpress ? "Mostrando Envío Inmediato" : "⚡ Productos de Envío Inmediato"}
               </span>
               <Zap
                 className={`h-4 w-4 sm:h-5 sm:w-5 ${ofertasExpress ? "express-active-zap" : "express-idle-zap"}`}
@@ -157,13 +158,13 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
           </button>
         </div>
         <p
-          className={`mb-8 text-center text-[0.62rem] uppercase tracking-regal transition-colors duration-300 sm:text-xs ${
-            ofertasExpress ? "text-[#25D366]/80" : "text-ivory/45"
+          className={`mb-10 text-center text-[0.66rem] uppercase tracking-regal transition-colors duration-300 sm:text-xs ${
+            ofertasExpress ? "text-[#25D366]/90" : "text-ivory/60"
           }`}
         >
           {ofertasExpress
-            ? "Viendo solo los productos con descuento y entrega inmediata"
-            : "Tocá para ver solo los productos con descuento y entrega inmediata"}
+            ? "Viendo solo los productos con entrega express"
+            : "Tocá para ver solo los productos con entrega express ⚡"}
         </p>
 
         {/* ────────── Filtros rediseñados ────────── */}

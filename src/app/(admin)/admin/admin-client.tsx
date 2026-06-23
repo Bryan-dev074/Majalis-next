@@ -410,6 +410,8 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
             onOcultar={onOcultarDemo}
             onMostrar={onMostrarDemo}
             onToggle={onToggle}
+            onEditar={(p) => setModalPerfume(toInput(p))}
+            onEliminar={onEliminar}
           />
         )}
         {pestaña === "analitica" && (
@@ -842,22 +844,36 @@ function TablaStock({
 //  PESTAÑA: PRUEBAS DEL SISTEMA
 // ════════════════════════════════════════════════════════════════════════════
 function DemoView({
-  perfumes, onOcultar, onMostrar, onToggle,
+  perfumes, onOcultar, onMostrar, onToggle, onEditar, onEliminar,
 }: {
   perfumes: Perfume[];
   onOcultar: () => void;
   onMostrar: () => void;
   onToggle: (id: string, c: "activo" | "destacado", v: boolean) => void;
+  onEditar: (p: Perfume) => void;
+  onEliminar: (p: Perfume) => void;
 }) {
+  const [query, setQuery] = useState("");
   const activos = perfumes.filter((p) => p.activo).length;
   const switchOn = activos === 0; // todos ocultos = switch "apagado" en tienda
+
+  const filtrados = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return perfumes;
+    return perfumes.filter(
+      (p) =>
+        p.nombre.toLowerCase().includes(q) ||
+        p.marca.toLowerCase().includes(q) ||
+        (p.sku ?? "").toLowerCase().includes(q)
+    );
+  }, [perfumes, query]);
 
   return (
     <div>
       <div className="mb-5">
         <h2 className="text-lg font-bold" style={{ color: "var(--adm-text)" }}>Perfumes de Prueba del Sistema</h2>
         <p className="mt-0.5 text-sm" style={{ color: "var(--adm-text-muted)" }}>
-          Estos son los 11 perfumes seed con los que arrancó la tienda. Ocultálos cuando tengas tus productos reales cargados.
+          Estos son los perfumes seed con los que arrancó la tienda. Podés <strong>editarlos</strong>, <strong>ocultarlos</strong> o <strong>borrarlos</strong> cuando tengas tus productos reales cargados.
         </p>
       </div>
 
@@ -886,7 +902,21 @@ function DemoView({
         </div>
       </div>
 
-      {/* Tabla de demos */}
+      {/* Buscador de demos */}
+      <div className="mb-4 relative max-w-sm">
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+          style={{ color: "var(--adm-text-muted)" }}
+        />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar demo por nombre o SKU…"
+          className="adm-input adm-inputWithIcon"
+        />
+      </div>
+
+      {/* Tabla de demos con acciones completas */}
       <div className="adm-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="adm-table">
@@ -897,35 +927,65 @@ function DemoView({
                 <th>Stock</th>
                 <th>Estado</th>
                 <th className="text-right">Visible</th>
+                <th className="text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {perfumes.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    <div className="flex items-center gap-3">
-                      <div className="relative h-10 w-8 shrink-0 overflow-hidden rounded" style={{ background: "var(--adm-surface-2)" }}>
-                        {p.url_imagen && (
-                          <Image src={p.url_imagen} alt={p.nombre} fill sizes="32px" className="object-cover" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-semibold" style={{ color: "var(--adm-text)" }}>{p.nombre}</p>
-                        <p className="text-xs" style={{ color: "var(--adm-text-muted)" }}>{p.sku ?? "sin sku"} · {p.volumen_ml}ml</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ color: "var(--adm-text-soft)" }}>{p.marca}</td>
-                  <td style={{ color: "var(--adm-text)" }}>{p.stock_disponible}</td>
-                  <td><EstadoBadge perfume={p} /></td>
-                  <td className="text-right">
-                    <button
-                      onClick={() => onToggle(p.id, "activo", !p.activo)}
-                      className={`adm-switch${p.activo ? " adm-switch-on" : ""}`}
-                    />
+              {filtrados.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-10 text-center" style={{ color: "var(--adm-text-muted)" }}>
+                    No hay demos que coincidan con la búsqueda.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filtrados.map((p) => (
+                  <tr key={p.id}>
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <div className="relative h-10 w-8 shrink-0 overflow-hidden rounded" style={{ background: "var(--adm-surface-2)" }}>
+                          {p.url_imagen && (
+                            <Image src={p.url_imagen} alt={p.nombre} fill sizes="32px" className="object-cover" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-semibold" style={{ color: "var(--adm-text)" }}>{p.nombre}</p>
+                          <p className="text-xs" style={{ color: "var(--adm-text-muted)" }}>{p.sku ?? "sin sku"} · {p.volumen_ml}ml</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ color: "var(--adm-text-soft)" }}>{p.marca}</td>
+                    <td style={{ color: "var(--adm-text)" }}>{p.stock_disponible}</td>
+                    <td><EstadoBadge perfume={p} /></td>
+                    <td className="text-right">
+                      <button
+                        onClick={() => onToggle(p.id, "activo", !p.activo)}
+                        className={`adm-switch${p.activo ? " adm-switch-on" : ""}`}
+                        title={p.activo ? "Ocultar de la tienda" : "Mostrar en tienda"}
+                      />
+                    </td>
+                    <td>
+                      <div className="flex items-center justify-end gap-1">
+                        <IconBtn
+                          onClick={() => onEditar(p)}
+                          title="Editar"
+                          color="var(--adm-blue)"
+                          bg="var(--adm-blue-bg)"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </IconBtn>
+                        <IconBtn
+                          onClick={() => onEliminar(p)}
+                          title="Eliminar"
+                          color="var(--adm-red)"
+                          bg="var(--adm-red-bg)"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </IconBtn>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
