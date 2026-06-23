@@ -357,3 +357,14 @@ update public.perfumes
 -- ============================================================================
 --  FIN DEL SCRIPT
 -- ============================================================================
+
+-- ============================================================================
+--  MIGRACIÓN: Tiendas / Proveedores por producto (jsonb)
+--  Cada producto puede tener varias tiendas donde también se consigue.
+--  Se guarda como JSONB en la columna `tiendas`. Backward-compatible: los
+--  productos existentes quedan con '[]' por el DEFAULT.
+--
+--  Ejecutar en Supabase → SQL Editor. Es idempotente (IF NOT EXISTS).
+-- ----------------------------------------------------------------------------
+alter table perfumes add column if not exists tiendas jsonb not null default '[]'::jsonb;
+-- ============================================================================

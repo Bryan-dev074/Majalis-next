@@ -8,7 +8,7 @@ import {
   AlertTriangle, CheckCircle2, FlaskConical, Sun, Moon,
   BarChart2, RefreshCw, Zap, ShieldAlert, KeyRound, Save, Database,
 } from "lucide-react";
-import { Perfume, Cupon } from "@/types/database";
+import { Perfume, Cupon, TiendaProducto } from "@/types/database";
 import { formatGs, precioEfectivo } from "@/lib/format";
 import {
   loginAction, logoutAction, guardarPerfumeAction, eliminarPerfumeAction,
@@ -1295,10 +1295,21 @@ function PerfumeForm({
   const [corazon, setCorazon] = useState(inicial.notas_olfativas.corazon.join(", "));
   const [fondo, setFondo] = useState(inicial.notas_olfativas.fondo.join(", "));
   const [categoria, setCategoria] = useState(inicial.categoria.join(", "));
+  const [tiendas, setTiendas] = useState<TiendaProducto[]>(inicial.tiendas ?? []);
   const [pending, startTransition] = useTransition();
 
   const set = <K extends keyof PerfumeInput>(k: K, v: PerfumeInput[K]) =>
     setForm((prev) => ({ ...prev, [k]: v }));
+
+  // ── Helpers para la sección repetible de Tiendas / Proveedores ──
+  const addTienda = () =>
+    setTiendas((prev) => [...prev, { tienda: "", url: "", codigo: "" }]);
+  const removeTienda = (i: number) =>
+    setTiendas((prev) => prev.filter((_, idx) => idx !== i));
+  const updateTienda = (i: number, campo: keyof TiendaProducto, valor: string) =>
+    setTiendas((prev) =>
+      prev.map((t, idx) => (idx === i ? { ...t, [campo]: valor } : t))
+    );
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1312,6 +1323,7 @@ function PerfumeForm({
           fondo: parseList(fondo),
         },
         categoria: parseList(categoria),
+        tiendas,
       });
     });
   };
@@ -1512,6 +1524,61 @@ function PerfumeForm({
             </div>
           </div>
 
+          {/* Tiendas / Proveedores (sección repetible) */}
+          <div className="rounded-lg border p-4"
+            style={{ borderColor: "var(--adm-border)", background: "var(--adm-surface-2)" }}>
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <div>
+                <p className="adm-label">Tiendas / Proveedores</p>
+                <p className="adm-help">
+                  Otros sitios donde también se consigue este perfume. Cada fila guarda el nombre de la tienda,
+                  el link y el código interno de esa tienda (para reencontrarlo si la URL cambia).
+                </p>
+              </div>
+              <button type="button" onClick={addTienda} className="adm-btn adm-btn-ghost adm-btn-sm shrink-0">
+                <Plus className="h-4 w-4" /> Agregar tienda
+              </button>
+            </div>
+
+            <div className="mt-3 space-y-3">
+              {tiendas.length === 0 ? (
+                <p className="rounded-md border border-dashed px-3 py-4 text-center text-xs"
+                  style={{ borderColor: "var(--adm-border-strong)", color: "var(--adm-text-muted)" }}>
+                  Sin tiendas vinculadas. Presioná “Agregar tienda” para cargar la primera.
+                </p>
+              ) : (
+                tiendas.map((t, i) => (
+                  <div key={i} className="grid grid-cols-1 items-end gap-2 sm:grid-cols-[1fr_1.4fr_1fr_auto]">
+                    <div>
+                      <label className="adm-label">Tienda</label>
+                      <input value={t.tienda}
+                        onChange={(e) => updateTienda(i, "tienda", e.target.value)}
+                        className="adm-input mt-1" placeholder="Mercado Libre" />
+                    </div>
+                    <div>
+                      <label className="adm-label">URL</label>
+                      <input value={t.url}
+                        onChange={(e) => updateTienda(i, "url", e.target.value)}
+                        className="adm-input mt-1" placeholder="https://…" />
+                    </div>
+                    <div>
+                      <label className="adm-label">Código</label>
+                      <input value={t.codigo}
+                        onChange={(e) => updateTienda(i, "codigo", e.target.value)}
+                        className="adm-input mt-1" placeholder="ML-123456789" />
+                    </div>
+                    <button type="button" onClick={() => removeTienda(i)}
+                      title="Quitar tienda"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors"
+                      style={{ color: "var(--adm-red)", background: "var(--adm-red-bg)" }}>
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
         </div>
 
         {/* Footer */}
@@ -1697,6 +1764,7 @@ function perfumeVacio(esExternoFlag: boolean): PerfumeInput {
     descripcion: "",
     notas_olfativas: { salida: [], corazon: [], fondo: [] },
     categoria: [],
+    tiendas: [],
     sku: null, // vacío → auto-generado en el server
     destacado: false,
     es_dropi: esExternoFlag,
@@ -1718,6 +1786,7 @@ function toInput(p: Perfume): PerfumeInput {
     descripcion: p.descripcion,
     notas_olfativas: p.notas_olfativas,
     categoria: p.categoria,
+    tiendas: p.tiendas ?? [],
     sku: p.sku,
     destacado: p.destacado,
     es_dropi: p.es_dropi === true || (p.sku?.startsWith("DROPI-") ?? false),

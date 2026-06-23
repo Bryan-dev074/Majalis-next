@@ -36,6 +36,9 @@ function normalizarPerfume(row: Record<string, unknown>): Perfume {
       fondo: [],
     }) as Perfume["notas_olfativas"],
     categoria: Array.isArray(row.categoria) ? (row.categoria as string[]) : [],
+    tiendas: Array.isArray(row.tiendas)
+      ? (row.tiendas as Perfume["tiendas"])
+      : [],
     sku,
     destacado: Boolean(row.destacado),
     // Columna explícita o, en su defecto, prefijo del SKU

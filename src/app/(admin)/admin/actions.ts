@@ -8,8 +8,13 @@ import {
   iniciarSesionAdmin,
   cerrarSesionAdmin,
 } from "@/lib/supabase-admin";
-import { Perfume, Cupon } from "@/types/database";
+import { Perfume, Cupon, TiendaProducto } from "@/types/database";
 import { FALLBACK_PERFUMES } from "@/data/fallback-perfumes";
+import {
+  getSheetsClient,
+  googleSheetsConfigurado,
+  GOOGLE_SHEET_ID,
+} from "@/lib/google-sheets";
 
 // ────────────────────────────────────────────────────────────────────────────
 //  Tipos de entrada / salida
@@ -29,6 +34,8 @@ export interface PerfumeInput {
   descripcion: string;
   notas_olfativas: { salida: string[]; corazon: string[]; fondo: string[] };
   categoria: string[];
+  /** Tiendas/proveedores externos donde también se consigue el producto. */
+  tiendas: TiendaProducto[];
   /** Dejar vacío para que el servidor lo genere: MARCA-NOMBRE-ML */
   sku: string | null;
   destacado: boolean;
@@ -94,6 +101,62 @@ function generarSku(marca: string, nombre: string, volumen_ml: number): string {
   const marcaSlug = slug(marca).slice(0, 6);
   const nombreSlug = slug(nombre).slice(0, 10);
   return `${marcaSlug}-${nombreSlug}-${volumen_ml}`;
+}
+
+/**
+ * Limpia el array de tiendas que viene del formulario:
+ * descarta filas vacías (sin tienda ni url ni código) y recorta los campos.
+ * Así no se guarda basura del tipo { tienda: "", url: "", codigo: "" }.
+ */
+function normalizarTiendas(tiendas: TiendaProducto[] | undefined | null): TiendaProducto[] {
+  if (!Array.isArray(tiendas)) return [];
+  return tiendas
+    .map((t) => ({
+      tienda: String(t?.tienda ?? "").trim(),
+      url:    String(t?.url ?? "").trim(),
+      codigo: String(t?.codigo ?? "").trim(),
+    }))
+    .filter((t) => t.tienda || t.url || t.codigo);
+}
+
+/**
+ * Borra de Google Sheets la fila del producto en la pestaña "Hoja 1",
+ * buscándola por el id en la columna A. Best-effort: nunca lanza.
+ */
+async function borrarFilaSheets(id: string): Promise<void> {
+  const sheets = await getSheetsClient();
+
+  // 1) Encontrar el índice base-0 de la fila cuyo valor en la columna A === id.
+  const lectura = await sheets.spreadsheets.values.get({
+    spreadsheetId: GOOGLE_SHEET_ID,
+    range: "A:A",
+  });
+  const valores = lectura.data.values ?? [];
+  let idx = -1;
+  for (let i = 0; i < valores.length; i++) {
+    if (String(valores[i]?.[0] ?? "").trim() === id) { idx = i; break; }
+  }
+  if (idx === -1) return; // no está en la planilla → nada que borrar
+
+  // 2) Resolver el sheetId (gid) numérico de "Hoja 1".
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: GOOGLE_SHEET_ID });
+  const hoja = meta.data.sheets?.find((s) => s.properties?.title === "Hoja 1");
+  const gid = hoja?.properties?.sheetId;
+  if (gid == null) return; // sin gid no podemos borrar la dimensión
+
+  // 3) Borrar la fila completa (deleteDimension reajusta las fórmulas de abajo).
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: GOOGLE_SHEET_ID,
+    requestBody: {
+      requests: [
+        {
+          deleteDimension: {
+            range: { sheetId: gid, dimension: "ROWS", startIndex: idx, endIndex: idx + 1 },
+          },
+        },
+      ],
+    },
+  });
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -187,6 +250,7 @@ export async function guardarPerfumeAction(input: PerfumeInput): Promise<ActionR
     descripcion:      input.descripcion.trim(),
     notas_olfativas:  input.notas_olfativas,
     categoria:        input.categoria,
+    tiendas:          normalizarTiendas(input.tiendas),
     sku:              skuFinal,
     destacado:        Boolean(input.destacado),
     es_dropi:         Boolean(input.es_dropi),
@@ -210,8 +274,45 @@ export async function guardarPerfumeAction(input: PerfumeInput): Promise<ActionR
 export async function eliminarPerfumeAction(id: string): Promise<ActionResult> {
   await requerirAdmin();
   const supabase = supabaseAdmin();
+
+  // (Opcional) Antes de borrar, leer la url_imagen para poder limpiar Storage.
+  let nombreArchivoImg: string | null = null;
+  try {
+    const { data: fila } = await supabase
+      .from("perfumes")
+      .select("url_imagen")
+      .eq("id", id)
+      .single();
+    const urlImg = String(fila?.url_imagen ?? "");
+    // Extrae el <archivo> si la URL es del bucket público "productos".
+    const m = urlImg.match(/\/storage\/v1\/object\/public\/productos\/([^?#]+)/);
+    if (m) nombreArchivoImg = decodeURIComponent(m[1]);
+  } catch (e) {
+    console.error("[eliminarPerfumeAction] leer url_imagen:", e);
+  }
+
+  // 1) Borrar de Supabase (operación principal).
   const { error } = await supabase.from("perfumes").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };
+
+  // 2) Best-effort: borrar la fila en la Google Sheet (pestaña "Hoja 1").
+  if (googleSheetsConfigurado()) {
+    try {
+      await borrarFilaSheets(id);
+    } catch (e) {
+      console.error("[eliminarPerfumeAction] borrar fila de Sheets:", e);
+    }
+  }
+
+  // 3) Best-effort: borrar la foto del bucket "productos" en Storage.
+  if (nombreArchivoImg) {
+    try {
+      await supabase.storage.from(BUCKET_IMAGENES).remove([nombreArchivoImg]);
+    } catch (e) {
+      console.error("[eliminarPerfumeAction] borrar imagen de Storage:", e);
+    }
+  }
+
   revalidatePath("/");
   revalidatePath("/admin");
   return { ok: true };
@@ -561,6 +662,7 @@ export async function inicializarDemosAction(): Promise<
     descripcion: p.descripcion,
     notas_olfativas: p.notas_olfativas,
     categoria: p.categoria,
+    tiendas: p.tiendas ?? [],
     sku: p.sku,
     destacado: p.destacado,
     es_dropi: false,

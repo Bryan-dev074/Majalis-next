@@ -10,6 +10,16 @@ export interface FragranceNotes {
   fondo: string[];
 }
 
+/**
+ * Vínculo del producto con una tienda/proveedor externo donde también se consigue.
+ * Sirve para reencontrar el producto si su URL cambia (buscando por código).
+ */
+export interface TiendaProducto {
+  tienda: string; // nombre de la tienda/proveedor. Ej: "Mercado Libre", "Dropi"
+  url: string;    // URL del producto en esa tienda
+  codigo: string; // código/id del producto en esa tienda
+}
+
 /** Perfume del catálogo. */
 export interface Perfume {
   id: string;
@@ -26,6 +36,8 @@ export interface Perfume {
   descripcion: string;
   notas_olfativas: FragranceNotes;
   categoria: string[];
+  /** Tiendas/proveedores externos donde también se consigue este producto. */
+  tiendas: TiendaProducto[];
   sku: string | null;
   destacado: boolean;
   /**
