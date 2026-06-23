@@ -58,6 +58,8 @@ export async function fetchCatalogo(): Promise<Perfume[]> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+  // Sin base de datos configurada (preview / deploy nuevo sin variables):
+  // mostramos el seed de respaldo para que el sitio no se vea vacío.
   if (!url || !anon) {
     return FALLBACK_PERFUMES;
   }
@@ -83,18 +85,29 @@ export async function fetchCatalogo(): Promise<Perfume[]> {
     clearTimeout(timeout);
 
     if (!res.ok) {
-      return FALLBACK_PERFUMES;
+      // La base respondió con error: NO resucitamos el seed. Mostrar el
+      // fallback aquí haría aparecer 11 perfumes "fantasma" con precios y
+      // stock que no existen y que el panel /admin no puede gestionar.
+      console.error("[fetchCatalogo] Supabase respondió", res.status);
+      return [];
     }
 
     const rows = (await res.json()) as Record<string, unknown>[];
-    if (!Array.isArray(rows) || rows.length === 0) {
-      return FALLBACK_PERFUMES;
+    if (!Array.isArray(rows)) {
+      return [];
     }
 
+    // IMPORTANTE: con la base configurada y respondiendo, devolvemos lo que
+    // haya — INCLUSO una lista vacía. Antes, una respuesta vacía caía al seed
+    // (FALLBACK_PERFUMES) y resucitaba los 11 demos como "fantasmas"
+    // imposibles de ocultar (no son filas reales de la base). Eso es lo que
+    // pasaba al ocultar todos los demos sin tener aún productos propios.
     return rows.map(normalizarPerfume);
-  } catch {
-    // Cualquier error de red, timeout o parse → catálogo local.
-    return FALLBACK_PERFUMES;
+  } catch (e) {
+    // Error de red, timeout o parse con la base configurada: catálogo vacío,
+    // no el seed (misma razón que arriba).
+    console.error("[fetchCatalogo] Error consultando Supabase:", e);
+    return [];
   }
 }
 

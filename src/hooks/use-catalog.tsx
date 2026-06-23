@@ -10,7 +10,6 @@ import {
   ReactNode,
 } from "react";
 import { Perfume } from "@/types/database";
-import { FALLBACK_PERFUMES } from "@/data/fallback-perfumes";
 
 interface CatalogContextValue {
   /** Lista completa de perfumes del catálogo (solo activos / no ocultos). */
@@ -50,7 +49,10 @@ function leerSet(key: string): Set<string> {
  * - Permite refrescar tras ediciones (`sultan:catalogo-cambio`).
  */
 export function CatalogProvider({ children }: { children: ReactNode }) {
-  const [perfumesBase, setPerfumesBase] = useState<Perfume[]>(FALLBACK_PERFUMES);
+  // Arrancamos vacío: el catálogo real llega de /api/catalogo. Antes
+  // arrancaba con FALLBACK_PERFUMES y, si la base venía vacía, esos 11 demos
+  // hardcodeados quedaban en pantalla como "fantasmas" imposibles de ocultar.
+  const [perfumesBase, setPerfumesBase] = useState<Perfume[]>([]);
   const [detalle, setDetalle] = useState<Perfume | null>(null);
   const [cargado, setCargado] = useState(false);
   const [token, setToken] = useState(0);
@@ -72,7 +74,10 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
           return;
         }
         const data = (await res.json()) as Perfume[];
-        if (!cancelado && Array.isArray(data) && data.length > 0) {
+        // Respetamos la respuesta del servidor aunque sea vacía: si el
+        // catálogo quedó sin productos activos, la tienda debe verse vacía,
+        // NO con el seed de respaldo (esos demos no se gestionan desde /admin).
+        if (!cancelado && Array.isArray(data)) {
           setPerfumesBase(data);
         }
       } catch {

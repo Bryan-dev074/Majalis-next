@@ -231,7 +231,16 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
         </div>
 
         {/* Grid */}
-        {filtrados.length === 0 ? (
+        {perfumes.length === 0 ? (
+          // Catálogo realmente vacío (todavía no hay productos activos).
+          <div className="flex flex-col items-center py-20 text-center text-ivory/40">
+            <SearchX className="mb-4 h-10 w-10 opacity-40" strokeWidth={1} />
+            <p className="text-sm">Estamos preparando nuestro catálogo.</p>
+            <p className="mt-2 max-w-xs text-xs text-ivory/30">
+              Muy pronto vas a encontrar aquí nuestras fragancias exclusivas.
+            </p>
+          </div>
+        ) : filtrados.length === 0 ? (
           <div className="flex flex-col items-center py-20 text-ivory/40">
             <SearchX className="mb-4 h-10 w-10 opacity-40" strokeWidth={1} />
             <p className="text-sm">

@@ -18,7 +18,10 @@ export function CatalogoClient() {
 
   return (
     <>
-      <Favoritos perfumes={destacados} onAbrirDetalle={abrirDetalle} />
+      {/* La banda de "Favoritos" solo tiene sentido si hay destacados. */}
+      {destacados.length > 0 && (
+        <Favoritos perfumes={destacados} onAbrirDetalle={abrirDetalle} />
+      )}
       <Catalogo
         perfumes={perfumes}
         query={query}
