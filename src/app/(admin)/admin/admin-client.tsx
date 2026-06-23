@@ -19,6 +19,7 @@ import {
   type PerfumeInput, type CuponInput, type DatosAdmin,
   type ConfigProveedor,
 } from "./actions";
+import SyncSheetButton from "./sync-sheet-button";
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
 
@@ -366,7 +367,9 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
 
         {/* ── CONTENIDO ── */}
         {pestaña === "stock" && (
-          <TablaStock
+          <>
+            <SyncSheetButton toast={toast_} />
+            <TablaStock
             perfumes={stock}
             titulo="Mi Stock Local"
             subtitulo="Productos físicos en el local de CDE. ⚡ Envío Inmediato automático para tus clientes."
@@ -385,6 +388,7 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
               startTransition(async () => { await ocultarTodosAction(act.map((p) => p.id)); });
             }}
           />
+          </>
         )}
         {pestaña === "externo" && (
           <>
