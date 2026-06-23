@@ -44,6 +44,27 @@ export interface CuponInput {
   fecha_expiracion: string | null;
 }
 
+/**
+ * Configuración de un proveedor de stock externo (ej: Dropi Paraguay).
+ * Se persiste en la tabla `public.config_proveedores`.
+ */
+export interface ConfigProveedor {
+  id: string;
+  proveedor: string;          // "Dropi Paraguay", etc.
+  api_url: string | null;     // URL base de la API
+  api_key: string | null;     // Token de acceso (se enmascara en el cliente)
+  sincronizar_diario: boolean; // automatizar lectura diaria de stock
+  ultimo_sync: string | null;  // timestamp del último sync manual/automático
+  updated_at: string;
+}
+
+export interface ConfigProveedorInput {
+  proveedor: string;
+  api_url: string;
+  api_key: string;
+  sincronizar_diario: boolean;
+}
+
 type ActionResult = { ok: boolean; error?: string };
 
 export interface DatosAdmin {
@@ -51,6 +72,7 @@ export interface DatosAdmin {
   cupones: Cupon[];
   configurado: boolean;
   top5: { id: string; nombre: string; clicks_mensuales: number }[];
+  proveedor: ConfigProveedor | null;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -278,43 +300,184 @@ export async function eliminarCuponAction(id: string): Promise<ActionResult> {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+//  Proveedor de stock externo (config_proveedores)
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Guarda (upsert) la configuración del proveedor.
+ * Si api_key llega como string enmascarado (•••), conserva el existente.
+ */
+export async function guardarProveedorAction(
+  input: ConfigProveedorInput,
+  idExistente?: string
+): Promise<ActionResult> {
+  await requerirAdmin();
+  const supabase = supabaseAdmin();
+
+  const payload: Record<string, unknown> = {
+    proveedor: input.proveedor.trim(),
+    api_url: input.api_url.trim() || null,
+    sincronizar_diario: Boolean(input.sincronizar_diario),
+    updated_at: new Date().toISOString(),
+  };
+
+  // Solo pisar api_key si llega un valor real (no enmascarado)
+  if (input.api_key && !input.api_key.includes("•")) {
+    payload.api_key = input.api_key.trim();
+  }
+
+  let error;
+  if (idExistente) {
+    ({ error } = await supabase
+      .from("config_proveedores")
+      .update(payload)
+      .eq("id", idExistente));
+  } else {
+    ({ error } = await supabase.from("config_proveedores").insert(payload));
+  }
+
+  if (error) {
+    console.error("[guardarProveedorAction]", error.message);
+    return { ok: false, error: error.message };
+  }
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+/**
+ * Fuerza una sincronización de stock ahora (manual).
+ * Por ahora valida que la config esté presente; cuando se conecte la API real
+ * de Dropi, este endpoint orquestará la lectura y el upsert de perfumes.
+ */
+export async function sincronizarProveedorAction(id: string): Promise<
+  ActionResult & { sincronizados?: number; detalle?: string }
+> {
+  await requerirAdmin();
+  const supabase = supabaseAdmin();
+
+  // Verificar que la config exista y tenga credenciales
+  const { data, error } = await supabase
+    .from("config_proveedores")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (error || !data) {
+    return { ok: false, error: "No se encontró la configuración del proveedor." };
+  }
+  if (!(data as ConfigProveedor).api_url || !(data as ConfigProveedor).api_key) {
+    return {
+      ok: false,
+      error: "Faltan credenciales (URL y/o API Key). Guardalas primero.",
+    };
+  }
+
+  // Actualizamos la marca de último sync. La lectura real de Dropi se
+  // implementará cuando se confirmen los endpoints del proveedor.
+  const { error: errUp } = await supabase
+    .from("config_proveedores")
+    .update({
+      ultimo_sync: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (errUp) {
+    console.error("[sincronizarProveedorAction]", errUp.message);
+    return { ok: false, error: errUp.message };
+  }
+
+  revalidatePath("/admin");
+  return {
+    ok: true,
+    sincronizados: 0,
+    detalle:
+      "Configuración validada y registrada. La sincronización real con el proveedor quedará activa apenas se confirmen los endpoints.",
+  };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 //  Carga de datos (Server Component)
 // ────────────────────────────────────────────────────────────────────────────
 
 /**
- * Carga todos los perfumes (activos e inactivos), cupones y Top-5 del mes.
- * Si Supabase no está configurado, devuelve vacío con configurado: false.
+ * Carga todos los datos del panel en flujos INDEPENDIENTES:
+ * si una tabla falla (ej: cupones vacíos), las demás igual cargan.
+ * Cada error se loguea con console.error para diagnóstico en Vercel.
  */
 export async function cargarDatosAdmin(): Promise<DatosAdmin> {
+  // Estado base si Supabase no está configurado
   if (!adminConfigurado()) {
-    return { perfumes: [], cupones: [], configurado: false, top5: [] };
+    return { perfumes: [], cupones: [], configurado: false, top5: [], proveedor: null };
   }
-  try {
-    const supabase = supabaseAdmin();
-    const [
-      { data: perfumesData, error: errP },
-      { data: cuponesData, error: errC },
-      { data: top5Data },
-    ] = await Promise.all([
-      supabase.from("perfumes").select("*").order("created_at", { ascending: true }),
-      supabase.from("cupones").select("*").order("porcentaje_descuento", { ascending: false }),
-      supabase
-        .from("perfumes")
-        .select("id, nombre, clicks_mensuales")
-        .order("clicks_mensuales", { ascending: false })
-        .limit(5),
-    ]);
 
-    if (errP || errC) {
-      return { perfumes: [], cupones: [], configurado: true, top5: [] };
+  const supabase = supabaseAdmin();
+  const base = { configurado: true } as DatosAdmin;
+
+  // 1) Perfumes (CRÍTICO: si falla, igual devolvemos el resto)
+  let perfumes: Perfume[] = [];
+  try {
+    const { data, error } = await supabase
+      .from("perfumes")
+      .select("*")
+      .order("created_at", { ascending: true });
+    if (error) {
+      console.error("[cargarDatosAdmin] Error leyendo perfumes:", error.message);
+    } else {
+      perfumes = (data ?? []) as unknown as Perfume[];
     }
-    return {
-      perfumes:  (perfumesData ?? []) as unknown as Perfume[],
-      cupones:   (cuponesData ?? []) as unknown as Cupon[],
-      configurado: true,
-      top5: (top5Data ?? []) as { id: string; nombre: string; clicks_mensuales: number }[],
-    };
-  } catch {
-    return { perfumes: [], cupones: [], configurado: false, top5: [] };
+  } catch (e) {
+    console.error("[cargarDatosAdmin] Excepción leyendo perfumes:", e);
   }
+
+  // 2) Cupones (NO crítico: si falla, devolvemos [])
+  let cupones: Cupon[] = [];
+  try {
+    const { data, error } = await supabase
+      .from("cupones")
+      .select("*")
+      .order("porcentaje_descuento", { ascending: false });
+    if (error) {
+      console.error("[cargarDatosAdmin] Error leyendo cupones:", error.message);
+    } else {
+      cupones = (data ?? []) as unknown as Cupon[];
+    }
+  } catch (e) {
+    console.error("[cargarDatosAdmin] Excepción leyendo cupones:", e);
+  }
+
+  // 3) Top 5 por clicks_mensuales
+  let top5: { id: string; nombre: string; clicks_mensuales: number }[] = [];
+  try {
+    const { data, error } = await supabase
+      .from("perfumes")
+      .select("id, nombre, clicks_mensuales")
+      .order("clicks_mensuales", { ascending: false })
+      .limit(5);
+    if (error) {
+      console.error("[cargarDatosAdmin] Error leyendo top5:", error.message);
+    } else {
+      top5 = (data ?? []) as { id: string; nombre: string; clicks_mensuales: number }[];
+    }
+  } catch (e) {
+    console.error("[cargarDatosAdmin] Excepción leyendo top5:", e);
+  }
+
+  // 4) Config del proveedor (NO crítico)
+  let proveedor: ConfigProveedor | null = null;
+  try {
+    const { data, error } = await supabase
+      .from("config_proveedores")
+      .select("*")
+      .limit(1)
+      .single();
+    if (error) {
+      // PSQL cod 42P01 (tabla inexistente) → no es error fatal, solo no hay tabla aún
+      console.error("[cargarDatosAdmin] Tabla config_proveedores:", error.message);
+    } else if (data) {
+      proveedor = data as unknown as ConfigProveedor;
+    }
+  } catch (e) {
+    console.error("[cargarDatosAdmin] Excepción leyendo proveedor:", e);
+  }
+
+  return { ...base, perfumes, cupones, top5, proveedor };
 }

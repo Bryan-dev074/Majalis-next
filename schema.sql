@@ -71,6 +71,21 @@ create index if not exists idx_cupones_codigo on public.cupones (codigo);
 create index if not exists idx_cupones_activo on public.cupones (activo);
 
 -- ----------------------------------------------------------------------------
+--  2b. TABLA: config_proveedores  (credenciales Dropi y similares)
+--      Una sola fila activa por proveedor (limit(1) en el admin).
+-- ----------------------------------------------------------------------------
+create table if not exists public.config_proveedores (
+    id                    uuid primary key default gen_random_uuid(),
+    proveedor             text        not null default 'Dropi Paraguay',
+    api_url               text,                              -- URL base del proveedor
+    api_key               text,                              -- token (se enmascara en el cliente)
+    sincronizar_diario    boolean     not null default false,
+    ultimo_sync           timestamptz,
+    created_at            timestamptz not null default now(),
+    updated_at            timestamptz not null default now()
+);
+
+-- ----------------------------------------------------------------------------
 --  3. TABLA: perfiles_usuario
 -- ----------------------------------------------------------------------------
 create table if not exists public.perfiles_usuario (
@@ -301,12 +316,25 @@ on conflict (codigo) do nothing;
 
 -- ============================================================================
 --  MIGRACIÓN · Columnas nuevas (v3): es_demo + clicks_mensuales
+--  + Tabla config_proveedores para gestión de APIs externas.
 --  Idempotente: se puede correr varias veces sin romper.
 -- ============================================================================
 alter table public.perfumes
     add column if not exists es_dropi         boolean not null default false,
     add column if not exists es_demo          boolean not null default false,
     add column if not exists clicks_mensuales integer not null default 0;
+
+-- Tabla de proveedores (Dropi y similares)
+create table if not exists public.config_proveedores (
+    id                    uuid primary key default gen_random_uuid(),
+    proveedor             text        not null default 'Dropi Paraguay',
+    api_url               text,
+    api_key               text,
+    sincronizar_diario    boolean     not null default false,
+    ultimo_sync           timestamptz,
+    created_at            timestamptz not null default now(),
+    updated_at            timestamptz not null default now()
+);
 
 -- Backfill: cualquier perfume con SKU DROPI- queda marcado como Dropi.
 update public.perfumes

@@ -6,7 +6,7 @@ import {
   Lock, Eye, EyeOff, LogOut, Plus, Minus, Pencil, Trash2,
   Search, Star, Power, Tag, Boxes, X, ExternalLink,
   AlertTriangle, CheckCircle2, FlaskConical, Sun, Moon,
-  BarChart2, RefreshCw, Zap, ShieldAlert,
+  BarChart2, RefreshCw, Zap, ShieldAlert, KeyRound, Save,
 } from "lucide-react";
 import { Perfume, Cupon } from "@/types/database";
 import { formatGs, precioEfectivo } from "@/lib/format";
@@ -14,7 +14,9 @@ import {
   loginAction, logoutAction, guardarPerfumeAction, eliminarPerfumeAction,
   ajustarStockAction, togglePerfumeAction, ocultarTodosAction, mostrarTodosAction,
   guardarCuponAction, toggleCuponAction, eliminarCuponAction, resetearClicksAction,
+  guardarProveedorAction, sincronizarProveedorAction,
   type PerfumeInput, type CuponInput, type DatosAdmin,
+  type ConfigProveedor,
 } from "./actions";
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
@@ -126,6 +128,8 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
   const [cupones, setCupones] = useState<Cupon[]>(datos.cupones);
   const [top5, setTop5] = useState(datos.top5);
   const [modalPerfume, setModalPerfume] = useState<PerfumeInput | null>(null);
+  // Id del perfume cuyo stock se está mutando (para spinner en +/-)
+  const [stockPending, setStockPending] = useState<string | null>(null);
 
   // Tema claro / oscuro persistido
   const [dark, setDark] = useState(() => {
@@ -158,6 +162,8 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
 
   // ─── Handlers comunes ───
   const onStock = (id: string, delta: number) => {
+    setStockPending(id);
+    // Mutación optimista: el número cambia al instante en pantalla
     setPerfumes((prev) =>
       prev.map((p) => p.id === id
         ? { ...p, stock_disponible: Math.max(0, p.stock_disponible + delta) }
@@ -166,7 +172,17 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
     );
     startTransition(async () => {
       const res = await ajustarStockAction(id, delta);
-      if (!res.ok) toast_("error", res.error ?? "Error al ajustar stock");
+      setStockPending(null);
+      if (!res.ok) {
+        // Revertir si falla
+        setPerfumes((prev) =>
+          prev.map((p) => p.id === id
+            ? { ...p, stock_disponible: Math.max(0, p.stock_disponible - delta) }
+            : p
+          )
+        );
+        toast_("error", res.error ?? "Error al ajustar stock");
+      }
     });
   };
 
@@ -354,6 +370,7 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
             onEliminar={onEliminar}
             onNuevo={() => setModalPerfume(perfumeVacio(false))}
             onEditar={(p) => setModalPerfume(toInput(p))}
+            stockPending={stockPending}
             onOcultarTodos={() => {
               const act = stock.filter((p) => p.activo);
               if (!act.length) return;
@@ -364,24 +381,28 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
           />
         )}
         {pestaña === "externo" && (
-          <TablaStock
-            perfumes={externo}
-            titulo="Origen Externo — Pago Contra Entrega"
-            subtitulo='Productos que se despachan desde depósito externo bajo modalidad "Pago Contra Entrega". El cliente solo ve "Sultan Oud Elixir".'
-            esExterno={true}
-            onStock={onStock}
-            onToggle={onToggle}
-            onEliminar={onEliminar}
-            onNuevo={() => setModalPerfume(perfumeVacio(true))}
-            onEditar={(p) => setModalPerfume(toInput(p))}
-            onOcultarTodos={() => {
-              const act = externo.filter((p) => p.activo);
-              if (!act.length) return;
-              if (!confirm(`¿Ocultar los ${act.length} productos externos de la tienda?`)) return;
-              setPerfumes((prev) => prev.map((p) => (esExterno(p) && !p.es_demo ? { ...p, activo: false } : p)));
-              startTransition(async () => { await ocultarTodosAction(act.map((p) => p.id)); });
-            }}
-          />
+          <>
+            <ProveedorConfig proveedor={datos.proveedor} toast={toast_} />
+            <TablaStock
+              perfumes={externo}
+              titulo="Origen Externo — Pago Contra Entrega"
+              subtitulo='Productos que se despachan desde depósito externo bajo modalidad "Pago Contra Entrega". El cliente solo ve "Sultan Oud Elixir".'
+              esExterno={true}
+              onStock={onStock}
+              onToggle={onToggle}
+              onEliminar={onEliminar}
+              onNuevo={() => setModalPerfume(perfumeVacio(true))}
+              onEditar={(p) => setModalPerfume(toInput(p))}
+              stockPending={stockPending}
+              onOcultarTodos={() => {
+                const act = externo.filter((p) => p.activo);
+                if (!act.length) return;
+                if (!confirm(`¿Ocultar los ${act.length} productos externos de la tienda?`)) return;
+                setPerfumes((prev) => prev.map((p) => (esExterno(p) && !p.es_demo ? { ...p, activo: false } : p)));
+                startTransition(async () => { await ocultarTodosAction(act.map((p) => p.id)); });
+              }}
+            />
+          </>
         )}
         {pestaña === "demo" && (
           <DemoView
@@ -438,11 +459,195 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+//  CONFIGURACIÓN DE PROVEEDORES (Dropi y similares)
+//  Tarjeta destacada arriba de la pestaña "Origen Externo".
+//  Permite guardar credenciales y forzar sincronización de stock.
+// ════════════════════════════════════════════════════════════════════════════
+function ProveedorConfig({
+  proveedor,
+  toast,
+}: {
+  proveedor: ConfigProveedor | null;
+  toast: (tipo: "ok" | "error", texto: string) => void;
+}) {
+  // Hidratación segura de los campos (evita hydration mismatch)
+  const inicial: ConfigProveedor | null = proveedor;
+
+  const [form, setForm] = useState({
+    proveedor: inicial?.proveedor ?? "Dropi Paraguay",
+    api_url: inicial?.api_url ?? "",
+    api_key: inicial?.api_key ? "••••••••••••" : "",
+    sincronizar_diario: inicial?.sincronizar_diario ?? false,
+  });
+  const [guardando, setGuardando] = useState(false);
+  const [sincronizando, setSincronizando] = useState(false);
+  const [, startTransition] = useTransition();
+
+  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
+    setForm((prev) => ({ ...prev, [k]: v }));
+
+  const ultimoSyncTexto = inicial?.ultimo_sync
+    ? new Date(inicial.ultimo_sync).toLocaleString("es-PY", {
+        dateStyle: "short",
+        timeStyle: "short",
+      })
+    : "Nunca";
+
+  const onGuardar = (e: React.FormEvent) => {
+    e.preventDefault();
+    setGuardando(true);
+    startTransition(async () => {
+      const res = await guardarProveedorAction(form, inicial?.id);
+      setGuardando(false);
+      if (res.ok) {
+        toast("ok", "Configuración del proveedor guardada.");
+        window.location.reload();
+      } else {
+        toast("error", res.error ?? "Error al guardar");
+      }
+    });
+  };
+
+  const onSincronizar = () => {
+    if (!inicial?.id) {
+      toast("error", "Primero guardá la configuración.");
+      return;
+    }
+    setSincronizando(true);
+    startTransition(async () => {
+      const res = await sincronizarProveedorAction(inicial.id);
+      setSincronizando(false);
+      if (res.ok) {
+        toast("ok", res.detalle ?? "Sincronización completada.");
+        window.location.reload();
+      } else {
+        toast("error", res.error ?? "Error al sincronizar");
+      }
+    });
+  };
+
+  return (
+    <form onSubmit={onGuardar} className="adm-feature-card mb-6">
+      <div className="mb-4 flex items-start gap-3">
+        <div
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+          style={{ color: "var(--adm-gold)", background: "var(--adm-blue-bg)" }}
+        >
+          <KeyRound className="h-5 w-5" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-base font-bold" style={{ color: "var(--adm-text)" }}>
+            🔑 Configuración de APIs y Proveedores
+          </h3>
+          <p className="text-sm" style={{ color: "var(--adm-text-muted)" }}>
+            Gestión de credenciales para sincronizar stock externo. Última sincronización:{" "}
+            <strong style={{ color: "var(--adm-text-soft)" }}>{ultimoSyncTexto}</strong>
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {/* Proveedor */}
+        <div>
+          <label className="adm-label">Proveedor</label>
+          <span className="adm-help">Ej: Dropi Paraguay · Quién provee el stock externo</span>
+          <input
+            value={form.proveedor}
+            onChange={(e) => set("proveedor", e.target.value)}
+            className="adm-input mt-1"
+            placeholder="Dropi Paraguay"
+          />
+        </div>
+
+        {/* URL */}
+        <div>
+          <label className="adm-label">URL Base de la API</label>
+          <span className="adm-help">Endpoint raíz del proveedor. Ej: https://api.dropi.co</span>
+          <input
+            value={form.api_url}
+            onChange={(e) => set("api_url", e.target.value)}
+            className="adm-input mt-1"
+            placeholder="https://api.dropi.co"
+          />
+        </div>
+
+        {/* API Key */}
+        <div>
+          <label className="adm-label">API Key / Token de Acceso</label>
+          <span className="adm-help">
+            {inicial?.api_key
+              ? "Ya hay una clave guardada (se muestra oculta). Para cambiarla, escribí una nueva."
+              : "Pegá el token secreto que te dio el proveedor"}
+          </span>
+          <input
+            type="password"
+            value={form.api_key}
+            onChange={(e) => set("api_key", e.target.value)}
+            className="adm-input mt-1 font-mono"
+            placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
+          />
+        </div>
+
+        {/* Toggle sincronización diaria */}
+        <div className="flex items-center justify-between rounded-lg border p-3"
+          style={{ borderColor: "var(--adm-border)", background: "var(--adm-surface-2)" }}>
+          <div>
+            <p className="text-sm font-semibold" style={{ color: "var(--adm-text)" }}>
+              Automatizar sincronización diaria
+            </p>
+            <p className="text-xs" style={{ color: "var(--adm-text-muted)" }}>
+              El sistema actualizará el stock automáticamente cada día
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => set("sincronizar_diario", !form.sincronizar_diario)}
+            className={`adm-switch${form.sincronizar_diario ? " adm-switch-on" : ""}`}
+            aria-label="Toggle sincronización diaria"
+          />
+        </div>
+      </div>
+
+      {/* Botones de acción */}
+      <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
+        <button
+          type="button"
+          onClick={onSincronizar}
+          disabled={sincronizando || !inicial?.id}
+          className="adm-btn adm-btn-gold"
+        >
+          {sincronizando ? (
+            <>
+              <span className="adm-spinner" /> Sincronizando…
+            </>
+          ) : (
+            <>
+              <RefreshCw className="h-4 w-4" /> 🔄 Sincronizar Stock Ahora
+            </>
+          )}
+        </button>
+        <button type="submit" disabled={guardando} className="adm-btn adm-btn-gold">
+          {guardando ? (
+            <>
+              <span className="adm-spinner" /> Guardando…
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4" /> 💾 Guardar Configuración
+            </>
+          )}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 //  TABLA DE STOCK (reutilizada para Stock Local y Origen Externo)
 // ════════════════════════════════════════════════════════════════════════════
 function TablaStock({
   perfumes, titulo, subtitulo, esExterno: esPestañaExterna,
-  onStock, onToggle, onEliminar, onNuevo, onEditar, onOcultarTodos,
+  onStock, onToggle, onEliminar, onNuevo, onEditar, onOcultarTodos, stockPending,
 }: {
   perfumes: Perfume[];
   titulo: string;
@@ -454,6 +659,7 @@ function TablaStock({
   onNuevo: () => void;
   onEditar: (p: Perfume) => void;
   onOcultarTodos: () => void;
+  stockPending?: string | null;
 }) {
   const [query, setQuery] = useState("");
   const [filtroMarca, setFiltroMarca] = useState("todas");
@@ -483,12 +689,15 @@ function TablaStock({
       {/* Toolbar */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: "var(--adm-text-muted)" }} />
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+            style={{ color: "var(--adm-text-muted)" }}
+          />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar por nombre, marca o SKU…"
-            className="adm-input pl-9"
+            className="adm-input adm-inputWithIcon"
           />
         </div>
         <select value={filtroMarca} onChange={(e) => setFiltroMarca(e.target.value)} className="adm-select w-auto">
@@ -567,12 +776,26 @@ function TablaStock({
                         <span className="font-bold" style={{ color: "var(--adm-text)" }}>{p.stock_disponible}</span>
                       ) : (
                         <div className="adm-stock-control">
-                          <button onClick={() => onStock(p.id, -1)} className="adm-stock-btn adm-stock-btn-minus" title="Vendido (-1)">
-                            <Minus className="h-3.5 w-3.5" />
+                          <button
+                            onClick={() => onStock(p.id, -1)}
+                            className="adm-stock-btn adm-stock-btn-minus"
+                            title="Vendido (-1)"
+                            disabled={stockPending === p.id}
+                          >
+                            {stockPending === p.id
+                              ? <span className="adm-spinner" style={{ width: "0.7em", height: "0.7em", borderWidth: "1.5px" }} />
+                              : <Minus className="h-3.5 w-3.5" />}
                           </button>
                           <span className="adm-stock-value">{p.stock_disponible}</span>
-                          <button onClick={() => onStock(p.id, +1)} className="adm-stock-btn adm-stock-btn-plus" title="Reponer (+1)">
-                            <Plus className="h-3.5 w-3.5" />
+                          <button
+                            onClick={() => onStock(p.id, +1)}
+                            className="adm-stock-btn adm-stock-btn-plus"
+                            title="Reponer (+1)"
+                            disabled={stockPending === p.id}
+                          >
+                            {stockPending === p.id
+                              ? <span className="adm-spinner" style={{ width: "0.7em", height: "0.7em", borderWidth: "1.5px" }} />
+                              : <Plus className="h-3.5 w-3.5" />}
                           </button>
                         </div>
                       )}

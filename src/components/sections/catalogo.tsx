@@ -114,7 +114,7 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
         </div>
 
         {/* Botón destacado: Ofertas de Envío Inmediato */}
-        <div className="mb-10 flex justify-center" data-reveal>
+        <div className="mb-3 flex justify-center" data-reveal>
           <button
             onClick={() => {
               setOfertasExpress((v) => !v);
@@ -124,10 +124,10 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
                 setFamiliaActiva("todas");
               }
             }}
-            className={`group relative overflow-hidden rounded-full border-2 px-8 py-4 text-sm font-bold uppercase tracking-regal transition-all duration-500 ${
+            className={`group relative overflow-hidden rounded-full border-2 px-6 py-3.5 text-xs font-bold uppercase tracking-regal transition-all duration-500 sm:px-8 sm:py-4 sm:text-sm ${
               ofertasExpress
                 ? "border-[#25D366] bg-gradient-to-r from-[#1faa52] to-[#25D366] text-obsidian shadow-[0_0_50px_-8px_rgba(37,211,102,0.9)]"
-                : "border-[#d4af37] bg-gradient-to-r from-gold-dark via-gold to-gold-light text-obsidian shadow-[0_0_45px_-10px_rgba(212,175,55,0.7)] hover:shadow-[0_0_60px_-8px_rgba(212,175,55,0.95)]"
+                : "express-idle-beat border-[#d4af37] bg-gradient-to-r from-gold-dark via-gold to-gold-light text-obsidian hover:shadow-[0_0_60px_-8px_rgba(212,175,55,0.95)]"
             }`}
             aria-pressed={ofertasExpress}
           >
@@ -139,26 +139,32 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
                   : "-translate-x-full transition-transform duration-700 group-hover:translate-x-full"
               }`}
             />
-            <span className="relative flex items-center gap-2.5">
+            <span className="relative flex items-center gap-2 sm:gap-2.5">
               <Zap
-                className={`h-5 w-5 ${ofertasExpress ? "express-active-zap" : ""}`}
+                className={`h-4 w-4 sm:h-5 sm:w-5 ${ofertasExpress ? "express-active-zap" : "express-idle-zap"}`}
                 fill={ofertasExpress ? "currentColor" : "none"}
                 strokeWidth={2}
               />
-              {ofertasExpress ? "Mostrando Envío Inmediato" : "Ofertas de Envío Inmediato"}
+              <span className="leading-tight">
+                {ofertasExpress ? "Mostrando Envío Inmediato" : "Ofertas de Envío Inmediato"}
+              </span>
               <Zap
-                className={`h-5 w-5 ${ofertasExpress ? "express-active-zap" : ""}`}
+                className={`h-4 w-4 sm:h-5 sm:w-5 ${ofertasExpress ? "express-active-zap" : "express-idle-zap"}`}
                 fill={ofertasExpress ? "currentColor" : "none"}
                 strokeWidth={2}
               />
             </span>
           </button>
         </div>
-        {ofertasExpress && (
-          <p className="mb-8 text-center text-xs uppercase tracking-regal text-[#25D366]/80">
-            Productos con descuento · Entrega inmediata en Paraguay
-          </p>
-        )}
+        <p
+          className={`mb-8 text-center text-[0.62rem] uppercase tracking-regal transition-colors duration-300 sm:text-xs ${
+            ofertasExpress ? "text-[#25D366]/80" : "text-ivory/45"
+          }`}
+        >
+          {ofertasExpress
+            ? "Viendo solo los productos con descuento y entrega inmediata"
+            : "Tocá para ver solo los productos con descuento y entrega inmediata"}
+        </p>
 
         {/* ────────── Filtros rediseñados ────────── */}
         <div className="mb-10 space-y-6" data-reveal>

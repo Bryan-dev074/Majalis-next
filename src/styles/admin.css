@@ -444,3 +444,69 @@
 .adm-toast {
   animation: adm-slide-in 0.25s ease-out;
 }
+
+/* Spinner */
+@keyframes adm-spin {
+  to { transform: rotate(360deg); }
+}
+.adm-spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 9999px;
+  animation: adm-spin 0.6s linear infinite;
+}
+
+/* Inputs con ícono a la izquierda (buscador): padding correcto */
+.adm-inputWithIcon {
+  padding-left: 2.5rem; /* pl-10 */
+}
+
+/* Placeholders sutiles (menos brillantes) */
+.adm-input::placeholder,
+.adm-textarea::placeholder {
+  opacity: 0.55;
+  font-style: italic;
+  font-weight: 400;
+}
+.adm-help {
+  opacity: 0.95;
+}
+
+/* Botón dorado premium (config de proveedores) */
+.adm-btn-gold {
+  background: linear-gradient(135deg, #b8860b, #d4af37 50%, #f4e088);
+  color: #1a1208;
+  border: 1px solid #d4af37;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.adm-btn-gold:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 4px 14px -4px rgba(212, 175, 55, 0.6);
+}
+.adm-btn-gold:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Sub-tarjeta resaltada para configuración de proveedores */
+.adm-feature-card {
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border);
+  border-radius: 14px;
+  padding: 1.5rem;
+  box-shadow: var(--adm-shadow);
+  position: relative;
+  overflow: hidden;
+}
+.adm-feature-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #b8860b, #d4af37, #f4e088, #d4af37, #b8860b);
+}

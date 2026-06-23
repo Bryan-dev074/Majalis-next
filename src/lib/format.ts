@@ -68,26 +68,23 @@ export function buildWhatsAppCheckoutUrl(
   // ───── BLOQUE LOCAL: Envío Inmediato ─────
   if (hayLocales) {
     bloques.push(
-      "Olá! Quiero gestionar mi pedido con *⚡ ENVÍO INMEDIATO / EXPRESS*:",
+      "Quiero gestionar mi pedido con *⚡ ENVÍO INMEDIATO / EXPRESS*:",
       "",
-      "📦 *DETALLE DEL PEDIDO (Express):*"
+      "📦 *DETALLE DEL PEDIDO:*"
     );
     locales.forEach((it) => {
       bloques.push(
         `• ${it.cantidad}x ${it.perfume.nombre} (${it.perfume.volumen_ml}ml) — Marca: ${it.perfume.marca}`
       );
-      if (it.perfume.sku) bloques.push(`• Código: \`${it.perfume.sku}\``);
+      if (it.perfume.sku) bloques.push(`  Código: \`${it.perfume.sku}\``);
     });
     const subtotalLocales = subtotalCarrito(locales);
     bloques.push(
       "",
       "💰 *RESUMEN:*",
-      `• Subtotal: ${formatGs(subtotalLocales)}`,
-      "• Envío: A coordinar (Despacho rápido desde CDE)",
-      `• *TOTAL:* ${formatGs(subtotalLocales)}`,
+      `• Total: ${formatGs(subtotalLocales)}`,
       "",
-      "📌 *REGLA DE ENTREGA EXPRESS:*",
-      "_Entiendo que para agilizar el despacho inmediato de mi stock físico local, debo realizar el pago previo vía Transferencia Bancaria o Giro. Por favor, facilítenme los datos de la cuenta para abonar y enviar el comprobante._"
+      "📌 *Para confirmar el despacho express, requiero abonar por transferencia o giro. ¿Me pasan los datos de la cuenta?*"
     );
   }
 
@@ -95,35 +92,35 @@ export function buildWhatsAppCheckoutUrl(
   if (hayExternos) {
     if (hayLocales) bloques.push("", "──────────────", "");
     bloques.push(
-      "Olá! Quiero gestionar mi pedido con *🚚 PAGO CONTRA ENTREGA (Paga en Casa)*:",
+      "Quiero gestionar mi pedido con *🚚 PAGO CONTRA ENTREGA (Paga en Casa)*:",
       "",
-      "📦 *DETALLE DEL PEDIDO (Contra Entrega):*"
+      "📦 *DETALLE DEL PEDIDO:*"
     );
     externos.forEach((it) => {
       bloques.push(
         `• ${it.cantidad}x ${it.perfume.nombre} (${it.perfume.volumen_ml}ml) — Marca: ${it.perfume.marca}`
       );
-      if (it.perfume.sku) bloques.push(`• Código: \`${it.perfume.sku}\``);
+      if (it.perfume.sku) bloques.push(`  Código: \`${it.perfume.sku}\``);
     });
     const subtotalExternos = subtotalCarrito(externos);
     bloques.push(
       "",
       "💰 *RESUMEN:*",
-      `• *TOTAL A PAGAR EN CASA:* ${formatGs(subtotalExternos)}`,
+      `• Total a pagar en casa: ${formatGs(subtotalExternos)}`,
       "",
       "📌 *DATOS DE ENVÍO:*",
       `• Nombre: ${extras?.nombre || "—"}`,
       `• Ciudad: ${extras?.ciudad || "—"}`,
-      `• Dirección Exacta: ${extras?.direccion || "—"}`,
-      `• Teléfono de contacto: ${extras?.whatsapp || "—"}`,
+      `• Dirección: ${extras?.direccion || "—"}`,
+      `• Teléfono: ${extras?.whatsapp || "—"}`,
       "",
-      "_Por favor, confirmen mi pedido para preparar el despacho a mi domicilio de forma segura._"
+      "¿Me confirman el pedido para coordinar el envío? 🙏"
     );
   }
 
   // Si el carrito es mixto, agregar total consolidado al final
   if (hayLocales && hayExternos) {
-    bloques.push("", `💎 *TOTAL GENERAL DEL PEDIDO:* ${formatGs(total)}`);
+    bloques.push("", `💎 *TOTAL GENERAL:* ${formatGs(total)}`);
   }
 
   const cuerpo = bloques.join("\n");
