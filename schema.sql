@@ -11,7 +11,7 @@
 --  Extensión: UUID si no existe (compatibilidad)
 -- ----------------------------------------------------------------------------
 create extension if not exists "pgcrypto";
-
+create extension if not exists pg_trgm;
 -- ----------------------------------------------------------------------------
 --  1. TABLA: perfumes
 -- ----------------------------------------------------------------------------
@@ -38,6 +38,7 @@ create table if not exists public.perfumes (
     categoria             text[]      not null default '{}',
     sku                   text        unique,
     destacado             boolean     not null default false,
+    es_dropi              boolean     not null default false,  -- true: importado vía Dropi (envío más largo); false: stock local propio
     created_at            timestamptz not null default now(),
     updated_at            timestamptz not null default now()
 );
@@ -294,6 +295,18 @@ on conflict (codigo) do nothing;
 --     on public.cupones for select
 --     using (activo = true and usos_actuales < limite_usos);
 -- ============================================================================
+
+-- ============================================================================
+--  MIGRACIÓN · Columna es_dropi (para quienes ya tenían el schema anterior)
+--  Idempotente: se puede correr varias veces sin romper.
+-- ============================================================================
+alter table public.perfumes
+    add column if not exists es_dropi boolean not null default false;
+
+-- Backfill: cualquier perfume con SKU DROPI- queda marcado automáticamente.
+update public.perfumes
+   set es_dropi = true
+ where sku is not null and sku like 'DROPI-%';
 
 -- ============================================================================
 --  FIN DEL SCRIPT

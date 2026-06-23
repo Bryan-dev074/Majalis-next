@@ -422,9 +422,100 @@ Así la contraseña no queda en el código (que es público en GitHub).
 |---|---|
 | Conectar la base | Ejecutar `schema.sql` en Supabase SQL Editor |
 | Cargar un perfume | Table Editor → `perfumes` → Insert row |
-| Ocultar los de prueba | Entrar a `/admin` → "Ocultar todos los de prueba" |
+| Ocultar los de prueba | Entrar a `/admin` → "Ocultar todos" |
 | Cambiar redes/WhatsApp | Editar `src/data/site-config.ts` |
 | Cambiar la contraseña | Editar `src/data/site-config.ts` o `ADMIN_PASSWORD` en env |
 | Conectar Dropi | Seguir la sección 6 cuando tengas las credenciales |
 
 ¿Dudas? Revisá este archivo o el código — todo está comentado en español.
+
+---
+
+# ACTUALIZACIÓN v2 — Panel profesional + Stock Local vs Dropi
+
+> Esta versión refactoriza el panel `/admin` por completo. Si ya tenías la
+> v1 funcionando, solo necesitás **volver a ejecutar `schema.sql`** en
+> Supabase (es idempotente) para agregar la columna `es_dropi`.
+
+## Novedades
+
+### 🔐 Autenticación en servidor (corrección crítica)
+Antes la contraseña y la conexión a Supabase se validaban en el navegador,
+que no puede ver variables sin el prefijo `NEXT_PUBLIC_`. Ahora **todo vive
+en el servidor** (Server Actions + cookie firmada con HMAC-SHA256).
+
+- Entrás a `/admin`, escribís la contraseña → se valida en el server y se
+  setea una cookie `httpOnly` de 7 días.
+- En cada recarga, el Server Component verifica la cookie y carga los datos
+  con la `SERVICE_ROLE_KEY` (que NUNCA llega al navegador).
+- El indicador pasa a **verde "Base de datos conectada"** de forma global.
+
+### 🎨 Panel claro, legible y cómodo
+- Tema claro propio (`src/styles/admin.css`), alto contraste, diseñado para
+  trabajar horas sin fatiga visual.
+- Badges de colores vivos: 🟢 Visible · ⚫ Oculto · 🔴 Agotado · 🟡 Dropi.
+- Tabla con buscador interno y filtro por marca.
+
+### 📦 Stock Local vs Catálogo Dropi
+Cada perfume tiene un origen claro:
+
+| Origen | ¿Qué es? | ¿Cómo se marca? |
+|---|---|---|
+| **Mi Stock Local** | Perfumes tuyos, control total, envío inmediato, precios más bajos | `es_dropi = false` (default) |
+| **Catálogo Dropi** | Importados vía API futura, envío más largo | `es_dropi = true` o SKU con prefijo `DROPI-` |
+
+El panel tiene **pestañas separadas** para cada uno, así no se mezclan.
+
+### ⚡ Control de stock express
+En "Mi Stock Local", al lado del stock de cada perfume hay botones **`−`**
+y **`+`**. Un clic = restar o sumar una unidad. Ideal para vender en el
+local sin abrir el formulario.
+
+### 📊 KPIs y gestión de cupones
+- Tarjetas de métricas: Stock Local, Catálogo Dropi, Bajo stock (<3),
+  Cupones activos.
+- Pestaña **Cupones** para activar, desactivar, editar `%` o crear nuevos.
+
+### 🔥 Ofertas de Envío Inmediato (tienda)
+En la home, arriba del catálogo, hay un botón **muy llamativo** dorado/verde.
+Al clickearlo, la tienda filtra y muestra **solo** los perfumes de tu stock
+local que tengan `en_oferta = true`. Son los más baratos y de entrega
+inmediata → los empujás visualmente para vender más rápido.
+
+Para que un perfume aparezca ahí:
+1. Cargalo desde `/admin` → Mi Stock Local → Nuevo.
+2. Marcá **"En oferta"** y ponele un `precio_descuento`.
+3. Asegurate de que **NO** esté marcado como Dropi.
+
+## Variables de entorno (Vercel) — checklist v2
+
+```
+NEXT_PUBLIC_SUPABASE_URL        ← pública (lectura de la tienda)
+NEXT_PUBLIC_SUPABASE_ANON_KEY   ← pública (lectura de la tienda)
+SUPABASE_URL                    ← secreta (server: admin)
+SUPABASE_SERVICE_ROLE_KEY       ← secreta (server: admin)
+ADMIN_PASSWORD                  ← secreta (tu contraseña del panel)
+ADMIN_SESSION_SECRET            ← opcional, recomendada (firma la cookie)
+NEXT_PUBLIC_WHATSAPP_NUMBER     ← pública (tu WhatsApp)
+```
+
+> `ADMIN_SESSION_SECRET` es opcional: si no la ponés, deriva de la
+> contraseña. Pero para producción conviene una cadena larga y aleatoria.
+
+## Migración (si ya tenías la v1)
+
+En **Supabase → SQL Editor**, ejecutá de nuevo `schema.sql` entero. Las
+líneas nuevas que importan:
+
+```sql
+alter table public.perfumes
+    add column if not exists es_dropi boolean not null default false;
+
+update public.perfumes
+   set es_dropi = true
+ where sku is not null and sku like 'DROPI-%';
+```
+
+No se pierde ningún dato. Los 11 perfumes de prueba quedan como
+`es_dropi = false` (stock local) → podés ocultarlos o editarlos.
+

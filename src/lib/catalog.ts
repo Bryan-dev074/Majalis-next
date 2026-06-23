@@ -15,6 +15,7 @@ import { FALLBACK_PERFUMES } from "@/data/fallback-perfumes";
  */
 
 function normalizarPerfume(row: Record<string, unknown>): Perfume {
+  const sku = row.sku == null ? null : String(row.sku);
   return {
     id: String(row.id),
     nombre: String(row.nombre ?? ""),
@@ -35,8 +36,11 @@ function normalizarPerfume(row: Record<string, unknown>): Perfume {
       fondo: [],
     }) as Perfume["notas_olfativas"],
     categoria: Array.isArray(row.categoria) ? (row.categoria as string[]) : [],
-    sku: row.sku == null ? null : String(row.sku),
+    sku,
     destacado: Boolean(row.destacado),
+    // Columna explícita o, en su defecto, prefijo del SKU
+    es_dropi:
+      row.es_dropi === true || (sku != null && sku.startsWith("DROPI-")),
     created_at: String(row.created_at ?? new Date().toISOString()),
     updated_at: String(row.updated_at ?? new Date().toISOString()),
   };

@@ -59,3 +59,13 @@ export const REDES_SOCIALES: RedSocial[] = [
  * o mejor: agregá ADMIN_PASSWORD en .env.local y en Vercel.
  */
 export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "sultan-admin-2026";
+
+/**
+ * Secreto para firmar la cookie de sesión del panel /admin (HMAC).
+ * En producción, definí ADMIN_SESSION_SECRET en Vercel con una cadena larga
+ * y aleatoria. Si no está definida, deriva de ADMIN_PASSWORD para que
+ * igualmente funcione (menos seguro, solo para desarrollo).
+ */
+export const ADMIN_SESSION_SECRET =
+  process.env.ADMIN_SESSION_SECRET ??
+  `sultan-session-${ADMIN_PASSWORD}-change-me`;

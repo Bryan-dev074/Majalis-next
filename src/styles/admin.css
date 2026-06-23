@@ -1,0 +1,329 @@
+/* ============================================================================
+   SULTAN OUD · PANEL DE ADMINISTRACIÓN
+   Tema claro, alto contraste, legibilidad prioritaria.
+   Pensado para trabajar horas sin fatiga visual.
+   ============================================================================ */
+
+.admin-root {
+  /* Paleta clara profesional */
+  --adm-bg: #f4f5f7;
+  --adm-surface: #ffffff;
+  --adm-surface-2: #fafbfc;
+  --adm-border: #e2e6eb;
+  --adm-border-strong: #c9d0d8;
+
+  --adm-text: #11151c;
+  --adm-text-soft: #444b55;
+  --adm-text-muted: #6b7480;
+
+  --adm-primary: #0b5fff;
+  --adm-primary-hover: #094bcc;
+  --adm-primary-soft: #e8efff;
+
+  /* Badges vivos */
+  --adm-green: #12a150;
+  --adm-green-bg: #e3f7ec;
+  --adm-gray: #6b7280;
+  --adm-gray-bg: #eef0f3;
+  --adm-red: #d92d20;
+  --adm-red-bg: #fee9e7;
+  --adm-amber: #b54708;
+  --adm-amber-bg: #fef0c7;
+  --adm-gold: #8a6d1a;
+
+  background: var(--adm-bg);
+  color: var(--adm-text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Sobreescribir el body oscuro heredado solo dentro del admin */
+.admin-root,
+.admin-root * {
+  cursor: auto !important;
+}
+
+.admin-root button,
+.admin-root a,
+.admin-root input,
+.admin-root textarea,
+.admin-root select {
+  cursor: pointer;
+}
+.admin-root input,
+.admin-root textarea,
+.admin-root select {
+  cursor: text;
+}
+
+/* Forzar cursor normal: el liquid-cursor de la tienda no carga aquí (no hay providers),
+   pero por seguridad anulamos el `cursor: none` global de globals.css. */
+@media (pointer: fine) {
+  .admin-root,
+  .admin-root * {
+    cursor: auto !important;
+  }
+}
+
+/* ─────────────────────────  Tipografía  ───────────────────────── */
+.admin-root h1,
+.admin-root h2,
+.admin-root h3 {
+  color: var(--adm-text);
+  letter-spacing: -0.01em;
+}
+
+/* ─────────────────────────  Componentes  ───────────────────────── */
+
+/* Tarjeta surface */
+.adm-card {
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border);
+  border-radius: 12px;
+}
+
+.adm-card-pad {
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+/* Inputs limpios y legibles */
+.adm-input,
+.adm-textarea,
+.adm-select {
+  width: 100%;
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border-strong);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.9rem;
+  color: var(--adm-text);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.adm-input::placeholder,
+.adm-textarea::placeholder {
+  color: var(--adm-text-muted);
+}
+.adm-input:focus,
+.adm-textarea:focus,
+.adm-select:focus {
+  outline: none;
+  border-color: var(--adm-primary);
+  box-shadow: 0 0 0 3px var(--adm-primary-soft);
+}
+
+.adm-label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--adm-text-soft);
+  margin-bottom: 0.35rem;
+}
+
+/* Botones */
+.adm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 8px;
+  padding: 0.55rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+.adm-btn-primary {
+  background: var(--adm-primary);
+  color: #fff;
+}
+.adm-btn-primary:hover {
+  background: var(--adm-primary-hover);
+}
+.adm-btn-ghost {
+  background: var(--adm-surface);
+  border-color: var(--adm-border-strong);
+  color: var(--adm-text-soft);
+}
+.adm-btn-ghost:hover {
+  border-color: var(--adm-text-muted);
+  color: var(--adm-text);
+}
+.adm-btn-danger {
+  background: var(--adm-red-bg);
+  color: var(--adm-red);
+  border-color: transparent;
+}
+.adm-btn-danger:hover {
+  background: #fdd9d5;
+}
+.adm-btn-sm {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.78rem;
+}
+
+/* Badges de estado */
+.adm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.adm-badge-green {
+  background: var(--adm-green-bg);
+  color: var(--adm-green);
+}
+.adm-badge-gray {
+  background: var(--adm-gray-bg);
+  color: var(--adm-gray);
+}
+.adm-badge-red {
+  background: var(--adm-red-bg);
+  color: var(--adm-red);
+}
+.adm-badge-amber {
+  background: var(--adm-amber-bg);
+  color: var(--adm-amber);
+}
+.adm-badge-blue {
+  background: var(--adm-primary-soft);
+  color: var(--adm-primary);
+}
+
+/* Tabla */
+.adm-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.adm-table th {
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--adm-text-muted);
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid var(--adm-border);
+  background: var(--adm-surface-2);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.adm-table td {
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid var(--adm-border);
+  font-size: 0.88rem;
+  color: var(--adm-text);
+  vertical-align: middle;
+}
+.adm-table tr:last-child td {
+  border-bottom: none;
+}
+.adm-table tr:hover td {
+  background: var(--adm-surface-2);
+}
+
+/* Control de stock express (+ / -) */
+.adm-stock-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border-strong);
+  border-radius: 9999px;
+  padding: 0.15rem;
+}
+.adm-stock-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 9999px;
+  border: none;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.adm-stock-btn-minus {
+  background: var(--adm-red-bg);
+  color: var(--adm-red);
+}
+.adm-stock-btn-minus:hover {
+  background: #fbd3ce;
+}
+.adm-stock-btn-plus {
+  background: var(--adm-green-bg);
+  color: var(--adm-green);
+}
+.adm-stock-btn-plus:hover {
+  background: #cef0dc;
+}
+.adm-stock-value {
+  min-width: 34px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+/* Pestañas */
+.adm-tab {
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--adm-text-muted);
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+.adm-tab:hover {
+  color: var(--adm-text);
+  background: var(--adm-surface);
+}
+.adm-tab-active {
+  background: var(--adm-surface);
+  color: var(--adm-primary);
+  border-color: var(--adm-border);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+/* Scrollbar del admin (ligero) */
+.admin-root ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.admin-root ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.admin-root ::-webkit-scrollbar-thumb {
+  background: var(--adm-border-strong);
+  border-radius: 9999px;
+  border: 2px solid var(--adm-bg);
+}
+.admin-root ::-webkit-scrollbar-thumb:hover {
+  background: var(--adm-text-muted);
+}
+
+/* Animación de feedback (toast) */
+@keyframes adm-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.adm-toast {
+  animation: adm-slide-in 0.25s ease-out;
+}

@@ -28,6 +28,13 @@ export interface Perfume {
   categoria: string[];
   sku: string | null;
   destacado: boolean;
+  /**
+   * Origen del perfume:
+   *  · false (default) → Stock Local propio (control total, envío inmediato).
+   *  · true            → Catálogo Dropi (importado por API futura).
+   * Discrimina también por SKU con prefijo "DROPI-".
+   */
+  es_dropi: boolean;
   created_at: string;
   updated_at: string;
 }
