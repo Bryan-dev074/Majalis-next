@@ -28,6 +28,10 @@ export const dynamic = "force-dynamic";
 const RANGO_DATOS = "A:D"; // id, código, nombre, marca de la planilla
 const RANGO_APPEND = "A1"; // ancla para el append
 
+// G (Cotización) referencia automáticamente el dólar de la pestaña "Cotizaciones"
+// (que actualiza solo el Apps Script). Así cada producto nuevo ya queda enganchado.
+const COTIZACION_REF = "='Cotizaciones'!$A$2";
+
 const formulaPrecioVenta = (fila: number) =>
   `=REDONDEAR(((E${fila} * (1 + F${fila})) * G${fila}); -3)`;
 const formulaGanancia = (fila: number) =>
@@ -157,7 +161,8 @@ export async function POST() {
         const fila = proximaFila + i;
         return [
           p.id, p.sku ?? "", p.nombre ?? "", p.marca ?? "",
-          "", "", "",
+          "", "",          // E (costo) y F (margen): scraping / carga manual
+          COTIZACION_REF,  // G (cotización): automática desde la pestaña Cotizaciones
           formulaPrecioVenta(fila), formulaGanancia(fila),
         ];
       });
