@@ -159,6 +159,85 @@ async function borrarFilaSheets(id: string): Promise<void> {
   });
 }
 
+/**
+ * Escribe las tiendas de un producto en la columna J de su fila de la Sheet.
+ *
+ *  · Si el producto YA tiene fila (existe el id en la columna A) → actualiza
+ *    SOLO la columna J con el JSON de tiendas.
+ *  · Si NO tiene fila (producto nuevo de stock local) → agrega una fila
+ *    completa con las fórmulas de precio (igual que el botón "Sincronizar
+ *    planilla" de /api/sheets/sync) más las tiendas en J.
+ *
+ * Columnas: A id · B sku · C nombre · D marca · E costo · F margen ·
+ *           G cotización · H precio venta (fórmula) · I ganancia (fórmula) ·
+ *           J tiendas (JSON).
+ *
+ * Best-effort: nunca lanza (el llamador la envuelve en try/catch).
+ */
+async function sincronizarTiendasSheets(
+  id: string,
+  sku: string | null,
+  nombre: string,
+  marca: string,
+  tiendas: TiendaProducto[]
+): Promise<void> {
+  const sheets = await getSheetsClient();
+
+  // 1) ¿Existe ya la fila del producto? (buscar por id en la columna A)
+  const lectura = await sheets.spreadsheets.values.get({
+    spreadsheetId: GOOGLE_SHEET_ID,
+    range: "A:A",
+  });
+  const valores = lectura.data.values ?? [];
+  let fila1 = -1; // número de fila 1-based
+  for (let i = 0; i < valores.length; i++) {
+    if (String(valores[i]?.[0] ?? "").trim() === id) { fila1 = i + 1; break; }
+  }
+
+  // JSON de tiendas (vacío → celda en blanco para no romper con "[]" literal).
+  const jsonTiendas = tiendas.length > 0 ? JSON.stringify(tiendas) : "";
+
+  if (fila1 > 0) {
+    // 2a) Ya existe → actualizar solo la columna J (tiendas).
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: GOOGLE_SHEET_ID,
+      range: `J${fila1}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [[jsonTiendas]] },
+    });
+    return;
+  }
+
+  // 2b) No existe → append de una fila completa con fórmulas de precio.
+  //     Estas fórmulas espejan a /api/sheets/sync (POST) para que la fila quede
+  //     consistente y un sync posterior no la duplique.
+  const proximaFila = valores.length + 1;
+  const cotizacionRef = "='Cotizaciones'!$A$2";
+  const formulaPrecioVenta =
+    `=REDONDEAR(((E${proximaFila} * (1 + F${proximaFila})) * G${proximaFila}); -3)`;
+  const formulaGanancia = `=H${proximaFila} - (E${proximaFila} * G${proximaFila})`;
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: GOOGLE_SHEET_ID,
+    range: "A1",
+    valueInputOption: "USER_ENTERED",
+    insertDataOption: "INSERT_ROWS",
+    requestBody: {
+      values: [[
+        id,
+        sku ?? "",
+        nombre,
+        marca,
+        "", "",              // E (costo) y F (margen): los carga el dueño a mano
+        cotizacionRef,       // G: cotización automática desde la pestaña Cotizaciones
+        formulaPrecioVenta,  // H: precio de venta
+        formulaGanancia,     // I: ganancia
+        jsonTiendas,         // J: tiendas (JSON)
+      ]],
+    },
+  });
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 //  Auth
 // ────────────────────────────────────────────────────────────────────────────
@@ -259,13 +338,38 @@ export async function guardarPerfumeAction(input: PerfumeInput): Promise<ActionR
   };
 
   let error;
+  let idProducto = input.id;
   if (input.id) {
     ({ error } = await supabase.from("perfumes").update(payload).eq("id", input.id));
   } else {
-    ({ error } = await supabase.from("perfumes").insert(payload));
+    const { data: insertado, error: errInsert } = await supabase
+      .from("perfumes")
+      .insert(payload)
+      .select("id")
+      .single();
+    error = errInsert;
+    if (insertado?.id) idProducto = insertado.id;
   }
 
   if (error) return { ok: false, error: error.message };
+
+  // ── Sincronizar tiendas en la Google Sheet (best-effort) ──
+  // Solo para stock local: la planilla es el inventario físico propio.
+  // Los productos externos (Dropi) no viven en la planilla.
+  if (idProducto && !Boolean(input.es_dropi) && googleSheetsConfigurado()) {
+    try {
+      await sincronizarTiendasSheets(
+        idProducto,
+        skuFinal,
+        input.nombre.trim(),
+        input.marca.trim(),
+        normalizarTiendas(input.tiendas)
+      );
+    } catch (e) {
+      console.error("[guardarPerfumeAction] sincronizar tiendas en Sheets:", e);
+    }
+  }
+
   revalidatePath("/");
   revalidatePath("/admin");
   return { ok: true };
