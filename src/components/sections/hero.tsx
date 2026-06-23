@@ -72,6 +72,9 @@ export function Hero() {
           Importadores directos de Dubai. La colección más exclusiva de
           fragancias árabes, ahora al alcance de tu mano en todo el
           territorio paraguayo.
+          <span className="flag-wave ml-1.5 text-2xl md:text-3xl" role="img" aria-label="Bandera de Paraguay">
+            🇵🇾
+          </span>
         </p>
 
         {/* CTAs */}

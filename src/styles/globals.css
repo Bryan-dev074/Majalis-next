@@ -535,6 +535,19 @@
   animation: express-idle-zap 1.8s ease-in-out infinite;
 }
 
+/* Bandera ondeando suavemente (emoji 🇵🇾 del hero) */
+@keyframes flag-wave {
+  0%, 100% { transform: rotate(-6deg) scale(1); }
+  25%      { transform: rotate(3deg)  scale(1.08); }
+  50%      { transform: rotate(-2deg) scale(1); }
+  75%      { transform: rotate(4deg)  scale(1.05); }
+}
+.flag-wave {
+  display: inline-block;
+  animation: flag-wave 2.4s ease-in-out infinite;
+  transform-origin: bottom left;
+}
+
 /* Cursor personalizado — dos elementos: núcleo + halo líquido */
 .cursor-core {
   position: fixed;

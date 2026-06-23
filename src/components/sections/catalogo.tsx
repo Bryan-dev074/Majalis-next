@@ -147,7 +147,7 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
                 strokeWidth={2}
               />
               <span className="leading-tight">
-                {ofertasExpress ? "Mostrando Envío Inmediato" : "⚡ Productos de Envío Inmediato"}
+                {ofertasExpress ? "Mostrando Envío Inmediato" : "Productos de Envío Inmediato"}
               </span>
               <Zap
                 className={`h-4 w-4 sm:h-5 sm:w-5 ${ofertasExpress ? "express-active-zap" : "express-idle-zap"}`}

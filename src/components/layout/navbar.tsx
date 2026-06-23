@@ -122,16 +122,16 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
       }`}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-10">
-        {/* Marca */}
+        {/* Marca — forzada a la esquina izquierda */}
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="group flex flex-col items-start"
+          className="group mr-auto flex flex-col items-start"
           aria-label="Inicio Sultan Oud Elixir"
         >
           <span className="font-lapidary text-lg md:text-2xl tracking-regal text-ivory drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] transition-colors group-hover:text-gold-champagne">
             SULTAN OUD
           </span>
-          <span className="text-elixir-shimmer font-display italic text-sm md:text-base tracking-imperial">
+          <span className="font-display text-base font-semibold italic tracking-imperial text-elixir-shimmer drop-shadow-[0_0_10px_rgba(212,175,55,0.4)] md:text-lg">
             Elixir
           </span>
         </button>

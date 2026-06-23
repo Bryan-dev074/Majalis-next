@@ -36,7 +36,7 @@ export function Footer() {
             <h2 className="font-lapidary text-3xl tracking-regal text-ivory">
               SULTAN OUD
             </h2>
-            <p className="text-elixir-shimmer font-display italic text-base tracking-imperial">
+            <p className="text-elixir-shimmer font-display text-lg font-semibold italic tracking-imperial drop-shadow-[0_0_10px_rgba(212,175,55,0.35)]">
               Elixir · Paraguay
             </p>
             <p className="mt-5 max-w-md text-base leading-relaxed text-ivory/75">
