@@ -121,11 +121,11 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
           : "bg-transparent py-6"
       }`}
     >
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-10">
+      <div className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 md:px-10">
         {/* Marca — forzada a la esquina izquierda */}
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="group mr-auto flex flex-col items-start"
+          className="group flex flex-col items-start justify-self-start"
           aria-label="Inicio Sultan Oud Elixir"
         >
           <span className="font-lapidary text-lg md:text-2xl tracking-regal text-ivory drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] transition-colors group-hover:text-gold-champagne">
@@ -137,7 +137,7 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
         </button>
 
         {/* Centro — navegación desktop */}
-        <div className="hidden items-center gap-10 md:flex">
+        <div className="hidden items-center gap-10 justify-self-center md:flex">
           {[
             { label: "Colección", id: "catalogo" },
             { label: "Importación", id: "importacion" },
@@ -156,9 +156,9 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
         </div>
 
         {/* Derecha — búsqueda, carrito, menú mobile */}
-        <div className="flex items-center gap-3 md:gap-5">
+        <div className="flex items-center justify-end gap-4 justify-self-end md:gap-6">
           {/* Búsqueda expandible con autocompletado */}
-          <div className="relative flex items-center" ref={contenedorRef}>
+          <div className="relative flex items-center gap-2" ref={contenedorRef}>
             <input
               type="text"
               value={query}
