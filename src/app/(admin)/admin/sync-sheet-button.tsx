@@ -1,64 +1,138 @@
 "use client";
 
-import { useState } from "react";
-import { FileSpreadsheet, RefreshCw, CheckCircle2, AlertTriangle } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import {
+  FileSpreadsheet, RefreshCw, AlertTriangle, ShieldCheck,
+} from "lucide-react";
 
-interface SyncResultado {
+interface VerifyResp {
   ok: boolean;
-  nuevos?: number;
-  totalSupabase?: number;
-  yaEnPlanilla?: number;
-  rango?: string | null;
+  sincronizado?: boolean;
+  totalLocal?: number;
+  enPlanilla?: number;
+  faltantes?: number;
+  desactualizados?: number;
+  agregados?: number;
+  actualizados?: number;
   detalle?: string;
   error?: string;
 }
 
+type Estado =
+  | { tipo: "cargando"; texto: string }
+  | { tipo: "ok"; texto: string } // todo sincronizado → verde
+  | { tipo: "warn"; texto: string } // hay pendientes → ámbar
+  | { tipo: "error"; texto: string }
+  | null;
+
 /**
- * Botón "Enviar productos nuevos a la planilla".
- * Llama a POST /api/sheets/sync (Supabase → Google Sheet, un solo sentido).
- * No toca precios: solo completa los productos que aún no están en la planilla
- * para que el scraping los encuentre.
+ * Tarjeta "Enviar stock local a la planilla".
+ *  · Al montar verifica el estado (GET, solo lectura) y lo pinta.
+ *  · "Verificar" re-chequea.  "Sincronizar planilla" agrega/corrige (POST).
+ * No toca precios: solo datos básicos de los productos de stock local.
  */
 export default function SyncSheetButton({
   toast,
 }: {
   toast?: (tipo: "ok" | "error", texto: string) => void;
 }) {
-  const [cargando, setCargando] = useState(false);
-  const [ultimo, setUltimo] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
+  const [estado, setEstado] = useState<Estado>(null);
+  const [verificando, setVerificando] = useState(false);
+  const [sincronizando, setSincronizando] = useState(false);
+
+  const aplicar = useCallback((data: VerifyResp, httpOk: boolean) => {
+    if (httpOk && data.ok) {
+      if (data.sincronizado) {
+        setEstado({
+          tipo: "ok",
+          texto:
+            data.detalle ??
+            "Todos los productos de stock local están bien actualizados.",
+        });
+      } else {
+        const partes: string[] = [];
+        if (data.faltantes) partes.push(`${data.faltantes} sin enviar`);
+        if (data.desactualizados) partes.push(`${data.desactualizados} desactualizado(s)`);
+        setEstado({
+          tipo: "warn",
+          texto: `Hay ${partes.join(" · ")}. Apretá "Sincronizar planilla".`,
+        });
+      }
+    } else {
+      setEstado({ tipo: "error", texto: data.error ?? "Error al consultar la planilla." });
+    }
+  }, []);
+
+  const verificar = useCallback(async () => {
+    setVerificando(true);
+    setEstado({ tipo: "cargando", texto: "Verificando estado de la planilla…" });
+    try {
+      const res = await fetch("/api/sheets/sync", { method: "GET" });
+      aplicar(await res.json(), res.ok);
+    } catch (e) {
+      setEstado({ tipo: "error", texto: e instanceof Error ? e.message : "Error de red." });
+    } finally {
+      setVerificando(false);
+    }
+  }, [aplicar]);
+
+  // Verificar automáticamente al abrir la pestaña.
+  useEffect(() => {
+    verificar();
+  }, [verificar]);
 
   const sincronizar = async () => {
-    if (cargando) return;
-    setCargando(true);
-    setUltimo(null);
+    if (sincronizando) return;
+    setSincronizando(true);
+    setEstado({ tipo: "cargando", texto: "Sincronizando con la planilla…" });
     try {
       const res = await fetch("/api/sheets/sync", { method: "POST" });
-      const data: SyncResultado = await res.json();
-
+      const data: VerifyResp = await res.json();
+      aplicar(data, res.ok);
       if (res.ok && data.ok) {
-        const texto =
-          (data.nuevos ?? 0) > 0
-            ? `${data.nuevos} producto(s) nuevo(s) enviados a la planilla.`
-            : "La planilla ya estaba al día. No había productos nuevos.";
-        setUltimo({ tipo: "ok", texto });
-        toast?.("ok", texto);
+        const cambios = (data.agregados ?? 0) + (data.actualizados ?? 0);
+        toast?.(
+          "ok",
+          cambios > 0
+            ? `${data.agregados ?? 0} agregado(s) y ${data.actualizados ?? 0} actualizado(s).`
+            : "La planilla ya estaba al día."
+        );
       } else {
-        const texto = data.error ?? "Error al sincronizar con Google Sheets.";
-        setUltimo({ tipo: "error", texto });
-        toast?.("error", texto);
+        toast?.("error", data.error ?? "Error al sincronizar.");
       }
     } catch (e) {
       const texto = e instanceof Error ? e.message : "Error de red.";
-      setUltimo({ tipo: "error", texto });
+      setEstado({ tipo: "error", texto });
       toast?.("error", texto);
     } finally {
-      setCargando(false);
+      setSincronizando(false);
     }
   };
 
+  // Colores del banner de estado según el tipo.
+  const banner = (() => {
+    if (!estado) return null;
+    const map = {
+      ok: { color: "var(--adm-green)", bg: "var(--adm-green-bg)", icon: <ShieldCheck className="h-4 w-4" /> },
+      warn: { color: "var(--adm-amber)", bg: "var(--adm-amber-bg)", icon: <AlertTriangle className="h-4 w-4" /> },
+      error: { color: "var(--adm-red)", bg: "var(--adm-red-bg)", icon: <AlertTriangle className="h-4 w-4" /> },
+      cargando: { color: "var(--adm-text-muted)", bg: "var(--adm-surface-2)", icon: <span className="adm-spinner" /> },
+    } as const;
+    const s = map[estado.tipo];
+    return (
+      <div
+        className="mt-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium"
+        style={{ color: s.color, background: s.bg, borderColor: s.color }}
+      >
+        {s.icon}
+        <span>{estado.tipo === "ok" ? "✅ " : ""}{estado.texto}</span>
+      </div>
+    );
+  })();
+
   return (
     <div className="adm-feature-card mb-6">
-      <div className="flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col items-start gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex items-start gap-3">
           <div
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
@@ -71,41 +145,34 @@ export default function SyncSheetButton({
               📤 Enviar stock local a la planilla
             </h3>
             <p className="mt-0.5 text-sm" style={{ color: "var(--adm-text-muted)" }}>
-              Agrega a la Google Sheet solo los productos de <strong>stock local</strong> que
-              todavía no están (excluye Origen Externo y demos). Deja libres las columnas de
-              precio para el scraping y no modifica los precios existentes.
+              Verifica que tus productos de <strong>stock local</strong> estén bien cargados en la
+              Google Sheet. Si falta alguno o cambió de datos, lo agrega/corrige (sin tocar precios).
             </p>
-            {ultimo && (
-              <p
-                className="mt-2 flex items-center gap-1.5 text-xs font-medium"
-                style={{ color: ultimo.tipo === "ok" ? "var(--adm-green)" : "var(--adm-red)" }}
-              >
-                {ultimo.tipo === "ok" ? (
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                ) : (
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                )}
-                {ultimo.texto}
-              </p>
-            )}
           </div>
         </div>
-        <button
-          onClick={sincronizar}
-          disabled={cargando}
-          className="adm-btn adm-btn-gold shrink-0"
-        >
-          {cargando ? (
-            <>
-              <span className="adm-spinner" /> Enviando…
-            </>
-          ) : (
-            <>
-              <RefreshCw className="h-4 w-4" /> Sincronizar planilla
-            </>
-          )}
-        </button>
+        <div className="flex shrink-0 gap-2">
+          <button
+            onClick={verificar}
+            disabled={verificando || sincronizando}
+            className="adm-btn adm-btn-ghost"
+          >
+            {verificando ? <span className="adm-spinner" /> : <ShieldCheck className="h-4 w-4" />}
+            Verificar
+          </button>
+          <button
+            onClick={sincronizar}
+            disabled={sincronizando || verificando}
+            className="adm-btn adm-btn-gold"
+          >
+            {sincronizando ? (
+              <><span className="adm-spinner" /> Sincronizando…</>
+            ) : (
+              <><RefreshCw className="h-4 w-4" /> Sincronizar planilla</>
+            )}
+          </button>
+        </div>
       </div>
+      {banner}
     </div>
   );
 }
