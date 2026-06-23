@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus, Sparkles, Zap } from "lucide-react";
 import { Perfume } from "@/types/database";
-import { formatGs, precioEfectivo } from "@/lib/format";
+import { formatGs, precioEfectivo, esExterno } from "@/lib/format";
 import { useCart } from "@/hooks/use-cart";
 
 interface ProductCardProps {
@@ -74,6 +74,14 @@ export function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
             <span className="border border-ivory/15 bg-obsidian/40 px-5 py-2 text-[0.6rem] uppercase tracking-imperial text-ivory/70">
               Edición reservada
             </span>
+          </div>
+        )}
+
+        {/* Badge "⚡ Envío Inmediato" — solo stock local (es_dropi=false) */}
+        {!esExterno(perfume) && !agotado && (
+          <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full border border-[#25D366]/40 bg-obsidian/80 px-2.5 py-1 text-[0.5rem] font-bold uppercase tracking-regal text-[#25D366] backdrop-blur-sm">
+            <Zap className="h-2.5 w-2.5" fill="currentColor" />
+            Envío Inmediato
           </div>
         )}
 

@@ -1,26 +1,28 @@
 /* ============================================================================
    SULTAN OUD · PANEL DE ADMINISTRACIÓN
-   Tema claro, alto contraste, legibilidad prioritaria.
-   Pensado para trabajar horas sin fatiga visual.
+   Tema dual: Claro (productivo) y Oscuro lujoso (oro sobre obsidiana).
+   Toggle Sol/Luna en el header. Persistencia en localStorage.
+   Alto contraste garantizado en ambos modos.
    ============================================================================ */
 
 .admin-root {
-  /* Paleta clara profesional */
+  /* ── TEMA CLARO (por defecto) ── */
   --adm-bg: #f4f5f7;
   --adm-surface: #ffffff;
   --adm-surface-2: #fafbfc;
   --adm-border: #e2e6eb;
   --adm-border-strong: #c9d0d8;
-
   --adm-text: #11151c;
   --adm-text-soft: #444b55;
   --adm-text-muted: #6b7480;
-
   --adm-primary: #0b5fff;
   --adm-primary-hover: #094bcc;
   --adm-primary-soft: #e8efff;
+  --adm-gold: #8a6d1a;
+  --adm-shadow: 0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.04);
+  --adm-shadow-lg: 0 10px 30px -8px rgba(16, 24, 40, 0.18);
 
-  /* Badges vivos */
+  /* Badges vivos (compartidos) */
   --adm-green: #12a150;
   --adm-green-bg: #e3f7ec;
   --adm-gray: #6b7280;
@@ -29,34 +31,60 @@
   --adm-red-bg: #fee9e7;
   --adm-amber: #b54708;
   --adm-amber-bg: #fef0c7;
-  --adm-gold: #8a6d1a;
+  --adm-blue: #0b5fff;
+  --adm-blue-bg: #e8efff;
+}
 
+/* ── TEMA OSCURO LUJOSO (oro sobre obsidiana) ── */
+.admin-root.adm-dark {
+  --adm-bg: #050505;
+  --adm-surface: #0f0d0a;
+  --adm-surface-2: #15110b;
+  --adm-border: #2a2218;
+  --adm-border-strong: #3d3220;
+  --adm-text: #f5efe0;
+  --adm-text-soft: #d4c9a8;
+  --adm-text-muted: #9a8f72;
+  --adm-primary: #d4af37;
+  --adm-primary-hover: #e8c766;
+  --adm-primary-soft: rgba(212, 175, 55, 0.12);
+  --adm-gold: #d4af37;
+  --adm-shadow: 0 1px 3px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(212, 175, 55, 0.05);
+  --adm-shadow-lg: 0 10px 40px -8px rgba(212, 175, 55, 0.2);
+
+  --adm-green: #4ade80;
+  --adm-green-bg: rgba(74, 222, 128, 0.12);
+  --adm-gray: #9ca3af;
+  --adm-gray-bg: rgba(156, 163, 175, 0.12);
+  --adm-red: #f87171;
+  --adm-red-bg: rgba(248, 113, 113, 0.12);
+  --adm-amber: #fbbf24;
+  --adm-amber-bg: rgba(251, 191, 36, 0.12);
+  --adm-blue: #d4af37; /* en oscuro, el primario es el oro */
+  --adm-blue-bg: rgba(212, 175, 55, 0.12);
+}
+
+.admin-root {
   background: var(--adm-bg);
   color: var(--adm-text);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
-/* Sobreescribir el body oscuro heredado solo dentro del admin */
+/* Anular el cursor:none de la tienda dentro del admin */
 .admin-root,
 .admin-root * {
   cursor: auto !important;
 }
-
 .admin-root button,
-.admin-root a,
-.admin-root input,
-.admin-root textarea,
-.admin-root select {
-  cursor: pointer;
+.admin-root a {
+  cursor: pointer !important;
 }
 .admin-root input,
 .admin-root textarea,
 .admin-root select {
-  cursor: text;
+  cursor: text !important;
 }
-
-/* Forzar cursor normal: el liquid-cursor de la tienda no carga aquí (no hay providers),
-   pero por seguridad anulamos el `cursor: none` global de globals.css. */
 @media (pointer: fine) {
   .admin-root,
   .admin-root * {
@@ -74,18 +102,18 @@
 
 /* ─────────────────────────  Componentes  ───────────────────────── */
 
-/* Tarjeta surface */
 .adm-card {
   background: var(--adm-surface);
   border: 1px solid var(--adm-border);
   border-radius: 12px;
+  box-shadow: var(--adm-shadow);
 }
-
 .adm-card-pad {
   background: var(--adm-surface);
   border: 1px solid var(--adm-border);
   border-radius: 12px;
   padding: 1.25rem;
+  box-shadow: var(--adm-shadow);
 }
 
 /* Inputs limpios y legibles */
@@ -120,6 +148,14 @@
   color: var(--adm-text-soft);
   margin-bottom: 0.35rem;
 }
+.adm-help {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--adm-text-muted);
+  margin-top: 0.1rem;
+}
 
 /* Botones */
 .adm-btn {
@@ -134,10 +170,14 @@
   border: 1px solid transparent;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   white-space: nowrap;
+  color: var(--adm-text);
 }
 .adm-btn-primary {
   background: var(--adm-primary);
   color: #fff;
+}
+.admin-root.adm-dark .adm-btn-primary {
+  color: #050505;
 }
 .adm-btn-primary:hover {
   background: var(--adm-primary-hover);
@@ -157,11 +197,29 @@
   border-color: transparent;
 }
 .adm-btn-danger:hover {
-  background: #fdd9d5;
+  filter: brightness(0.95);
 }
 .adm-btn-sm {
   padding: 0.3rem 0.6rem;
   font-size: 0.78rem;
+}
+
+/* Botón toggle tema */
+.adm-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 9999px;
+  border: 1px solid var(--adm-border-strong);
+  background: var(--adm-surface);
+  color: var(--adm-text-soft);
+  transition: all 0.2s ease;
+}
+.adm-theme-toggle:hover {
+  border-color: var(--adm-primary);
+  color: var(--adm-primary);
 }
 
 /* Badges de estado */
@@ -192,8 +250,8 @@
   color: var(--adm-amber);
 }
 .adm-badge-blue {
-  background: var(--adm-primary-soft);
-  color: var(--adm-primary);
+  background: var(--adm-blue-bg);
+  color: var(--adm-blue);
 }
 
 /* Tabla */
@@ -251,21 +309,21 @@
   font-weight: 700;
   font-size: 1rem;
   line-height: 1;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition: filter 0.12s ease;
 }
 .adm-stock-btn-minus {
   background: var(--adm-red-bg);
   color: var(--adm-red);
 }
 .adm-stock-btn-minus:hover {
-  background: #fbd3ce;
+  filter: brightness(0.92);
 }
 .adm-stock-btn-plus {
   background: var(--adm-green-bg);
   color: var(--adm-green);
 }
 .adm-stock-btn-plus:hover {
-  background: #cef0dc;
+  filter: brightness(0.92);
 }
 .adm-stock-value {
   min-width: 34px;
@@ -273,6 +331,7 @@
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   font-size: 0.92rem;
+  color: var(--adm-text);
 }
 
 /* Pestañas */
@@ -293,10 +352,68 @@
   background: var(--adm-surface);
   color: var(--adm-primary);
   border-color: var(--adm-border);
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  box-shadow: var(--adm-shadow);
 }
 
-/* Scrollbar del admin (ligero) */
+/* KPI */
+.adm-kpi {
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border);
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: var(--adm-shadow);
+}
+
+/* Interruptor maestro (switch) */
+.adm-switch {
+  position: relative;
+  display: inline-flex;
+  height: 26px;
+  width: 48px;
+  align-items: center;
+  border-radius: 9999px;
+  background: var(--adm-border-strong);
+  transition: background 0.2s ease;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+.adm-switch.adm-switch-on {
+  background: var(--adm-green);
+}
+.adm-switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  height: 20px;
+  width: 20px;
+  border-radius: 9999px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease;
+}
+.adm-switch.adm-switch-on::after {
+  transform: translateX(22px);
+}
+
+/* Barra Top 5 */
+.adm-top-bar {
+  position: relative;
+  height: 10px;
+  background: var(--adm-bg);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+.adm-top-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, var(--adm-gold), var(--adm-primary));
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
+/* Scrollbar */
 .admin-root ::-webkit-scrollbar {
   width: 10px;
   height: 10px;

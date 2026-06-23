@@ -11,7 +11,7 @@ import {
 import { Perfume, Cupon } from "@/types/database";
 
 // ────────────────────────────────────────────────────────────────────────────
-//  Tipos de entrada (sin campos generados por la DB)
+//  Tipos de entrada / salida
 // ────────────────────────────────────────────────────────────────────────────
 
 export interface PerfumeInput {
@@ -28,12 +28,50 @@ export interface PerfumeInput {
   descripcion: string;
   notas_olfativas: { salida: string[]; corazon: string[]; fondo: string[] };
   categoria: string[];
+  /** Dejar vacío para que el servidor lo genere: MARCA-NOMBRE-ML */
   sku: string | null;
   destacado: boolean;
+  /** true = Origen Externo (depósito externo, pago contra entrega). Nunca se muestra al cliente como proveedor. */
   es_dropi: boolean;
 }
 
+export interface CuponInput {
+  id?: string;
+  codigo: string;
+  porcentaje_descuento: number;
+  activo: boolean;
+  limite_usos: number;
+  fecha_expiracion: string | null;
+}
+
 type ActionResult = { ok: boolean; error?: string };
+
+export interface DatosAdmin {
+  perfumes: Perfume[];
+  cupones: Cupon[];
+  configurado: boolean;
+  top5: { id: string; nombre: string; clicks_mensuales: number }[];
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  Helper: generador de SKU
+//  Estructura: MARCA_SLUG-NOMBRE_SLUG-VOLUMENml  →  LTTF-OUDMOOD-100
+// ────────────────────────────────────────────────────────────────────────────
+
+function generarSku(marca: string, nombre: string, volumen_ml: number): string {
+  const slug = (s: string) =>
+    s
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // quitar tildes
+      .toUpperCase()
+      .replace(/[^A-Z0-9\s]/g, "")
+      .trim()
+      .replace(/\s+/g, "");
+
+  const marcaSlug = slug(marca).slice(0, 6);
+  const nombreSlug = slug(nombre).slice(0, 10);
+  return `${marcaSlug}-${nombreSlug}-${volumen_ml}`;
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 //  Auth
@@ -49,14 +87,9 @@ export async function logoutAction(): Promise<ActionResult> {
   return { ok: true };
 }
 
-/** Guardián: lanza si no hay sesión válida o no hay service role. */
 async function requerirAdmin() {
-  if (!adminConfigurado()) {
-    throw new Error("SUPABASE_NO_CONFIGURADO");
-  }
-  if (!(await sesionValida())) {
-    throw new Error("NO_AUTORIZADO");
-  }
+  if (!adminConfigurado()) throw new Error("SUPABASE_NO_CONFIGURADO");
+  if (!(await sesionValida())) throw new Error("NO_AUTORIZADO");
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -67,22 +100,29 @@ export async function guardarPerfumeAction(input: PerfumeInput): Promise<ActionR
   await requerirAdmin();
   const supabase = supabaseAdmin();
 
+  // Auto-generar SKU si está vacío
+  const skuFinal =
+    input.sku?.trim() ||
+    generarSku(input.marca, input.nombre, Number(input.volumen_ml) || 100);
+
   const payload = {
-    nombre: input.nombre.trim(),
-    marca: input.marca.trim(),
-    precio_regular: Number(input.precio_regular),
+    nombre:           input.nombre.trim(),
+    marca:            input.marca.trim(),
+    precio_regular:   Number(input.precio_regular),
     precio_descuento: input.precio_descuento == null ? null : Number(input.precio_descuento),
-    en_oferta: Boolean(input.en_oferta),
+    en_oferta:        Boolean(input.en_oferta),
     stock_disponible: Math.max(0, Number(input.stock_disponible)),
-    volumen_ml: Number(input.volumen_ml) || 100,
-    activo: Boolean(input.activo),
-    url_imagen: input.url_imagen.trim(),
-    descripcion: input.descripcion.trim(),
-    notas_olfativas: input.notas_olfativas,
-    categoria: input.categoria,
-    sku: input.sku?.trim() || null,
-    destacado: Boolean(input.destacado),
-    es_dropi: Boolean(input.es_dropi),
+    volumen_ml:       Number(input.volumen_ml) || 100,
+    activo:           Boolean(input.activo),
+    url_imagen:       input.url_imagen.trim(),
+    descripcion:      input.descripcion.trim(),
+    notas_olfativas:  input.notas_olfativas,
+    categoria:        input.categoria,
+    sku:              skuFinal,
+    destacado:        Boolean(input.destacado),
+    es_dropi:         Boolean(input.es_dropi),
+    // Los nuevos perfumes cargados por el admin nunca son demos
+    es_demo:          false,
   };
 
   let error;
@@ -108,15 +148,13 @@ export async function eliminarPerfumeAction(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
-/** Cambia +/- el stock de un perfume (control express de ventas en local). */
+/** Ajusta +/- el stock directamente (control express desde la tabla). */
 export async function ajustarStockAction(
   id: string,
   delta: number
 ): Promise<ActionResult & { stock?: number }> {
   await requerirAdmin();
   const supabase = supabaseAdmin();
-
-  // Lectura del stock actual
   const { data, error: errRead } = await supabase
     .from("perfumes")
     .select("stock_disponible")
@@ -130,7 +168,6 @@ export async function ajustarStockAction(
     .update({ stock_disponible: nuevo })
     .eq("id", id);
   if (error) return { ok: false, error: error.message };
-
   revalidatePath("/");
   revalidatePath("/admin");
   return { ok: true, stock: nuevo };
@@ -154,8 +191,9 @@ export async function togglePerfumeAction(
   return { ok: true };
 }
 
-/** Oculta todos los perfumes (útil para limpiar los de prueba). */
+/** Oculta en bloque (útil para los perfumes de prueba/demo del sistema). */
 export async function ocultarTodosAction(ids: string[]): Promise<ActionResult> {
+  if (ids.length === 0) return { ok: true };
   await requerirAdmin();
   const supabase = supabaseAdmin();
   const { error } = await supabase
@@ -168,28 +206,47 @@ export async function ocultarTodosAction(ids: string[]): Promise<ActionResult> {
   return { ok: true };
 }
 
+/** Muestra en bloque (para restaurar perfumes de prueba si se necesita). */
+export async function mostrarTodosAction(ids: string[]): Promise<ActionResult> {
+  if (ids.length === 0) return { ok: true };
+  await requerirAdmin();
+  const supabase = supabaseAdmin();
+  const { error } = await supabase
+    .from("perfumes")
+    .update({ activo: true })
+    .in("id", ids);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/");
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+/** Resetea los clicks_mensuales de todos los perfumes (inicio de mes). */
+export async function resetearClicksAction(): Promise<ActionResult> {
+  await requerirAdmin();
+  const supabase = supabaseAdmin();
+  const { error } = await supabase
+    .from("perfumes")
+    .update({ clicks_mensuales: 0 })
+    .gte("clicks_mensuales", 0); // afecta a todos
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 //  Cupones
 // ────────────────────────────────────────────────────────────────────────────
-
-export interface CuponInput {
-  id?: string;
-  codigo: string;
-  porcentaje_descuento: number;
-  activo: boolean;
-  limite_usos: number;
-  fecha_expiracion: string | null;
-}
 
 export async function guardarCuponAction(input: CuponInput): Promise<ActionResult> {
   await requerirAdmin();
   const supabase = supabaseAdmin();
   const payload = {
-    codigo: input.codigo.trim().toUpperCase(),
+    codigo:               input.codigo.trim().toUpperCase(),
     porcentaje_descuento: Number(input.porcentaje_descuento),
-    activo: Boolean(input.activo),
-    limite_usos: Number(input.limite_usos),
-    fecha_expiracion: input.fecha_expiracion || null,
+    activo:               Boolean(input.activo),
+    limite_usos:          Number(input.limite_usos),
+    fecha_expiracion:     input.fecha_expiracion || null,
   };
   let error;
   if (input.id) {
@@ -224,37 +281,40 @@ export async function eliminarCuponAction(id: string): Promise<ActionResult> {
 //  Carga de datos (Server Component)
 // ────────────────────────────────────────────────────────────────────────────
 
-export interface DatosAdmin {
-  perfumes: Perfume[];
-  cupones: Cupon[];
-  configurado: boolean;
-}
-
 /**
- * Carga todos los perfumes (activos e inactivos) y cupones.
- * Si Supabase no está configurado, devuelve fallback vacío.
+ * Carga todos los perfumes (activos e inactivos), cupones y Top-5 del mes.
+ * Si Supabase no está configurado, devuelve vacío con configurado: false.
  */
 export async function cargarDatosAdmin(): Promise<DatosAdmin> {
   if (!adminConfigurado()) {
-    return { perfumes: [], cupones: [], configurado: false };
+    return { perfumes: [], cupones: [], configurado: false, top5: [] };
   }
   try {
     const supabase = supabaseAdmin();
-    const [{ data: perfumesData, error: errP }, { data: cuponesData, error: errC }] =
-      await Promise.all([
-        supabase.from("perfumes").select("*").order("created_at", { ascending: true }),
-        supabase.from("cupones").select("*").order("porcentaje_descuento", { ascending: false }),
-      ]);
+    const [
+      { data: perfumesData, error: errP },
+      { data: cuponesData, error: errC },
+      { data: top5Data },
+    ] = await Promise.all([
+      supabase.from("perfumes").select("*").order("created_at", { ascending: true }),
+      supabase.from("cupones").select("*").order("porcentaje_descuento", { ascending: false }),
+      supabase
+        .from("perfumes")
+        .select("id, nombre, clicks_mensuales")
+        .order("clicks_mensuales", { ascending: false })
+        .limit(5),
+    ]);
 
     if (errP || errC) {
-      return { perfumes: [], cupones: [], configurado: true };
+      return { perfumes: [], cupones: [], configurado: true, top5: [] };
     }
     return {
-      perfumes: (perfumesData ?? []) as unknown as Perfume[],
-      cupones: (cuponesData ?? []) as unknown as Cupon[],
+      perfumes:  (perfumesData ?? []) as unknown as Perfume[],
+      cupones:   (cuponesData ?? []) as unknown as Cupon[],
       configurado: true,
+      top5: (top5Data ?? []) as { id: string; nombre: string; clicks_mensuales: number }[],
     };
   } catch {
-    return { perfumes: [], cupones: [], configurado: false };
+    return { perfumes: [], cupones: [], configurado: false, top5: [] };
   }
 }

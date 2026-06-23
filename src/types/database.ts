@@ -35,6 +35,13 @@ export interface Perfume {
    * Discrimina también por SKU con prefijo "DROPI-".
    */
   es_dropi: boolean;
+  /**
+   * True si es uno de los perfumes de prueba (seed inicial del sistema).
+   * Sirve para identificarlos y ocultarlos en bloque cuando arranques a vender.
+   */
+  es_demo: boolean;
+  /** Contador de vistas del detalle del perfume en el mes actual. */
+  clicks_mensuales: number;
   created_at: string;
   updated_at: string;
 }

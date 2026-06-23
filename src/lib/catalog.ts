@@ -41,6 +41,10 @@ function normalizarPerfume(row: Record<string, unknown>): Perfume {
     // Columna explícita o, en su defecto, prefijo del SKU
     es_dropi:
       row.es_dropi === true || (sku != null && sku.startsWith("DROPI-")),
+    // Demo: los perfumes de prueba iniciales (seed)
+    es_demo: Boolean(row.es_demo),
+    // Contador de vistas del detalle (0 por defecto)
+    clicks_mensuales: Number(row.clicks_mensuales ?? 0),
     created_at: String(row.created_at ?? new Date().toISOString()),
     updated_at: String(row.updated_at ?? new Date().toISOString()),
   };

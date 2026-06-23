@@ -7,13 +7,6 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
-/**
- * Página del panel de administración — Server Component.
- * 1. Verifica sesión (cookie firmada). Si no hay → muestra login.
- * 2. Si hay sesión → carga perfumes + cupones desde Supabase (service role)
- *    y se los pasa al cliente.
- * La contraseña y el cliente de Supabase viven solo en el servidor.
- */
 export default async function AdminPage() {
   const autenticado = await sesionValida();
 
@@ -21,7 +14,7 @@ export default async function AdminPage() {
     return (
       <AdminClient
         autenticado={false}
-        datos={{ perfumes: [], cupones: [], configurado: false }}
+        datos={{ perfumes: [], cupones: [], configurado: false, top5: [] }}
       />
     );
   }

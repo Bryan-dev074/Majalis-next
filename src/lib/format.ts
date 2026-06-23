@@ -30,41 +30,103 @@ export function buildWhatsAppUrl(nombrePerfume: string, numero: string): string 
 }
 
 /**
- * Construye el mensaje de WhatsApp para un carrito completo (checkout).
+ * Determina si un perfume es de origen externo (contra entrega desde depósito).
+ * El cliente NUNCA ve "Dropi": para él solo existen "Envío Inmediato" (local)
+ * y "Pago Contra Entrega" (externo).
+ */
+export function esExterno(p: Pick<Perfume, "es_dropi" | "sku">): boolean {
+  return p.es_dropi === true || (p.sku != null && p.sku.startsWith("DROPI-"));
+}
+
+/**
+ * Genera el mensaje de WhatsApp para un carrito completo (checkout).
+ *
+ * Dos modalidades según el origen de los productos (marca oculta al cliente):
+ *  · LOCAL  (es_dropi = false) → ⚡ ENVÍO INMEDIATO / EXPRESS (pago previo).
+ *  · EXTERNO (es_dropi = true) → 🚚 PAGO CONTRA ENTREGA (paga en casa).
+ *
+ * Si el carrito mezcla ambos, arma un único mensaje con dos bloques.
+ * El texto es 100% profesional y nunca revela proveedores externos.
  */
 export function buildWhatsAppCheckoutUrl(
   items: CartItem[],
   numero: string,
-  extras?: { nombre?: string; ciudad?: string; direccion?: string }
+  extras?: { nombre?: string; ciudad?: string; direccion?: string; whatsapp?: string }
 ): string {
-  const lineas = items
-    .map((it, i) => {
-      const unit = precioEfectivo(it.perfume);
-      return `${i + 1}. ${it.perfume.nombre} (${it.perfume.marca}) — ${it.cantidad}u × ${formatGs(
-        unit
-      )} = ${formatGs(unit * it.cantidad)}`;
-    })
-    .join("\n");
+  const locales = items.filter((it) => !esExterno(it.perfume));
+  const externos = items.filter((it) => esExterno(it.perfume));
+  const hayLocales = locales.length > 0;
+  const hayExternos = externos.length > 0;
 
-  const subtotal = subtotalCarrito(items);
   const total = totalCarrito(items, null);
 
-  const cuerpo = [
-    "Hola Sultan Oud Elixir, quiero hacer el siguiente pedido:",
-    "",
-    lineas,
-    "",
-    `Subtotal: ${formatGs(subtotal)}`,
-    `Total: ${formatGs(total)}`,
-    "",
-    extras?.nombre ? `Nombre: ${extras.nombre}` : "",
-    extras?.ciudad ? `Ciudad: ${extras.ciudad}` : "",
-    extras?.direccion ? `Dirección: ${extras.direccion}` : "",
-    "Pago al recibir — Coordino la entrega por aquí.",
-  ]
-    .filter(Boolean)
-    .join("\n");
+  const bloques: string[] = [
+    "👑 *SULTAN OUD ELIXIR — NUEVO PEDIDO* 👑",
+    "---",
+  ];
 
+  // ───── BLOQUE LOCAL: Envío Inmediato ─────
+  if (hayLocales) {
+    bloques.push(
+      "Olá! Quiero gestionar mi pedido con *⚡ ENVÍO INMEDIATO / EXPRESS*:",
+      "",
+      "📦 *DETALLE DEL PEDIDO (Express):*"
+    );
+    locales.forEach((it) => {
+      bloques.push(
+        `• ${it.cantidad}x ${it.perfume.nombre} (${it.perfume.volumen_ml}ml) — Marca: ${it.perfume.marca}`
+      );
+      if (it.perfume.sku) bloques.push(`• Código: \`${it.perfume.sku}\``);
+    });
+    const subtotalLocales = subtotalCarrito(locales);
+    bloques.push(
+      "",
+      "💰 *RESUMEN:*",
+      `• Subtotal: ${formatGs(subtotalLocales)}`,
+      "• Envío: A coordinar (Despacho rápido desde CDE)",
+      `• *TOTAL:* ${formatGs(subtotalLocales)}`,
+      "",
+      "📌 *REGLA DE ENTREGA EXPRESS:*",
+      "_Entiendo que para agilizar el despacho inmediato de mi stock físico local, debo realizar el pago previo vía Transferencia Bancaria o Giro. Por favor, facilítenme los datos de la cuenta para abonar y enviar el comprobante._"
+    );
+  }
+
+  // ───── BLOQUE EXTERNO: Pago Contra Entrega ─────
+  if (hayExternos) {
+    if (hayLocales) bloques.push("", "──────────────", "");
+    bloques.push(
+      "Olá! Quiero gestionar mi pedido con *🚚 PAGO CONTRA ENTREGA (Paga en Casa)*:",
+      "",
+      "📦 *DETALLE DEL PEDIDO (Contra Entrega):*"
+    );
+    externos.forEach((it) => {
+      bloques.push(
+        `• ${it.cantidad}x ${it.perfume.nombre} (${it.perfume.volumen_ml}ml) — Marca: ${it.perfume.marca}`
+      );
+      if (it.perfume.sku) bloques.push(`• Código: \`${it.perfume.sku}\``);
+    });
+    const subtotalExternos = subtotalCarrito(externos);
+    bloques.push(
+      "",
+      "💰 *RESUMEN:*",
+      `• *TOTAL A PAGAR EN CASA:* ${formatGs(subtotalExternos)}`,
+      "",
+      "📌 *DATOS DE ENVÍO:*",
+      `• Nombre: ${extras?.nombre || "—"}`,
+      `• Ciudad: ${extras?.ciudad || "—"}`,
+      `• Dirección Exacta: ${extras?.direccion || "—"}`,
+      `• Teléfono de contacto: ${extras?.whatsapp || "—"}`,
+      "",
+      "_Por favor, confirmen mi pedido para preparar el despacho a mi domicilio de forma segura._"
+    );
+  }
+
+  // Si el carrito es mixto, agregar total consolidado al final
+  if (hayLocales && hayExternos) {
+    bloques.push("", `💎 *TOTAL GENERAL DEL PEDIDO:* ${formatGs(total)}`);
+  }
+
+  const cuerpo = bloques.join("\n");
   return `https://wa.me/${numero}?text=${encodeURIComponent(cuerpo)}`;
 }
 

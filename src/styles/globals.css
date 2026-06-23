@@ -455,6 +455,36 @@
   }
 }
 
+/* Botón "Envío Inmediato" activo: brillo continuo + rayo pulsante */
+@keyframes express-sweep {
+  0% {
+    transform: translateX(-150%);
+  }
+  60%,
+  100% {
+    transform: translateX(150%);
+  }
+}
+
+@keyframes express-zap {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    filter: drop-shadow(0 0 0 rgba(255, 255, 255, 0));
+  }
+  50% {
+    transform: scale(1.18) rotate(-6deg);
+    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9));
+  }
+}
+
+.express-active-sweep {
+  animation: express-sweep 2.4s linear infinite;
+}
+.express-active-zap {
+  animation: express-zap 1.4s ease-in-out infinite;
+}
+
 /* Cursor personalizado — dos elementos: núcleo + halo líquido */
 .cursor-core {
   position: fixed;

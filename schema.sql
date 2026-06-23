@@ -39,6 +39,8 @@ create table if not exists public.perfumes (
     sku                   text        unique,
     destacado             boolean     not null default false,
     es_dropi              boolean     not null default false,  -- true: importado vía Dropi (envío más largo); false: stock local propio
+    es_demo               boolean     not null default false,  -- true: perfume de prueba del seed inicial
+    clicks_mensuales      integer     not null default 0,      -- vistas del detalle del perfume en el mes
     created_at            timestamptz not null default now(),
     updated_at            timestamptz not null default now()
 );
@@ -127,11 +129,12 @@ create trigger trg_perfumes_updated_at
 --   · Algunos con descuento (en_oferta = true, precio_descuento definido).
 --   · Algunos con stock = 0 para validar el estado "Agotado".
 --   · SKU autogenerado por marca + slug.
+--   · es_demo = true para todos (así los podés ocultar en bloque desde /admin).
 -- ============================================================================
 
 insert into public.perfumes
     (nombre, marca, precio_regular, precio_descuento, en_oferta, stock_disponible, volumen_ml, activo,
-     url_imagen, descripcion, notas_olfativas, categoria, sku, destacado)
+     url_imagen, descripcion, notas_olfativas, categoria, sku, destacado, es_demo)
 values
 -- 1. Oud Mood — Lattafa — EN OFERTA
 ('Oud Mood', 'Lattafa', 250000, 199000, true, 8, 100, true,
@@ -142,7 +145,7 @@ values
     "corazon":  ["Pachulí","Cuero noble","Especias dulces"],
     "fondo":    ["Ámbar gris","Almizcle blanco","Sándalo Mysore"]
  }'::jsonb,
- array['Lattafa','Oud'], 'LTTF-OUDMOOD', true),
+ array['Lattafa','Oud'], 'LTTF-OUDMOOD', true, true),
 
 -- 2. Bade'e Al Oud (Glory) — Lattafa — precio regular, stock alto
 ('Bade''e Al Oud (Glory)', 'Lattafa', 350000, null, false, 15, 100, true,
@@ -153,7 +156,7 @@ values
     "corazon":  ["Rosa","Pachulí","Prunela"],
     "fondo":    ["Almizcle","Vainilla","Ámbar"]
  }'::jsonb,
- array['Lattafa','Oud'], 'LTTF-BADGE-GLORY', true),
+ array['Lattafa','Oud'], 'LTTF-BADGE-GLORY', true, true),
 
 -- 3. Club de Nuit Intense — Armaf — EN OFERTA
 ('Club de Nuit Intense', 'Armaf', 320000, 279000, true, 6, 105, true,
@@ -164,7 +167,7 @@ values
     "corazon":  ["Birch tar","Rosa","Jazmín","Iso E Super"],
     "fondo":    ["Almizcle","Vainilla","Pachulí","Vetiver"]
  }'::jsonb,
- array['Armaf','Fresco'], 'ARMAF-CLUBNUIT-INT', true),
+ array['Armaf','Fresco'], 'ARMAF-CLUBNUIT-INT', true, true),
 
 -- 4. Yara Moi — Lattafa — precio regular, stock medio
 ('Yara Moi', 'Lattafa', 220000, null, false, 5, 90, true,
@@ -175,7 +178,7 @@ values
     "corazon":  ["Orquídea","Flor de azahar","Jazmín"],
     "fondo":    ["Vainilla de Madagascar","Sándalo","Almizcle"]
  }'::jsonb,
- array['Lattafa','Dulce'], 'LTTF-YARAMOI', false),
+ array['Lattafa','Dulce'], 'LTTF-YARAMOI', false, true),
 
 -- 5. Asad — Lattafa — EN OFERTA
 ('Asad', 'Lattafa', 280000, 235000, true, 10, 100, true,
@@ -186,7 +189,7 @@ values
     "corazon":  ["Ambar","Lavanda","Manzana seca","Semilla de cilantro"],
     "fondo":    ["Vainilla","Oud","Almizcle","Pachulí"]
  }'::jsonb,
- array['Lattafa','Especiado'], 'LTTF-ASAD', true),
+ array['Lattafa','Especiado'], 'LTTF-ASAD', true, true),
 
 -- 6. Khamrah — Lattafa — precio regular, stock agotado (validación UI)
 ('Khamrah', 'Lattafa', 380000, null, false, 0, 100, true,
@@ -197,7 +200,7 @@ values
     "corazon":  ["Dátiles","Prunela","Loto","Canela dulce"],
     "fondo":    ["Vainilla","Sándalo","Mirra","Almizcle tonka"]
  }'::jsonb,
- array['Lattafa','Dulce'], 'LTTF-KHAMRAH', true),
+ array['Lattafa','Dulce'], 'LTTF-KHAMRAH', true, true),
 
 -- 7. Hawas — Rasasi — precio regular, stock medio
 ('Hawas', 'Rasasi', 450000, null, false, 7, 100, true,
@@ -208,7 +211,7 @@ values
     "corazon":  ["Canela","Cardamomo","Lirio acuático","Pimienta de Jamaica"],
     "fondo":    ["Almizcle","Vetiver","Sándalo","Dracena"]
  }'::jsonb,
- array['Fresco','Rasasi'], 'RSI-HAWAS', true),
+ array['Fresco','Rasasi'], 'RSI-HAWAS', true, true),
 
 -- 8. 9pm — Afnan — EN OFERTA
 ('9pm', 'Afnan', 260000, 219000, true, 9, 100, true,
@@ -219,7 +222,7 @@ values
     "corazon":  ["Chocolat blanco","Jengibre","Naranja amarga"],
     "fondo":    ["Vainilla tonka","Almizcle","Sándalo","Caramelo"]
  }'::jsonb,
- array['Afnan','Dulce'], 'AFNAN-9PM', false),
+ array['Afnan','Dulce'], 'AFNAN-9PM', false, true),
 
 -- 9. Fakhar Black — Lattafa — precio regular, stock medio
 ('Fakhar Black', 'Lattafa', 230000, null, false, 12, 100, true,
@@ -230,7 +233,7 @@ values
     "corazon":  ["Lavanda","Salvia","Geranio","Manzana verde"],
     "fondo":    ["Vetiver","Cedro","Pachulí","Almizcle"]
  }'::jsonb,
- array['Lattafa','Fresco'], 'LTTF-FAKHAR-BLK', false),
+ array['Lattafa','Fresco'], 'LTTF-FAKHAR-BLK', false, true),
 
 -- 10. Supremacy Not Only Intense — Afnan — precio regular, stock bajo (casi agotado)
 ('Supremacy Not Only Intense', 'Afnan', 420000, null, false, 3, 100, true,
@@ -241,7 +244,7 @@ values
     "corazon":  ["Rosa","Jazmín","Pachulí","Abedul"],
     "fondo":    ["Musgo de roble","Almizcle","Vainilla","Ambroxan"]
  }'::jsonb,
- array['Afnan','Fresco','Oud'], 'AFNAN-SUPREM-INT', false),
+ array['Afnan','Fresco','Oud'], 'AFNAN-SUPREM-INT', false, true),
 
 -- 11. Ameer Al Oudh — Lattafa — EN OFERTA
 ('Ameer Al Oudh', 'Lattafa', 210000, 179000, true, 14, 100, true,
@@ -252,7 +255,7 @@ values
     "corazon":  ["Azúcar de caña","Sándalo","Cedro"],
     "fondo":    ["Vainilla","Almizcle","Resina","Ámbar"]
  }'::jsonb,
- array['Lattafa','Oud','Dulce'], 'LTTF-AMEER-OUDH', false)
+ array['Lattafa','Oud','Dulce'], 'LTTF-AMEER-OUDH', false, true)
 on conflict (sku) do update set
     nombre               = excluded.nombre,
     marca                = excluded.marca,
@@ -297,13 +300,15 @@ on conflict (codigo) do nothing;
 -- ============================================================================
 
 -- ============================================================================
---  MIGRACIÓN · Columna es_dropi (para quienes ya tenían el schema anterior)
+--  MIGRACIÓN · Columnas nuevas (v3): es_demo + clicks_mensuales
 --  Idempotente: se puede correr varias veces sin romper.
 -- ============================================================================
 alter table public.perfumes
-    add column if not exists es_dropi boolean not null default false;
+    add column if not exists es_dropi         boolean not null default false,
+    add column if not exists es_demo          boolean not null default false,
+    add column if not exists clicks_mensuales integer not null default 0;
 
--- Backfill: cualquier perfume con SKU DROPI- queda marcado automáticamente.
+-- Backfill: cualquier perfume con SKU DROPI- queda marcado como Dropi.
 update public.perfumes
    set es_dropi = true
  where sku is not null and sku like 'DROPI-%';

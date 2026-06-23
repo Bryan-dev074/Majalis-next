@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { gsap } from "gsap";
-import { X, Plus, Minus, MessageCircle, Bell, Sparkles } from "lucide-react";
+import { X, Plus, Minus, MessageCircle, Bell, Sparkles, Zap } from "lucide-react";
 import { Perfume } from "@/types/database";
-import { formatGs, precioEfectivo, buildWhatsAppUrl } from "@/lib/format";
+import { formatGs, precioEfectivo, buildWhatsAppUrl, esExterno } from "@/lib/format";
+import { WHATSAPP_NUMBER } from "@/data/site-config";
 import { useCart } from "@/hooks/use-cart";
 import { NoteIcon } from "./note-icon";
 
@@ -13,8 +14,6 @@ interface ProductModalProps {
   perfume: Perfume | null;
   onClose: () => void;
 }
-
-const WHATSAPP_NUMBER = "595982064334";
 
 type Capa = keyof Perfume["notas_olfativas"];
 const CAPAS: { key: Capa; label: string; descripcion: string }[] = [
@@ -44,6 +43,20 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
   // Reset cantidad al cambiar de producto
   useEffect(() => {
     setCantidad(1);
+  }, [perfume?.id]);
+
+  // Contar +1 en clicks_mensuales cuando un cliente abre el detalle.
+  // Fire-and-forget: no bloquea la UX si falla.
+  useEffect(() => {
+    if (!perfume?.id) return;
+    if (perfume.id.startsWith("fb-")) return; // no contar perfumes del fallback local
+    fetch("/api/click", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: perfume.id }),
+    }).catch(() => {
+      /* ignorar: el contador no es crítico */
+    });
   }, [perfume?.id]);
 
   // Bloquear scroll del body cuando abre + avisar al botón de WhatsApp
@@ -202,6 +215,19 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
             <h2 className="modal-title mt-3 font-display text-3xl leading-tight text-ivory md:text-4xl lg:text-5xl">
               {perfume.nombre}
             </h2>
+
+            {/* Badge de modalidad de entrega (marca oculta al cliente) */}
+            {!esExterno(perfume) ? (
+              <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[#25D366]/40 bg-[#25D366]/10 px-3 py-1.5 text-[0.6rem] font-bold uppercase tracking-regal text-[#25D366]">
+                <Zap className="h-3 w-3" fill="currentColor" />
+                Envío Inmediato · Express
+              </div>
+            ) : (
+              <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/[0.06] px-3 py-1.5 text-[0.6rem] font-bold uppercase tracking-regal text-gold-champagne">
+                🚚 Pago Contra Entrega · Paga en Casa
+              </div>
+            )}
+
             {/* Descripción con mejor contraste */}
             <p className="modal-desc mt-4 text-sm leading-relaxed text-ivory/85 md:text-base">
               {perfume.descripcion}

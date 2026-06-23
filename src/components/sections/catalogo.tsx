@@ -113,7 +113,7 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
           </p>
         </div>
 
-        {/* 🔥 Botón llamativo: Ofertas de Envío Inmediato */}
+        {/* Botón destacado: Ofertas de Envío Inmediato */}
         <div className="mb-10 flex justify-center" data-reveal>
           <button
             onClick={() => {
@@ -131,17 +131,23 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
             }`}
             aria-pressed={ofertasExpress}
           >
-            {/* Brillo que pasa al hover */}
-            <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+            {/* Brillo continuo cuando está activo (sweep infinito) */}
+            <span
+              className={`pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/45 to-transparent ${
+                ofertasExpress
+                  ? "express-active-sweep"
+                  : "-translate-x-full transition-transform duration-700 group-hover:translate-x-full"
+              }`}
+            />
             <span className="relative flex items-center gap-2.5">
               <Zap
-                className={`h-5 w-5 ${ofertasExpress ? "animate-pulse" : ""}`}
+                className={`h-5 w-5 ${ofertasExpress ? "express-active-zap" : ""}`}
                 fill={ofertasExpress ? "currentColor" : "none"}
                 strokeWidth={2}
               />
-              {ofertasExpress ? "✓ Mostrando ofertas express" : "🔥 Ofertas de Envío Inmediato 🔥"}
+              {ofertasExpress ? "Mostrando Envío Inmediato" : "Ofertas de Envío Inmediato"}
               <Zap
-                className={`h-5 w-5 ${ofertasExpress ? "animate-pulse" : ""}`}
+                className={`h-5 w-5 ${ofertasExpress ? "express-active-zap" : ""}`}
                 fill={ofertasExpress ? "currentColor" : "none"}
                 strokeWidth={2}
               />
@@ -150,7 +156,7 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
         </div>
         {ofertasExpress && (
           <p className="mb-8 text-center text-xs uppercase tracking-regal text-[#25D366]/80">
-            Stock local con descuento · Entrega inmediata en Paraguay
+            Productos con descuento · Entrega inmediata en Paraguay
           </p>
         )}
 

@@ -58,6 +58,7 @@ export function CheckoutModal({ abierto, onClose }: CheckoutModalProps) {
       nombre: delivery.nombre,
       ciudad: delivery.ciudad,
       direccion: delivery.direccion,
+      whatsapp: delivery.whatsapp,
     });
     // Guardamos el total antes de vaciar para mostrarlo en la confirmación
     setTotalEnviado(total);
@@ -233,7 +234,7 @@ export function CheckoutModal({ abierto, onClose }: CheckoutModalProps) {
                 className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#1faa52] to-[#25D366] py-4 text-[0.75rem] font-semibold uppercase tracking-regal text-obsidian transition-all hover:shadow-[0_0_40px_-8px_rgba(37,211,102,0.8)]"
               >
                 <MessageCircle className="h-4 w-4" strokeWidth={2} />
-                Pedir y pagar al recibir
+                Enviar pedido por WhatsApp
               </button>
 
               {/* Continuar comprando */}
@@ -245,7 +246,7 @@ export function CheckoutModal({ abierto, onClose }: CheckoutModalProps) {
               </button>
 
               <p className="mt-4 text-center text-[0.6rem] uppercase tracking-regal text-ivory/40">
-                Envío coordinado a todo Paraguay · Pago al recibir
+                Coordinamos la entrega y el método de pago por WhatsApp
               </p>
             </div>
           )}
