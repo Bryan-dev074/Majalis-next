@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition, useCallback } from "react";
 import Image from "next/image";
 import {
   Lock, Eye, EyeOff, LogOut, Plus, Minus, Pencil, Trash2,
@@ -16,10 +16,12 @@ import {
   guardarCuponAction, toggleCuponAction, eliminarCuponAction, resetearClicksAction,
   guardarProveedorAction, sincronizarProveedorAction,
   inicializarDemosAction, borrarTodosLosDemosAction,
+  subirImagenProductoAction,
   type PerfumeInput, type CuponInput, type DatosAdmin,
   type ConfigProveedor,
 } from "./actions";
 import SyncSheetButton from "./sync-sheet-button";
+import ImageDrop from "./image-drop";
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
 
@@ -216,6 +218,20 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
       } else toast_("error", res.error ?? "Error al guardar");
     });
   };
+
+  // ─── Subida de imagen del producto a Supabase Storage ───
+  // Sube el archivo vía Server Action al bucket público "productos" y
+  // devuelve la URL pública, que <ImageDrop> usa como preview definitiva
+  // y que se guarda en url_imagen al guardar el producto.
+  const onSubirImagen = useCallback(async (file: File): Promise<string> => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await subirImagenProductoAction(fd);
+    if (!res.ok || !res.url) {
+      throw new Error(res.error ?? "No se pudo subir la imagen.");
+    }
+    return res.url;
+  }, []);
 
   const onOcultarDemo = () => {
     const activos = demos.filter((p) => p.activo);
@@ -462,6 +478,7 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
             inicial={modalPerfume}
             onCancel={() => setModalPerfume(null)}
             onGuardar={onGuardarPerfume}
+            onSubirImagen={onSubirImagen}
           />
         )}
 
@@ -1261,11 +1278,17 @@ function CuponesView({
 //  FORMULARIO DE PERFUME — con labels explicativos para el asistente
 // ════════════════════════════════════════════════════════════════════════════
 function PerfumeForm({
-  inicial, onCancel, onGuardar,
+  inicial, onCancel, onGuardar, onSubirImagen,
 }: {
   inicial: PerfumeInput;
   onCancel: () => void;
   onGuardar: (p: PerfumeInput) => void;
+  /**
+   * Sube un archivo de imagen y devuelve la URL pública.
+   * ⚠️ Implementado por PanelView. Hoy es un stub local (objectURL) que deja
+   * ver el preview pero NO persiste en Supabase Storage. Claude lo conectará.
+   */
+  onSubirImagen: (file: File) => Promise<string>;
 }) {
   const [form, setForm] = useState<PerfumeInput>(inicial);
   const [salida, setSalida] = useState(inicial.notas_olfativas.salida.join(", "));
@@ -1398,26 +1421,49 @@ function PerfumeForm({
             </div>
           </div>
 
-          {/* Imagen + SKU */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <label className="adm-label">URL de imagen *</label>
-              <span className="adm-help">Link directo a la foto del frasco (https://…)</span>
-              <input required value={form.url_imagen}
-                onChange={(e) => set("url_imagen", e.target.value)}
-                className="adm-input mt-1" placeholder="https://…" />
-            </div>
-            <div>
-              <label className="adm-label">SKU (Código interno)</label>
-              <span className="adm-help">
-                DEJAR VACÍO para que el sistema lo genere solo como: MARCA-NOMBRE-ML
-              </span>
-              <input
-                value={form.sku ?? ""}
-                onChange={(e) => set("sku", e.target.value || null)}
-                className="adm-input mt-1 font-mono"
-                placeholder="Se genera automático si lo dejás vacío"
+          {/* Imagen del producto + URL/SKU */}
+          <div className="rounded-lg border p-4 space-y-4"
+            style={{ borderColor: "var(--adm-border)", background: "var(--adm-surface-2)" }}>
+            <p className="adm-label mb-1">Foto del producto</p>
+            <p className="adm-help mb-3">
+              Subí una foto del frasco desde tu dispositivo. Queda guardada en Supabase Storage
+              y se muestra automáticamente en la tienda.
+            </p>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-[auto_1fr] md:items-start">
+              {/* Zona de carga / preview */}
+              <ImageDrop
+                urlActual={form.url_imagen || undefined}
+                onUpload={onSubirImagen}
+                onChange={(url) => set("url_imagen", url)}
               />
+
+              <div className="space-y-3">
+                {/* URL como alternativa avanzada */}
+                <div>
+                  <label className="adm-label">URL de imagen (alternativa)</label>
+                  <span className="adm-help">
+                    Pegá un link solo si la foto ya está alojada en otro lado
+                    (productos externos o imágenes ya subidas).
+                  </span>
+                  <input value={form.url_imagen}
+                    onChange={(e) => set("url_imagen", e.target.value)}
+                    className="adm-input mt-1" placeholder="https://…" />
+                </div>
+
+                {/* SKU */}
+                <div>
+                  <label className="adm-label">SKU (Código interno)</label>
+                  <span className="adm-help">
+                    DEJAR VACÍO para que el sistema lo genere solo como: MARCA-NOMBRE-ML
+                  </span>
+                  <input
+                    value={form.sku ?? ""}
+                    onChange={(e) => set("sku", e.target.value || null)}
+                    className="adm-input mt-1 font-mono"
+                    placeholder="Se genera automático si lo dejás vacío"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 

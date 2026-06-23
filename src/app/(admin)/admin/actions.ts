@@ -116,6 +116,52 @@ async function requerirAdmin() {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+//  Subida de imágenes de producto a Supabase Storage (bucket público "productos")
+// ────────────────────────────────────────────────────────────────────────────
+
+const BUCKET_IMAGENES = "productos";
+const TIPOS_IMG = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+const MAX_IMG_BYTES = 4 * 1024 * 1024; // 4 MB
+
+/**
+ * Sube una imagen al bucket público "productos" y devuelve su URL pública.
+ * Recibe un FormData con el campo "file". Usa la service role (saltea RLS).
+ * Lo consume <ImageDrop> a través de onSubirImagen en el panel.
+ */
+export async function subirImagenProductoAction(
+  formData: FormData
+): Promise<{ ok: boolean; url?: string; error?: string }> {
+  await requerirAdmin();
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: "No se recibió ninguna imagen." };
+  }
+  if (!TIPOS_IMG.includes(file.type)) {
+    return { ok: false, error: "Formato no permitido. Usá PNG, JPG o WebP." };
+  }
+  if (file.size > MAX_IMG_BYTES) {
+    return { ok: false, error: "La imagen supera los 4 MB." };
+  }
+
+  const supabase = supabaseAdmin();
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const ruta = `${crypto.randomUUID()}.${ext}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  const { error } = await supabase.storage
+    .from(BUCKET_IMAGENES)
+    .upload(ruta, buffer, { contentType: file.type, upsert: true });
+  if (error) {
+    console.error("[subirImagenProductoAction]", error.message);
+    return { ok: false, error: error.message };
+  }
+
+  const { data } = supabase.storage.from(BUCKET_IMAGENES).getPublicUrl(ruta);
+  return { ok: true, url: data.publicUrl };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 //  Perfumes — CRUD
 // ────────────────────────────────────────────────────────────────────────────
 

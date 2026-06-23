@@ -510,3 +510,96 @@
   height: 3px;
   background: linear-gradient(90deg, #b8860b, #d4af37, #f4e088, #d4af37, #b8860b);
 }
+
+/* ─────────────────────────  Drop zone de imágenes  ───────────────────────── */
+
+.adm-dropzone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 2px dashed var(--adm-border-strong);
+  border-radius: 12px;
+  background: var(--adm-surface-2);
+  padding: 1.25rem 1rem;
+  text-align: center;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+.adm-dropzone:hover {
+  border-color: var(--adm-primary);
+  background: var(--adm-primary-soft);
+}
+.adm-dropzone.is-dragging {
+  border-color: var(--adm-primary);
+  background: var(--adm-primary-soft);
+  box-shadow: 0 0 0 3px var(--adm-primary-soft);
+}
+.adm-dropzone.is-uploading {
+  cursor: progress;
+  opacity: 0.85;
+}
+.adm-dropzone-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  width: 40px;
+  border-radius: 9999px;
+  color: var(--adm-primary);
+  background: var(--adm-primary-soft);
+}
+.adm-dropzone-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--adm-text);
+}
+.adm-dropzone-hint {
+  font-size: 0.72rem;
+  font-style: italic;
+  color: var(--adm-text-muted);
+}
+.adm-dropzone-input {
+  /* Escondido: se dispara el click desde el label/contenedor */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* Mini-preview cuadrada con esquina para quitar la imagen */
+.adm-image-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-width: 150px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--adm-border);
+  background: var(--adm-surface-2);
+}
+.adm-image-preview-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  width: 24px;
+  border-radius: 9999px;
+  border: none;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  transition: background 0.15s ease;
+}
+.adm-image-preview-remove:hover {
+  background: var(--adm-red);
+}
+

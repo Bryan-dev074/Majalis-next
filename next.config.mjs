@@ -7,6 +7,8 @@ const nextConfig = {
       { protocol: "https", hostname: "plus.unsplash.com" },
       { protocol: "https", hostname: "fimgs.net" },
       { protocol: "https", hostname: "cdn.notinoimg.com" },
+      // Imágenes de producto subidas desde el panel (Supabase Storage, bucket "productos")
+      { protocol: "https", hostname: "fpzmdezcmbyplbdngcke.supabase.co" },
     ],
   },
   // Three.js y GSAP pesan; dejamos que Next los divida automáticamente.
