@@ -1,4 +1,4 @@
-import { TIENDAS, TIENDAS_AUTOMATICAS, type TiendaConfig } from "@/data/tiendas-config";
+import { TIENDAS_AUTOMATICAS, type TiendaConfig } from "@/data/tiendas-config";
 
 /**
  * Motor de búsqueda de un producto en TODAS las tiendas (Flujo B del asistente).
@@ -184,11 +184,5 @@ export async function buscarEnTodasLasTiendas(nombre: string): Promise<Resultado
     };
   });
 
-  const manuales: ResultadoTienda[] = TIENDAS.filter((t) => t.metodo === "manual").map((t) => ({
-    id: t.id, tienda: t.nombre, metodo: t.metodo, urlTienda: t.urlBase,
-    candidatos: [], mejorIndice: -1, confianza: 0, semaforo: "rojo",
-    nota: t.instagram ? `Solo Instagram ${t.instagram}` : "Vitrina sin precios — búsqueda manual",
-  }));
-
-  return [...automaticas, ...manuales];
+  return automaticas;
 }

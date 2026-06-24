@@ -1,17 +1,18 @@
 /**
- * Configuración de TODAS las tiendas del PDF `perfumes-arabes-cde.pdf`,
- * verificada por fetch directo (jun 2026). Ver `scraping.md` para el detalle.
+ * Tiendas SCRAPEABLES del PDF `perfumes-arabes-cde.pdf` (16 = 11 HTML + 5 API),
+ * verificadas por fetch directo (jun 2026). Ver `scraping.md` para el detalle.
+ * Se excluyen las solo-Instagram (9) y las de vitrina sin precios (Francia
+ * Perfumes): no se pueden scrapear ni con API, así que no van en el asistente.
  *
  * metodo:
- *   · "html"   → precio en HTML crudo, fetch directo (UrlFetchApp / fetch).
- *   · "api"    → bloquea fetch (403/Cloudflare) o renderiza por JS → usar
- *                API de scraping (Crawlbase/ScrapingBee).
- *   · "manual" → sin precios online (vitrina) o solo Instagram → Búsqueda Manual.
+ *   · "html" → precio en HTML crudo, fetch directo (UrlFetchApp / fetch).
+ *   · "api"  → bloquea fetch (403/Cloudflare) o renderiza por JS → usar
+ *              API de scraping (Crawlbase/ScrapingBee).
  *
- * El asistente de carga muestra TODAS estas tiendas en la tabla semáforo.
+ * El asistente de carga muestra estas tiendas en la tabla semáforo.
  */
 
-export type MetodoScraping = "html" | "api" | "manual";
+export type MetodoScraping = "html" | "api";
 export type Moneda = "USD" | "BRL" | "Gs";
 
 export interface TiendaConfig {
@@ -137,27 +138,7 @@ export const TIENDAS: TiendaConfig[] = [
     notas: "No responde a curl. Tratar con API de scraping.",
   },
 
-  // ── 🔴 Manual: vitrina sin precios ────────────────────────────────────────
-  {
-    id: "francia", nombre: "Francia Perfumes", dominio: "franciaperfumes.com",
-    urlBase: "https://www.franciaperfumes.com/", metodo: "manual", plataforma: "custom",
-    notas: "Vitrina sin precios reales online. Búsqueda Manual.",
-  },
-
-  // ── 🔴 Manual: solo Instagram (9) ─────────────────────────────────────────
-  { id: "imperio", nombre: "Imperio Perfumes", dominio: "instagram.com", urlBase: "https://instagram.com/imperioperfumes_py", metodo: "manual", instagram: "@imperioperfumes_py", notas: "Mayorista + minorista. Solo IG/WhatsApp." },
-  { id: "alhambra", nombre: "Distribuidora Perfumes Alhambra", dominio: "instagram.com", urlBase: "https://instagram.com/perfumesalhambra", metodo: "manual", instagram: "@perfumesalhambra", notas: "Distribuidor/mayorista (51K). Solo IG." },
-  { id: "bissoux", nombre: "Bissoux", dominio: "instagram.com", urlBase: "https://instagram.com/bissoux.py", metodo: "manual", instagram: "@bissoux.py", notas: "Proveedor/mayoreo. Solo IG." },
-  { id: "genove", nombre: "Genove", dominio: "instagram.com", urlBase: "https://instagram.com/genovepy", metodo: "manual", instagram: "@genovepy", notas: "Retail (18K). Solo IG." },
-  { id: "perfumhadas", nombre: "Perfumhadas", dominio: "instagram.com", urlBase: "https://instagram.com/perfumhadas_py", metodo: "manual", instagram: "@perfumhadas_py", notas: "Retail. Solo IG." },
-  { id: "elite", nombre: "Elite Store", dominio: "instagram.com", urlBase: "https://instagram.com/elitestorepy", metodo: "manual", instagram: "@elitestorepy", notas: "Retail. Solo IG." },
-  { id: "sax", nombre: "SAX Department Store", dominio: "instagram.com", urlBase: "https://instagram.com/saxstore", metodo: "manual", instagram: "@saxstore", notas: "Department store. Solo IG." },
-  { id: "ambar", nombre: "Perfumería Ámbar", dominio: "instagram.com", urlBase: "https://instagram.com/", metodo: "manual", instagram: "(verificar handle)", notas: "Microcentro CDE. Solo IG/TikTok." },
-  { id: "amadeus", nombre: "Amadeus Perfumería", dominio: "instagram.com", urlBase: "https://instagram.com/", metodo: "manual", instagram: "(verificar handle)", notas: "Retail CDE. Solo IG." },
 ];
 
-/** Tiendas que el scraper intenta automáticamente (html + api). */
-export const TIENDAS_AUTOMATICAS = TIENDAS.filter((t) => t.metodo !== "manual");
-
-/** Tiendas que arrancan en modo Búsqueda Manual. */
-export const TIENDAS_MANUALES = TIENDAS.filter((t) => t.metodo === "manual");
+/** Tiendas que el scraper intenta automáticamente (todas: html + api). */
+export const TIENDAS_AUTOMATICAS = TIENDAS;
