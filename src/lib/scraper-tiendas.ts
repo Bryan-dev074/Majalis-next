@@ -36,15 +36,19 @@ export interface ResultadoTienda {
 async function descargar(url: string, metodo: TiendaConfig["metodo"]): Promise<string | null> {
   try {
     if (metodo === "api") {
-      const prov = (process.env.SCRAPER_PROVIDER || "scraperapi").toLowerCase();
+      const prov = (process.env.SCRAPER_PROVIDER || "zenrows").toLowerCase();
       const key = process.env.SCRAPER_API_KEY;
       if (!key) return null; // sin API key no se puede; el caller lo marca como pendiente
+      const u = encodeURIComponent(url);
       const apiUrl =
         prov === "scrapingbee"
-          ? `https://app.scrapingbee.com/api/v1/?api_key=${key}&url=${encodeURIComponent(url)}&render_js=true`
+          ? `https://app.scrapingbee.com/api/v1/?api_key=${key}&url=${u}&render_js=true`
           : prov === "crawlbase"
-            ? `https://api.crawlbase.com/?token=${key}&url=${encodeURIComponent(url)}`
-            : `https://api.scraperapi.com/?api_key=${key}&url=${encodeURIComponent(url)}&render=true`;
+            ? `https://api.crawlbase.com/?token=${key}&url=${u}`
+            : prov === "scraperapi"
+              ? `https://api.scraperapi.com/?api_key=${key}&url=${u}&render=true`
+              // ZenRows (default): js_render + premium_proxy bypassea Cloudflare/403.
+              : `https://api.zenrows.com/v1/?apikey=${key}&url=${u}&js_render=true&premium_proxy=true`;
       const r = await fetch(apiUrl);
       return r.ok ? await r.text() : null;
     }
