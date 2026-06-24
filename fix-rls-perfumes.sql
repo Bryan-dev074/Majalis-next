@@ -40,6 +40,6 @@ create policy "catalogo_publico_solo_activos"
 --      productos ocultos, agregá otra policy con la condición que necesites.
 
 -- ── Verificación (opcional): debiera mostrar la policy creada.
-select polname as policy, cmd, roles
+select policyname as policy, cmd, roles
 from pg_policies
 where schemaname = 'public' and tablename = 'perfumes';
