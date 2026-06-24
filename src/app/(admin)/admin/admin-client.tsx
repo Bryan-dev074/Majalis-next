@@ -21,6 +21,7 @@ import {
   type ConfigProveedor,
 } from "./actions";
 import SyncSheetButton from "./sync-sheet-button";
+import MonedaPreciosButtons from "./moneda-precios-buttons";
 import ImageDrop from "./image-drop";
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
@@ -385,6 +386,7 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
         {pestaña === "stock" && (
           <>
             <SyncSheetButton toast={toast_} />
+            <MonedaPreciosButtons toast={toast_} />
             <TablaStock
             perfumes={stock}
             titulo="Mi Stock Local"
