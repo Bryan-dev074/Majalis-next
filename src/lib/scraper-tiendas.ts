@@ -44,7 +44,9 @@ async function buscarCandidatos(t: TiendaConfig, nombre: string): Promise<Candid
     const html = await descargar(url);
     if (!html) return [];
     const out: Candidato[] = [];
-    const re = /href="(https:\/\/www\.pionnershop\.com\/[a-z0-9][a-z0-9-]{8,}[A-Za-z]{1,3})"/gi;
+    // Los resultados de producto están en <a class="d-flex flex-column gap-3" href="...">
+    // (NO confundir con los links del menú de categorías).
+    const re = /<a class="d-flex flex-column gap-3" href="(https:\/\/www\.pionnershop\.com\/[^"]+)"/gi;
     const vistos = new Set<string>();
     let m: RegExpExecArray | null;
     while ((m = re.exec(html)) && out.length < 3) {
