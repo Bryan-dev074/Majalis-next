@@ -36,16 +36,57 @@ async function descargar(url: string): Promise<string | null> {
   }
 }
 
-// ── Buscadores por tienda. Se agrega un caso por dominio a medida que se valida.
+// ── Helpers genéricos ───────────────────────────────────────────────────────
+const Q = (s: string) => encodeURIComponent(s);
+
+/** Precio de la página de producto: JSON-LD ("price"), luego Gs/USD visible. */
+function extraerPrecio(html: string): string {
+  const jl = html.match(/"price"\s*:\s*"?(\d+(?:\.\d+)?)"?/i)?.[1];
+  if (jl) {
+    const n = Math.round(parseFloat(jl));
+    if (n >= 1000) return `Gs ${n.toLocaleString("es-PY")}`;
+  }
+  const gs = html.match(/(?:₲|Gs\.?|G\$)\s*([\d]{1,3}(?:\.\d{3})+)/)?.[1];
+  if (gs) return `Gs ${gs}`;
+  const usd = html.match(/U\$\s*([\d.,]+)/)?.[1];
+  if (usd) return `U$ ${usd}`;
+  return "—";
+}
+
+/** Título: og:title → h1 (si no es "carrito") → slug humanizado. */
+function extraerTitulo(html: string, url: string): string {
+  const og = html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/i)?.[1]?.trim();
+  if (og && !/carr|cart/i.test(og)) return og.slice(0, 70);
+  const h1 = html.match(/<h1[^>]*>([^<]+)<\/h1>/i)?.[1]?.trim();
+  if (h1 && !/carr|cart/i.test(h1)) return h1.slice(0, 70);
+  return (url.split("/").filter(Boolean).pop() || "").replace(/[-_]/g, " ").slice(0, 60);
+}
+
+/** Patrón genérico: búsqueda → links de producto → página de cada uno → precio. */
+async function viaProductos(searchUrl: string, linkRe: RegExp): Promise<Candidato[]> {
+  const sh = await descargar(searchUrl);
+  if (!sh) return [];
+  const links = [...new Set([...sh.matchAll(linkRe)].map((m) => m[1]))]
+    .map((u) => (u.startsWith("http") ? u : `https:${u}`))
+    .slice(0, 3);
+  const out: Candidato[] = [];
+  for (const url of links) {
+    const ph = await descargar(url);
+    if (!ph) continue;
+    out.push({ titulo: extraerTitulo(ph, url), url, precio: extraerPrecio(ph) });
+  }
+  return out;
+}
+
+// ── Buscadores por tienda ───────────────────────────────────────────────────
 async function buscarCandidatos(t: TiendaConfig, nombre: string): Promise<Candidato[]> {
-  // Pionner Shop — validado: búsqueda por término → resultados con link y precio.
+  const q = Q(nombre);
+
+  // Pionner (OpenCart) — precio en el listado de resultados.
   if (t.id === "pionner") {
-    const url = `https://www.pionnershop.com/index.php?route=product/search&search=${encodeURIComponent(nombre)}`;
-    const html = await descargar(url);
+    const html = await descargar(`https://www.pionnershop.com/index.php?route=product/search&search=${q}`);
     if (!html) return [];
     const out: Candidato[] = [];
-    // Los resultados de producto están en <a class="d-flex flex-column gap-3" href="...">
-    // (NO confundir con los links del menú de categorías).
     const re = /<a class="d-flex flex-column gap-3" href="(https:\/\/www\.pionnershop\.com\/[^"]+)"/gi;
     const vistos = new Set<string>();
     let m: RegExpExecArray | null;
@@ -57,14 +98,42 @@ async function buscarCandidatos(t: TiendaConfig, nombre: string): Promise<Candid
       const blk = ph ? ph.substring(ph.indexOf("price-product"), ph.indexOf("price-product") + 2600) : "";
       const usd = blk.match(/U\$\s*([\d.,]+)/)?.[1];
       const gs = blk.match(/G\$\s*([\d.,]+)/)?.[1];
-      const titulo = ph?.match(/<h1[^>]*>([^<]+)<\/h1>/i)?.[1]?.trim() ?? link.split("/").pop() ?? "";
-      out.push({ titulo, url: link, precio: gs ? `G$ ${gs}` : usd ? `U$ ${usd}` : "—" });
+      out.push({ titulo: ph ? extraerTitulo(ph, link) : link, url: link, precio: gs ? `G$ ${gs}` : usd ? `U$ ${usd}` : "—" });
     }
     return out;
   }
 
-  // Resto de tiendas HTML: framework listo, parser por agregar.
-  // (Ver scraping.md: cada tienda tiene su patrón de URL/búsqueda y selector.)
+  // Cellshop (Magento) — link + precio en el listado (data-price-amount).
+  if (t.id === "cellshop") {
+    const html = await descargar(`https://cellshop.com.py/catalogsearch/result/?q=${q}`);
+    if (!html) return [];
+    const out: Candidato[] = [];
+    const vistos = new Set<string>();
+    const re = /<a class="product-item-link"\s+href="([^"]+)">([\s\S]*?)<\/a>([\s\S]{0,1500})/gi;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(html)) && out.length < 3) {
+      const url = m[1];
+      if (vistos.has(url)) continue;
+      vistos.add(url);
+      const p = m[3].match(/data-price-amount="(\d+)"/)?.[1];
+      out.push({ titulo: m[2].replace(/\s+/g, " ").trim().slice(0, 60), url, precio: p ? `Gs ${Number(p).toLocaleString("es-PY")}` : "—" });
+    }
+    return out;
+  }
+
+  // Aroma Store — links /product/.
+  if (t.id === "aroma")
+    return viaProductos(`https://aromastore.com.py/?s=${q}`, /href="(https:\/\/aromastore\.com\.py\/product\/[^"]+)"/gi);
+
+  // Shopping China — links /producto/{id}.
+  if (t.id === "shoppingchina")
+    return viaProductos(`https://www.shoppingchina.com.py/?s=${q}`, /href="(https?:\/\/(?:www\.)?shoppingchina\.com\.py\/producto\/\d+)"/gi);
+
+  // La Perfumería — WooCommerce, links /producto/.
+  if (t.id === "laperfumeria")
+    return viaProductos(`https://laperfumeria.com.py/?s=${q}&post_type=product`, /href="(https:\/\/laperfumeria\.com\.py\/producto\/[^"]+)"/gi);
+
+  // Resto (elegancia, pontocom, mega, terranova, matrix): parser por agregar.
   return [];
 }
 
