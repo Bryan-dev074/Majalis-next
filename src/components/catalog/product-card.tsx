@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { Plus, Sparkles, Zap } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
 import { Perfume } from "@/types/database";
-import { formatGs, precioEfectivo, esExterno } from "@/lib/format";
+import { formatGs, precioEfectivo, concentracionDe } from "@/lib/format";
 import { useCart } from "@/hooks/use-cart";
 
 interface ProductCardProps {
@@ -77,16 +77,8 @@ export function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
           </div>
         )}
 
-        {/* Badge "⚡ Envío Inmediato" — solo stock local (es_dropi=false) */}
-        {!esExterno(perfume) && !agotado && (
-          <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full border border-[#25D366]/40 bg-obsidian/80 px-2.5 py-1 text-[0.5rem] font-bold uppercase tracking-regal text-[#25D366] backdrop-blur-sm">
-            <Zap className="h-2.5 w-2.5" fill="currentColor" />
-            Envío Inmediato
-          </div>
-        )}
-
         {/* CTA al hover — centrado verticalmente en la imagen para no tapar
-            ni el badge "Envío Inmediato" (abajo) ni el sello de oferta (arriba) */}
+            el sello de oferta (arriba) */}
         {!agotado && (
           <div className="absolute inset-0 flex translate-y-2 items-center justify-center gap-3 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
             <button
@@ -118,9 +110,16 @@ export function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
           <h3 className="font-display text-2xl leading-tight text-ivory">
             {perfume.nombre}
           </h3>
-          <p className="mt-1.5 text-[0.6rem] uppercase tracking-regal text-gold">
-            {perfume.categoria[1] ?? perfume.categoria[0]}
-          </p>
+          <div className="mt-1.5 flex items-center justify-center gap-2">
+            <p className="text-[0.6rem] uppercase tracking-regal text-gold">
+              {perfume.categoria[1] ?? perfume.categoria[0]}
+            </p>
+            {concentracionDe(perfume) && (
+              <span className="rounded-full border border-gold/30 px-2 py-0.5 text-[0.5rem] font-bold uppercase tracking-regal text-gold-champagne">
+                {concentracionDe(perfume)}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Precio — tratamiento elegante de oferta, más notorio */}

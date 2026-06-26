@@ -5,8 +5,8 @@ import Image from "next/image";
 import {
   Lock, Eye, EyeOff, LogOut, Plus, Minus, Pencil, Trash2,
   Search, Star, Power, Tag, Boxes, X, ExternalLink,
-  AlertTriangle, CheckCircle2, FlaskConical, Sun, Moon,
-  BarChart2, RefreshCw, Zap, ShieldAlert, KeyRound, Save, Database, Sparkles,
+  AlertTriangle, CheckCircle2, Sun, Moon,
+  BarChart2, RefreshCw, ShieldAlert, Database, Sparkles,
 } from "lucide-react";
 import { Perfume, Cupon, TiendaProducto } from "@/types/database";
 import { formatGs, precioEfectivo } from "@/lib/format";
@@ -14,14 +14,10 @@ import {
   loginAction, logoutAction, guardarPerfumeAction, eliminarPerfumeAction,
   ajustarStockAction, togglePerfumeAction, ocultarTodosAction, mostrarTodosAction,
   guardarCuponAction, toggleCuponAction, eliminarCuponAction, resetearClicksAction,
-  guardarProveedorAction, sincronizarProveedorAction,
   inicializarDemosAction, borrarTodosLosDemosAction,
   subirImagenProductoAction,
   type PerfumeInput, type CuponInput, type DatosAdmin,
-  type ConfigProveedor,
 } from "./actions";
-import SyncSheetButton from "./sync-sheet-button";
-import MonedaPreciosButtons from "./moneda-precios-buttons";
 import AsistenteCarga from "./asistente-carga";
 import ImageDrop from "./image-drop";
 
@@ -32,13 +28,9 @@ interface AdminClientProps {
   datos: DatosAdmin;
 }
 
-type Pestaña = "asistente" | "stock" | "externo" | "demo" | "analitica" | "cupones";
+type Pestaña = "asistente" | "stock" | "demo" | "analitica" | "cupones";
 
 interface Toast { tipo: "ok" | "error"; texto: string; }
-
-// ─── Helper: detectar origen externo ────────────────────────────────────────
-const esExterno = (p: Perfume) =>
-  p.es_dropi === true || (p.sku != null && p.sku.startsWith("DROPI-"));
 
 // ════════════════════════════════════════════════════════════════════════════
 //  ENTRY POINT
@@ -153,18 +145,16 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
   };
 
   // Segmentar perfumes
-  const stock = perfumes.filter((p) => !esExterno(p) && !p.es_demo);
-  const externo = perfumes.filter((p) => esExterno(p) && !p.es_demo);
+  const stock = perfumes.filter((p) => !p.es_demo);
   const demos = perfumes.filter((p) => p.es_demo);
 
   // KPIs
   const kpis = useMemo(() => ({
     stock: stock.length,
-    externo: externo.length,
     demos: demos.length,
     bajoStock: stock.filter((p) => p.stock_disponible < 3).length,
     cuponesActivos: cupones.filter((c) => c.activo).length,
-  }), [stock, externo, demos, cupones]);
+  }), [stock, demos, cupones]);
 
   // ─── Handlers comunes ───
   const onStock = (id: string, delta: number) => {
@@ -348,9 +338,8 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
         )}
 
         {/* ── KPIs ── */}
-        <div className="mb-7 grid grid-cols-2 gap-3 md:grid-cols-5">
-          <Kpi icon={<Boxes className="h-5 w-5" />} label="Stock Local" value={kpis.stock} color="blue" />
-          <Kpi icon={<FlaskConical className="h-5 w-5" />} label="Origen Externo" value={kpis.externo} color="amber" />
+        <div className="mb-7 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <Kpi icon={<Boxes className="h-5 w-5" />} label="Mi Stock" value={kpis.stock} color="blue" />
           <Kpi icon={<AlertTriangle className="h-5 w-5" />} label="Bajo stock (<3)" value={kpis.bajoStock} color={kpis.bajoStock > 0 ? "red" : "gray"} />
           <Kpi icon={<Tag className="h-5 w-5" />} label="Cupones activos" value={kpis.cuponesActivos} color="green" />
           <Kpi icon={<ShieldAlert className="h-5 w-5" />} label="Pruebas activas" value={demos.filter((p) => p.activo).length} color={demos.some((p) => p.activo) ? "amber" : "gray"} />
@@ -361,8 +350,7 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
           {(
             [
               { id: "asistente", icon: <Sparkles className="h-4 w-4" />, label: "Asistente IA" },
-              { id: "stock", icon: <Boxes className="h-4 w-4" />, label: "Mi Stock Local" },
-              { id: "externo", icon: <FlaskConical className="h-4 w-4" />, label: "Origen Externo" },
+              { id: "stock", icon: <Boxes className="h-4 w-4" />, label: "Mi Stock" },
               { id: "demo", icon: <ShieldAlert className="h-4 w-4" />, label: "Pruebas del Sistema" },
               { id: "analitica", icon: <BarChart2 className="h-4 w-4" />, label: "Analítica" },
               { id: "cupones", icon: <Tag className="h-4 w-4" />, label: "Cupones" },
@@ -387,53 +375,24 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
         {/* ── CONTENIDO ── */}
         {pestaña === "asistente" && <AsistenteCarga toast={toast_} />}
         {pestaña === "stock" && (
-          <>
-            <SyncSheetButton toast={toast_} />
-            <MonedaPreciosButtons toast={toast_} />
-            <TablaStock
+          <TablaStock
             perfumes={stock}
-            titulo="Mi Stock Local"
-            subtitulo="Productos físicos en el local de CDE. ⚡ Envío Inmediato automático para tus clientes."
-            esExterno={false}
+            titulo="Mi Stock"
+            subtitulo="Productos físicos en el local de CDE."
             onStock={onStock}
             onToggle={onToggle}
             onEliminar={onEliminar}
-            onNuevo={() => setModalPerfume(perfumeVacio(false))}
+            onNuevo={() => setModalPerfume(perfumeVacio())}
             onEditar={(p) => setModalPerfume(toInput(p))}
             stockPending={stockPending}
             onOcultarTodos={() => {
               const act = stock.filter((p) => p.activo);
               if (!act.length) return;
-              if (!confirm(`¿Ocultar los ${act.length} perfumes de stock local de la tienda?`)) return;
-              setPerfumes((prev) => prev.map((p) => (!esExterno(p) && !p.es_demo ? { ...p, activo: false } : p)));
+              if (!confirm(`¿Ocultar los ${act.length} perfumes de la tienda?`)) return;
+              setPerfumes((prev) => prev.map((p) => (!p.es_demo ? { ...p, activo: false } : p)));
               startTransition(async () => { await ocultarTodosAction(act.map((p) => p.id)); });
             }}
           />
-          </>
-        )}
-        {pestaña === "externo" && (
-          <>
-            <ProveedorConfig proveedor={datos.proveedor} toast={toast_} />
-            <TablaStock
-              perfumes={externo}
-              titulo="Origen Externo — Pago Contra Entrega"
-              subtitulo='Productos que se despachan desde depósito externo bajo modalidad "Pago Contra Entrega". El cliente solo ve "Sultan Oud Elixir".'
-              esExterno={true}
-              onStock={onStock}
-              onToggle={onToggle}
-              onEliminar={onEliminar}
-              onNuevo={() => setModalPerfume(perfumeVacio(true))}
-              onEditar={(p) => setModalPerfume(toInput(p))}
-              stockPending={stockPending}
-              onOcultarTodos={() => {
-                const act = externo.filter((p) => p.activo);
-                if (!act.length) return;
-                if (!confirm(`¿Ocultar los ${act.length} productos externos de la tienda?`)) return;
-                setPerfumes((prev) => prev.map((p) => (esExterno(p) && !p.es_demo ? { ...p, activo: false } : p)));
-                startTransition(async () => { await ocultarTodosAction(act.map((p) => p.id)); });
-              }}
-            />
-          </>
         )}
         {pestaña === "demo" && (
           <DemoView
@@ -509,190 +468,6 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-//  CONFIGURACIÓN DE PROVEEDORES (Dropi y similares)
-//  Tarjeta destacada arriba de la pestaña "Origen Externo".
-//  Permite guardar credenciales y forzar sincronización de stock.
-// ════════════════════════════════════════════════════════════════════════════
-function ProveedorConfig({
-  proveedor,
-  toast,
-}: {
-  proveedor: ConfigProveedor | null;
-  toast: (tipo: "ok" | "error", texto: string) => void;
-}) {
-  // Hidratación segura de los campos (evita hydration mismatch)
-  const inicial: ConfigProveedor | null = proveedor;
-
-  const [form, setForm] = useState({
-    proveedor: inicial?.proveedor ?? "Dropi Paraguay",
-    api_url: inicial?.api_url ?? "",
-    api_key: inicial?.api_key ? "••••••••••••" : "",
-    sincronizar_diario: inicial?.sincronizar_diario ?? false,
-  });
-  const [guardando, setGuardando] = useState(false);
-  const [sincronizando, setSincronizando] = useState(false);
-  const [, startTransition] = useTransition();
-
-  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
-    setForm((prev) => ({ ...prev, [k]: v }));
-
-  const ultimoSyncTexto = inicial?.ultimo_sync
-    ? new Date(inicial.ultimo_sync).toLocaleString("es-PY", {
-        dateStyle: "short",
-        timeStyle: "short",
-      })
-    : "Nunca";
-
-  const onGuardar = (e: React.FormEvent) => {
-    e.preventDefault();
-    setGuardando(true);
-    startTransition(async () => {
-      const res = await guardarProveedorAction(form, inicial?.id);
-      setGuardando(false);
-      if (res.ok) {
-        toast("ok", "Configuración del proveedor guardada.");
-        window.location.reload();
-      } else {
-        toast("error", res.error ?? "Error al guardar");
-      }
-    });
-  };
-
-  const onSincronizar = () => {
-    if (!inicial?.id) {
-      toast("error", "Primero guardá la configuración.");
-      return;
-    }
-    setSincronizando(true);
-    startTransition(async () => {
-      const res = await sincronizarProveedorAction(inicial.id);
-      setSincronizando(false);
-      if (res.ok) {
-        toast("ok", res.detalle ?? "Sincronización completada.");
-        window.location.reload();
-      } else {
-        toast("error", res.error ?? "Error al sincronizar");
-      }
-    });
-  };
-
-  return (
-    <form onSubmit={onGuardar} className="adm-feature-card mb-6">
-      <div className="mb-4 flex items-start gap-3">
-        <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
-          style={{ color: "var(--adm-gold)", background: "var(--adm-blue-bg)" }}
-        >
-          <KeyRound className="h-5 w-5" />
-        </div>
-        <div className="flex-1">
-          <h3 className="text-base font-bold" style={{ color: "var(--adm-text)" }}>
-            🔑 Configuración de APIs y Proveedores
-          </h3>
-          <p className="text-sm" style={{ color: "var(--adm-text-muted)" }}>
-            Gestión de credenciales para sincronizar stock externo. Última sincronización:{" "}
-            <strong style={{ color: "var(--adm-text-soft)" }}>{ultimoSyncTexto}</strong>
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {/* Proveedor */}
-        <div>
-          <label className="adm-label">Proveedor</label>
-          <span className="adm-help">Ej: Dropi Paraguay · Quién provee el stock externo</span>
-          <input
-            value={form.proveedor}
-            onChange={(e) => set("proveedor", e.target.value)}
-            className="adm-input mt-1"
-            placeholder="Dropi Paraguay"
-          />
-        </div>
-
-        {/* URL */}
-        <div>
-          <label className="adm-label">URL Base de la API</label>
-          <span className="adm-help">Endpoint raíz del proveedor. Ej: https://api.dropi.co</span>
-          <input
-            value={form.api_url}
-            onChange={(e) => set("api_url", e.target.value)}
-            className="adm-input mt-1"
-            placeholder="https://api.dropi.co"
-          />
-        </div>
-
-        {/* API Key */}
-        <div>
-          <label className="adm-label">API Key / Token de Acceso</label>
-          <span className="adm-help">
-            {inicial?.api_key
-              ? "Ya hay una clave guardada (se muestra oculta). Para cambiarla, escribí una nueva."
-              : "Pegá el token secreto que te dio el proveedor"}
-          </span>
-          <input
-            type="password"
-            value={form.api_key}
-            onChange={(e) => set("api_key", e.target.value)}
-            className="adm-input mt-1 font-mono"
-            placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
-          />
-        </div>
-
-        {/* Toggle sincronización diaria */}
-        <div className="flex items-center justify-between rounded-lg border p-3"
-          style={{ borderColor: "var(--adm-border)", background: "var(--adm-surface-2)" }}>
-          <div>
-            <p className="text-sm font-semibold" style={{ color: "var(--adm-text)" }}>
-              Automatizar sincronización diaria
-            </p>
-            <p className="text-xs" style={{ color: "var(--adm-text-muted)" }}>
-              El sistema actualizará el stock automáticamente cada día
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => set("sincronizar_diario", !form.sincronizar_diario)}
-            className={`adm-switch${form.sincronizar_diario ? " adm-switch-on" : ""}`}
-            aria-label="Toggle sincronización diaria"
-          />
-        </div>
-      </div>
-
-      {/* Botones de acción */}
-      <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
-        <button
-          type="button"
-          onClick={onSincronizar}
-          disabled={sincronizando || !inicial?.id}
-          className="adm-btn adm-btn-gold"
-        >
-          {sincronizando ? (
-            <>
-              <span className="adm-spinner" /> Sincronizando…
-            </>
-          ) : (
-            <>
-              <RefreshCw className="h-4 w-4" /> 🔄 Sincronizar Stock Ahora
-            </>
-          )}
-        </button>
-        <button type="submit" disabled={guardando} className="adm-btn adm-btn-gold">
-          {guardando ? (
-            <>
-              <span className="adm-spinner" /> Guardando…
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4" /> 💾 Guardar Configuración
-            </>
-          )}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════════════
 //  BANNER DE INICIALIZACIÓN — cuando la base de datos está vacía
 //  Permite cargar los 11 perfumes de prueba a Supabase con un clic,
 //  sin tener que correr SQL a mano. Así el panel deja de verse vacío.
@@ -758,13 +533,12 @@ function InicializarVacio({ toast }: { toast: (t: "ok" | "error", m: string) => 
 //  TABLA DE STOCK (reutilizada para Stock Local y Origen Externo)
 // ════════════════════════════════════════════════════════════════════════════
 function TablaStock({
-  perfumes, titulo, subtitulo, esExterno: esPestañaExterna,
+  perfumes, titulo, subtitulo,
   onStock, onToggle, onEliminar, onNuevo, onEditar, onOcultarTodos, stockPending,
 }: {
   perfumes: Perfume[];
   titulo: string;
   subtitulo: string;
-  esExterno: boolean;
   onStock: (id: string, delta: number) => void;
   onToggle: (id: string, c: "activo" | "destacado", v: boolean) => void;
   onEliminar: (p: Perfume) => void;
@@ -862,12 +636,6 @@ function TablaStock({
                             <p className="text-xs" style={{ color: "var(--adm-text-muted)" }}>
                               {p.sku ?? "sin sku"} · {p.volumen_ml}ml
                             </p>
-                            {!esPestañaExterna && (
-                              <span className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[0.6rem] font-bold"
-                                style={{ background: "var(--adm-green-bg)", color: "var(--adm-green)" }}>
-                                <Zap className="h-2.5 w-2.5" fill="currentColor" /> Express
-                              </span>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -884,9 +652,7 @@ function TablaStock({
                       )}
                     </td>
                     <td>
-                      {esPestañaExterna ? (
-                        <span className="font-bold" style={{ color: "var(--adm-text)" }}>{p.stock_disponible}</span>
-                      ) : (
+                      {(
                         <div className="adm-stock-control">
                           <button
                             onClick={() => onStock(p.id, -1)}
@@ -1344,9 +1110,6 @@ function PerfumeForm({
           style={{ borderColor: "var(--adm-border)", background: "var(--adm-surface)" }}>
           <h2 className="text-lg font-bold" style={{ color: "var(--adm-text)" }}>
             {form.id ? "Editar producto" : "Nuevo producto"}
-            {form.es_dropi && (
-              <span className="adm-badge adm-badge-amber ml-2 align-middle">Origen Externo</span>
-            )}
           </h2>
           <button type="button" onClick={onCancel} style={{ color: "var(--adm-text-muted)" }}>
             <X className="h-5 w-5" />
@@ -1428,12 +1191,6 @@ function PerfumeForm({
                 help="Desmarcar para ocultar temporalmente"
                 checked={form.activo}
                 onChange={(v) => set("activo", v)}
-              />
-              <CheckField
-                label="Origen Externo"
-                help="Marcar SOLO si se envía desde depósito externo bajo modalidad Contra Entrega (no lo tenés físicamente en CDE)"
-                checked={form.es_dropi}
-                onChange={(v) => set("es_dropi", v)}
               />
             </div>
           </div>
@@ -1755,7 +1512,7 @@ function CheckField({
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-function perfumeVacio(esExternoFlag: boolean): PerfumeInput {
+function perfumeVacio(): PerfumeInput {
   return {
     nombre: "",
     marca: "",
@@ -1772,7 +1529,7 @@ function perfumeVacio(esExternoFlag: boolean): PerfumeInput {
     tiendas: [],
     sku: null, // vacío → auto-generado en el server
     destacado: false,
-    es_dropi: esExternoFlag,
+    es_dropi: false,
   };
 }
 
@@ -1794,6 +1551,6 @@ function toInput(p: Perfume): PerfumeInput {
     tiendas: p.tiendas ?? [],
     sku: p.sku,
     destacado: p.destacado,
-    es_dropi: p.es_dropi === true || (p.sku?.startsWith("DROPI-") ?? false),
+    es_dropi: false,
   };
 }

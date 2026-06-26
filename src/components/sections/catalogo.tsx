@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { SearchX, X, Zap } from "lucide-react";
+import { SearchX, X } from "lucide-react";
 import { Perfume } from "@/types/database";
 import { ProductCard } from "@/components/catalog/product-card";
 import { useReveal } from "@/hooks/use-reveal";
@@ -29,7 +29,6 @@ interface CatalogoProps {
 export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: CatalogoProps) {
   const [marcaActiva, setMarcaActiva] = useState<string>("todas");
   const [familiaActiva, setFamiliaActiva] = useState<string>("todas");
-  const [ofertasExpress, setOfertasExpress] = useState<boolean>(false);
   const ref = useReveal<HTMLDivElement>({ stagger: 0.04, y: 24 });
 
   // Escuchar búsqueda global del navbar
@@ -67,30 +66,23 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
       const matchMarca = marcaActiva === "todas" || p.marca === marcaActiva;
       const matchFamilia =
         familiaActiva === "todas" || p.categoria.includes(familiaActiva);
-      // "Envío Inmediato": SOLO productos locales (es_dropi=false).
-      // No exige que estén en oferta — es el botón de los productos de entrega express.
-      const esLocal =
-        !p.es_dropi && !(p.sku?.startsWith("DROPI-") ?? false);
-      const matchOferta = !ofertasExpress || esLocal;
       const matchQuery =
         !q ||
         p.nombre.toLowerCase().includes(q) ||
         p.marca.toLowerCase().includes(q) ||
         p.descripcion.toLowerCase().includes(q);
-      return matchMarca && matchFamilia && matchOferta && matchQuery;
+      return matchMarca && matchFamilia && matchQuery;
     });
-  }, [perfumes, marcaActiva, familiaActiva, ofertasExpress, query]);
+  }, [perfumes, marcaActiva, familiaActiva, query]);
 
   const hayFiltros =
     marcaActiva !== "todas" ||
     familiaActiva !== "todas" ||
-    query.trim().length > 0 ||
-    ofertasExpress;
+    query.trim().length > 0;
 
   const limpiar = () => {
     setMarcaActiva("todas");
     setFamiliaActiva("todas");
-    setOfertasExpress(false);
     onQueryChange("");
   };
 
@@ -113,59 +105,6 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
             del mundo árabe. Cada botella llega desde Dubai con autenticidad garantizada.
           </p>
         </div>
-
-        {/* Botón destacado: Envío Inmediato */}
-        <div className="mb-5 flex justify-center" data-reveal>
-          <button
-            onClick={() => {
-              setOfertasExpress((v) => !v);
-              // Al activarse, limpiar marca/familia para que el foco quede en envío inmediato
-              if (!ofertasExpress) {
-                setMarcaActiva("todas");
-                setFamiliaActiva("todas");
-              }
-            }}
-            className={`group relative overflow-hidden rounded-full border-2 px-6 py-3.5 text-xs font-bold uppercase tracking-regal transition-all duration-500 sm:px-8 sm:py-4 sm:text-sm ${
-              ofertasExpress
-                ? "border-[#25D366] bg-gradient-to-r from-[#1faa52] to-[#25D366] text-obsidian shadow-[0_0_50px_-8px_rgba(37,211,102,0.9)]"
-                : "express-idle-beat border-[#d4af37] bg-gradient-to-r from-gold-dark via-gold to-gold-light text-obsidian hover:shadow-[0_0_60px_-8px_rgba(212,175,55,0.95)]"
-            }`}
-            aria-pressed={ofertasExpress}
-          >
-            {/* Brillo continuo cuando está activo (sweep infinito) */}
-            <span
-              className={`pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/45 to-transparent ${
-                ofertasExpress
-                  ? "express-active-sweep"
-                  : "-translate-x-full transition-transform duration-700 group-hover:translate-x-full"
-              }`}
-            />
-            <span className="relative flex items-center gap-2 sm:gap-2.5">
-              <Zap
-                className={`h-4 w-4 sm:h-5 sm:w-5 ${ofertasExpress ? "express-active-zap" : "express-idle-zap"}`}
-                fill={ofertasExpress ? "currentColor" : "none"}
-                strokeWidth={2}
-              />
-              <span className="leading-tight">
-                {ofertasExpress ? "Mostrando Envío Inmediato" : "Productos de Envío Inmediato"}
-              </span>
-              <Zap
-                className={`h-4 w-4 sm:h-5 sm:w-5 ${ofertasExpress ? "express-active-zap" : "express-idle-zap"}`}
-                fill={ofertasExpress ? "currentColor" : "none"}
-                strokeWidth={2}
-              />
-            </span>
-          </button>
-        </div>
-        <p
-          className={`mb-10 text-center text-[0.66rem] uppercase tracking-regal transition-colors duration-300 sm:text-xs ${
-            ofertasExpress ? "text-[#25D366]/90" : "text-ivory/60"
-          }`}
-        >
-          {ofertasExpress
-            ? "Viendo solo los productos con entrega express"
-            : "Tocá para ver solo los productos con entrega express ⚡"}
-        </p>
 
         {/* ────────── Filtros rediseñados ────────── */}
         <div className="mb-10 space-y-6" data-reveal>

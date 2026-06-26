@@ -2,17 +2,11 @@
 
 import { useState, useCallback } from "react";
 import {
-  Sparkles, AlertTriangle, CheckCircle2, ExternalLink, Search, Loader2, Save, Wand2, Clock,
+  Sparkles, AlertTriangle, CheckCircle2, Loader2, Save, Wand2, Clock,
 } from "lucide-react";
-import { guardarPerfumeAction, type PerfumeInput } from "./actions";
-import { TIENDAS } from "@/data/tiendas-config";
+import { guardarPerfumeAction, subirImagenProductoAction, type PerfumeInput } from "./actions";
+import ImageDrop from "./image-drop";
 
-interface Candidato { titulo: string; url: string; precio: string; }
-interface ResultadoTienda {
-  id: string; tienda: string; urlTienda: string;
-  candidatos: Candidato[]; mejorIndice: number; confianza: number;
-  semaforo: "verde" | "amarillo" | "rojo"; nota?: string;
-}
 interface PerfumeIA {
   marca: string; volumen_ml: number; categoria: string[]; descripcion: string;
   notas_olfativas: { salida: string[]; corazon: string[]; fondo: string[] };
@@ -47,9 +41,7 @@ export default function AsistenteCarga({
   const [nSalida, setNSalida] = useState("");
   const [nCorazon, setNCorazon] = useState("");
   const [nFondo, setNFondo] = useState("");
-
-  const [tiendas, setTiendas] = useState<ResultadoTienda[]>([]);
-  const [seleccion, setSeleccion] = useState<Record<string, number>>({});
+  const [urlImagen, setUrlImagen] = useState("");
 
   const bloqueado = dup.candidatos.length > 0 && !ignorarDup;
   const listoParaSync = nombre.trim().length >= 3 && !bloqueado && !cargando;
@@ -69,7 +61,7 @@ export default function AsistenteCarga({
     }
   }, [nombre]);
 
-  // ── Sincronizar: Gemini + tiendas en paralelo, con manejo robusto de errores ──
+  // ── Sincronizar: solo Gemini rellena los datos del perfume ──
   const sincronizar = async () => {
     if (!listoParaSync || cargando) return; // bloqueo anti doble-clic
     setCargando(true);
@@ -77,14 +69,9 @@ export default function AsistenteCarga({
     setHechoIA(false);
     try {
       const opt = { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nombre: nombre.trim() }) };
-      const [rP, rT] = await Promise.all([
-        fetch("/api/asistente/perfume", opt),
-        fetch("/api/asistente/tiendas", opt),
-      ]);
+      const rP = await fetch("/api/asistente/perfume", opt);
       const dP = await rP.json().catch(() => ({ ok: false, error: "Respuesta inválida de la IA." }));
-      const dT = await rT.json().catch(() => ({ ok: false }));
 
-      // Errores del flujo de datos (validación / ritmo / red).
       if (!dP.ok) {
         if (dP.codigo === "NO_PERFUME") setError({ tipo: "warn", texto: dP.error });
         else if (dP.codigo === "RITMO" || dP.codigo === "SATURADO") setError({ tipo: "wait", texto: dP.error });
@@ -92,7 +79,6 @@ export default function AsistenteCarga({
         return;
       }
 
-      // Datos del perfume → autocompletar.
       const p: PerfumeIA = dP.perfume;
       setMarca(p.marca || "");
       setMl(p.volumen_ml || 100);
@@ -102,19 +88,8 @@ export default function AsistenteCarga({
       setNCorazon(lista(p.notas_olfativas?.corazon));
       setNFondo(lista(p.notas_olfativas?.fondo));
 
-      // Tiendas (si fallaron por ritmo, igual mostramos los datos del perfume).
-      if (dT.ok) {
-        const ts: ResultadoTienda[] = dT.tiendas ?? [];
-        setTiendas(ts);
-        const sel: Record<string, number> = {};
-        ts.forEach((t) => { sel[t.id] = t.mejorIndice; });
-        setSeleccion(sel);
-      } else {
-        setTiendas([]);
-      }
-
       setHechoIA(true);
-      toast?.("ok", dP.cacheado ? "Datos recuperados (caché)." : "Datos cargados. Revisá las tiendas y guardá.");
+      toast?.("ok", dP.cacheado ? "Datos recuperados (caché)." : "Datos cargados. Cargá una foto y guardá.");
     } catch {
       setError({ tipo: "error", texto: "Falló la conexión. Revisá la red y reintentá." });
     } finally {
@@ -122,28 +97,33 @@ export default function AsistenteCarga({
     }
   };
 
+  // Subida de la foto a Supabase Storage (igual que en el formulario de stock).
+  const onSubirImagen = useCallback(async (file: File): Promise<string> => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await subirImagenProductoAction(fd);
+    if (!res.ok || !res.url) throw new Error(res.error ?? "No se pudo subir la imagen.");
+    return res.url;
+  }, []);
+
   const guardar = async () => {
     setGuardando(true);
-    const tiendasGuardar = tiendas
-      .filter((t) => seleccion[t.id] >= 0 && t.candidatos[seleccion[t.id]])
-      .map((t) => ({ tienda: t.tienda, url: t.candidatos[seleccion[t.id]].url, codigo: "" }));
-
     const input: PerfumeInput = {
       nombre: nombre.trim(), marca: marca.trim(),
       precio_regular: 0, precio_descuento: null, en_oferta: false,
       stock_disponible: 0, volumen_ml: Number(ml) || 100, activo: true,
-      url_imagen: "", descripcion: descripcion.trim(),
+      url_imagen: urlImagen, descripcion: descripcion.trim(),
       notas_olfativas: { salida: desdeLista(nSalida), corazon: desdeLista(nCorazon), fondo: desdeLista(nFondo) },
       categoria: desdeLista(categorias), sku: null, destacado: false, es_dropi: false,
-      tiendas: tiendasGuardar,
+      tiendas: [],
     };
     try {
       const res = await guardarPerfumeAction(input);
       if (res.ok) {
-        toast?.("ok", `Producto "${nombre}" guardado con ${tiendasGuardar.length} tienda(s).`);
+        toast?.("ok", `Producto "${nombre}" guardado en tu stock.`);
         setNombre(""); setDup({ candidatos: [], chequeado: false }); setHechoIA(false); setError(null);
         setMarca(""); setMl(100); setCategorias(""); setDescripcion(""); setNSalida(""); setNCorazon(""); setNFondo("");
-        setTiendas([]); setSeleccion({});
+        setUrlImagen("");
       } else {
         toast?.("error", res.error ?? "Error al guardar.");
       }
@@ -153,11 +133,6 @@ export default function AsistenteCarga({
       setGuardando(false);
     }
   };
-
-  const colorSem = (s: ResultadoTienda["semaforo"]) =>
-    s === "verde" ? "var(--adm-green)" : s === "amarillo" ? "var(--adm-amber)" : "var(--adm-red)";
-  const bgSem = (s: ResultadoTienda["semaforo"]) =>
-    s === "verde" ? "var(--adm-green-bg)" : s === "amarillo" ? "var(--adm-amber-bg)" : "var(--adm-red-bg)";
 
   return (
     <div className="space-y-5">
@@ -170,7 +145,8 @@ export default function AsistenteCarga({
           <div>
             <h3 className="text-base font-bold" style={{ color: "var(--adm-text)" }}>🪄 Asistente de carga con IA</h3>
             <p className="mt-0.5 text-sm" style={{ color: "var(--adm-text-muted)" }}>
-              Escribí el nombre del perfume; la IA valida, completa los datos y busca el precio en las 16 tiendas.
+              Escribí el nombre del perfume; la IA valida y completa marca, notas y descripción.
+              Cargá una foto y guardalo en tu stock.
             </p>
           </div>
         </div>
@@ -194,8 +170,8 @@ export default function AsistenteCarga({
             title={bloqueado ? "Resolvé la alerta de duplicado primero" : undefined}
           >
             {cargando
-              ? <><Loader2 className="h-4 w-4 animate-spin" /> Buscando precios y analizando notas… (5-8 segs)</>
-              : <><Sparkles className="h-4 w-4" /> Sincronizar Producto</>}
+              ? <><Loader2 className="h-4 w-4 animate-spin" /> Analizando notas… (5-8 segs)</>
+              : <><Sparkles className="h-4 w-4" /> Completar con IA</>}
           </button>
         </div>
 
@@ -227,34 +203,9 @@ export default function AsistenteCarga({
         )}
         {dup.chequeado && dup.candidatos.length === 0 && !error && nombre.trim().length >= 3 && (
           <p className="mt-2 flex items-center gap-1.5 text-xs" style={{ color: "var(--adm-green)" }}>
-            <CheckCircle2 className="h-3.5 w-3.5" /> Sin duplicados. Listo para sincronizar.
+            <CheckCircle2 className="h-3.5 w-3.5" /> Sin duplicados. Listo para completar.
           </p>
         )}
-      </div>
-
-      {/* Tiendas que se consultan (siempre visible) */}
-      <div className="adm-feature-card">
-        <h4 className="mb-2 text-sm font-bold" style={{ color: "var(--adm-text)" }}>
-          🏬 Tiendas que se consultan automáticamente ({TIENDAS.length})
-        </h4>
-        <p className="mb-2 text-xs" style={{ color: "var(--adm-text-muted)" }}>
-          Al sincronizar, el asistente busca el precio en estas tiendas (HTML directo, gratis):
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {TIENDAS.map((t) => (
-            <a
-              key={t.id}
-              href={t.urlBase}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-full border px-2.5 py-1 text-xs font-medium"
-              style={{ borderColor: "var(--adm-border)", color: "var(--adm-text-soft)", background: "var(--adm-surface-2)" }}
-              title={t.dominio}
-            >
-              {t.nombre}
-            </a>
-          ))}
-        </div>
       </div>
 
       {/* Skeletons mientras carga */}
@@ -267,48 +218,31 @@ export default function AsistenteCarga({
         </div>
       )}
 
-      {/* Campos autocompletados */}
+      {/* Campos autocompletados + foto */}
       {hechoIA && (
-        <div className="adm-feature-card">
-          <h4 className="mb-3 text-sm font-bold" style={{ color: "var(--adm-text)" }}>Datos del perfume (autocompletados — editá si hace falta)</h4>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div><label className="adm-label">Marca</label><input value={marca} onChange={(e) => setMarca(e.target.value)} className="adm-input mt-1" /></div>
-            <div><label className="adm-label">Volumen (ml)</label><input type="number" value={ml} onChange={(e) => setMl(Number(e.target.value))} className="adm-input mt-1" /></div>
-            <div className="md:col-span-2"><label className="adm-label">Categorías / familias (separadas por coma)</label><input value={categorias} onChange={(e) => setCategorias(e.target.value)} className="adm-input mt-1" /></div>
-            <div className="md:col-span-2"><label className="adm-label">Descripción</label><textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} className="adm-input mt-1" rows={2} /></div>
-            <div><label className="adm-label">Notas de salida</label><input value={nSalida} onChange={(e) => setNSalida(e.target.value)} className="adm-input mt-1" /></div>
-            <div><label className="adm-label">Notas de corazón</label><input value={nCorazon} onChange={(e) => setNCorazon(e.target.value)} className="adm-input mt-1" /></div>
-            <div><label className="adm-label">Notas de fondo</label><input value={nFondo} onChange={(e) => setNFondo(e.target.value)} className="adm-input mt-1" /></div>
+        <>
+          <div className="adm-feature-card">
+            <h4 className="mb-3 text-sm font-bold" style={{ color: "var(--adm-text)" }}>Datos del perfume (autocompletados — editá si hace falta)</h4>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div><label className="adm-label">Marca</label><input value={marca} onChange={(e) => setMarca(e.target.value)} className="adm-input mt-1" /></div>
+              <div><label className="adm-label">Volumen (ml)</label><input type="number" value={ml} onChange={(e) => setMl(Number(e.target.value))} className="adm-input mt-1" /></div>
+              <div className="md:col-span-2"><label className="adm-label">Categorías / familias (separadas por coma)</label><input value={categorias} onChange={(e) => setCategorias(e.target.value)} className="adm-input mt-1" /></div>
+              <div className="md:col-span-2"><label className="adm-label">Descripción</label><textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} className="adm-input mt-1" rows={2} /></div>
+              <div><label className="adm-label">Notas de salida</label><input value={nSalida} onChange={(e) => setNSalida(e.target.value)} className="adm-input mt-1" /></div>
+              <div><label className="adm-label">Notas de corazón</label><input value={nCorazon} onChange={(e) => setNCorazon(e.target.value)} className="adm-input mt-1" /></div>
+              <div><label className="adm-label">Notas de fondo</label><input value={nFondo} onChange={(e) => setNFondo(e.target.value)} className="adm-input mt-1" /></div>
+            </div>
           </div>
-        </div>
-      )}
 
-      {/* Tabla semáforo de tiendas */}
-      {hechoIA && tiendas.length > 0 && (
-        <div className="adm-feature-card">
-          <h4 className="mb-3 text-sm font-bold" style={{ color: "var(--adm-text)" }}>Tiendas ({tiendas.length}) — verde &gt;90% · amarillo revisar · rojo manual</h4>
-          <div className="space-y-1.5">
-            {tiendas.map((t) => (
-              <div key={t.id} className="flex flex-wrap items-center gap-2 rounded-lg border p-2 text-sm" style={{ borderColor: colorSem(t.semaforo), background: bgSem(t.semaforo) }}>
-                <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorSem(t.semaforo) }} />
-                <span className="w-40 shrink-0 font-semibold" style={{ color: "var(--adm-text)" }}>{t.tienda}</span>
-                <a href={t.urlTienda} target="_blank" rel="noreferrer" className="shrink-0" title="Abrir tienda" style={{ color: "var(--adm-text-muted)" }}><ExternalLink className="h-4 w-4" /></a>
-                {t.candidatos.length > 0 ? (
-                  <select value={seleccion[t.id] ?? -1} onChange={(e) => setSeleccion((s) => ({ ...s, [t.id]: Number(e.target.value) }))} className="adm-input flex-1" style={{ minWidth: 200 }}>
-                    <option value={-1}>— ninguno —</option>
-                    {t.candidatos.map((c, i) => <option key={i} value={i}>{c.titulo} · {c.precio}</option>)}
-                  </select>
-                ) : (
-                  <span className="flex-1 text-xs" style={{ color: "var(--adm-text-muted)" }}>{t.nota ?? "Sin resultados"}</span>
-                )}
-                <a href={t.urlTienda} target="_blank" rel="noreferrer" className="adm-btn adm-btn-ghost adm-btn-sm shrink-0">
-                  <Search className="h-3.5 w-3.5" /> Búsqueda Manual
-                </a>
-                {t.candidatos.length > 0 && <span className="shrink-0 text-xs font-semibold" style={{ color: colorSem(t.semaforo) }}>{t.confianza}%</span>}
-              </div>
-            ))}
+          {/* Foto del producto */}
+          <div className="adm-feature-card">
+            <h4 className="mb-1 text-sm font-bold" style={{ color: "var(--adm-text)" }}>Foto del producto</h4>
+            <p className="mb-3 text-xs" style={{ color: "var(--adm-text-muted)" }}>
+              Subí una foto de buena calidad del frasco. Queda guardada en Supabase y se muestra en la tienda.
+            </p>
+            <ImageDrop urlActual={urlImagen} onUpload={onSubirImagen} onChange={setUrlImagen} />
           </div>
-        </div>
+        </>
       )}
 
       {/* Guardar */}

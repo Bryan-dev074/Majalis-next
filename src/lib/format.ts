@@ -19,6 +19,23 @@ export function precioEfectivo(p: Pick<Perfume, "en_oferta" | "precio_descuento"
 }
 
 /**
+ * Concentración (EDP / EDT / Parfum / Elixir / Cologne) derivada del nombre o la
+ * categoría del perfume. Devuelve null si no se puede inferir (no muestra badge).
+ * No requiere columna nueva: la mayoría de los nombres ya la incluyen ("… EDP").
+ */
+export function concentracionDe(
+  p: Pick<Perfume, "nombre"> & { categoria?: string[] }
+): string | null {
+  const texto = `${p.nombre} ${(p.categoria ?? []).join(" ")}`.toLowerCase();
+  if (/\beau de parfum\b|\bedp\b/.test(texto)) return "EDP";
+  if (/\beau de toilette\b|\bedt\b/.test(texto)) return "EDT";
+  if (/\beau de cologne\b|\bedc\b|\bcologne\b/.test(texto)) return "Cologne";
+  if (/\belixir\b/.test(texto)) return "Elixir";
+  if (/\bparfum\b|\bextrait\b/.test(texto)) return "Parfum";
+  return null;
+}
+
+/**
  * Construye la URL de WhatsApp hacia el número del Sultan, con el mensaje
  * personalizado exigido por el brief:
  *   "Quiero hacer un pedido del perfume [Nombre del Perfume]"
@@ -30,101 +47,46 @@ export function buildWhatsAppUrl(nombrePerfume: string, numero: string): string 
 }
 
 /**
- * Determina si un perfume es de origen externo (contra entrega desde depósito).
- * El cliente NUNCA ve "Dropi": para él solo existen "Envío Inmediato" (local)
- * y "Pago Contra Entrega" (externo).
- */
-export function esExterno(p: Pick<Perfume, "es_dropi" | "sku">): boolean {
-  return p.es_dropi === true || (p.sku != null && p.sku.startsWith("DROPI-"));
-}
-
-/**
  * Genera el mensaje de WhatsApp para un carrito completo (checkout).
- *
- * Dos modalidades según el origen de los productos (marca oculta al cliente):
- *  · LOCAL  (es_dropi = false) → ⚡ ENVÍO INMEDIATO / EXPRESS (pago previo).
- *  · EXTERNO (es_dropi = true) → 🚚 PAGO CONTRA ENTREGA (paga en casa).
- *
- * Si el carrito mezcla ambos, arma un único mensaje con dos bloques.
- * El texto es 100% profesional y nunca revela proveedores externos.
+ * Un solo flujo: stock local de Sultan Oud Elixir. Los datos de entrega son
+ * opcionales (si el cliente los cargó) y el pago/envío se coordina por WhatsApp.
  */
 export function buildWhatsAppCheckoutUrl(
   items: CartItem[],
   numero: string,
   extras?: { nombre?: string; ciudad?: string; direccion?: string; whatsapp?: string }
 ): string {
-  const locales = items.filter((it) => !esExterno(it.perfume));
-  const externos = items.filter((it) => esExterno(it.perfume));
-  const hayLocales = locales.length > 0;
-  const hayExternos = externos.length > 0;
-
-  const total = totalCarrito(items, null);
+  const total = subtotalCarrito(items);
 
   const bloques: string[] = [
     "👑 *SULTAN OUD ELIXIR — NUEVO PEDIDO* 👑",
     "---",
+    "📦 *DETALLE DEL PEDIDO:*",
   ];
+  items.forEach((it) => {
+    bloques.push(
+      `• ${it.cantidad}x ${it.perfume.nombre} (${it.perfume.volumen_ml}ml) — Marca: ${it.perfume.marca}`
+    );
+    if (it.perfume.sku) bloques.push(`  Código: \`${it.perfume.sku}\``);
+  });
 
-  // ───── BLOQUE LOCAL: Envío Inmediato ─────
-  if (hayLocales) {
-    bloques.push(
-      "Quiero gestionar mi pedido con *⚡ ENVÍO INMEDIATO / EXPRESS*:",
-      "",
-      "📦 *DETALLE DEL PEDIDO:*"
-    );
-    locales.forEach((it) => {
-      bloques.push(
-        `• ${it.cantidad}x ${it.perfume.nombre} (${it.perfume.volumen_ml}ml) — Marca: ${it.perfume.marca}`
-      );
-      if (it.perfume.sku) bloques.push(`  Código: \`${it.perfume.sku}\``);
-    });
-    const subtotalLocales = subtotalCarrito(locales);
-    bloques.push(
-      "",
-      "💰 *RESUMEN:*",
-      `• Total: ${formatGs(subtotalLocales)}`,
-      "",
-      "📌 *Para confirmar el despacho express, requiero abonar por transferencia o giro. ¿Me pasan los datos de la cuenta?*"
-    );
-  }
+  bloques.push("", "💰 *RESUMEN:*", `• Total: ${formatGs(total)}`);
 
-  // ───── BLOQUE EXTERNO: Pago Contra Entrega ─────
-  if (hayExternos) {
-    if (hayLocales) bloques.push("", "──────────────", "");
-    bloques.push(
-      "Quiero gestionar mi pedido con *🚚 PAGO CONTRA ENTREGA (Paga en Casa)*:",
-      "",
-      "📦 *DETALLE DEL PEDIDO:*"
-    );
-    externos.forEach((it) => {
-      bloques.push(
-        `• ${it.cantidad}x ${it.perfume.nombre} (${it.perfume.volumen_ml}ml) — Marca: ${it.perfume.marca}`
-      );
-      if (it.perfume.sku) bloques.push(`  Código: \`${it.perfume.sku}\``);
-    });
-    const subtotalExternos = subtotalCarrito(externos);
+  const hayDatos = extras && (extras.nombre || extras.ciudad || extras.direccion || extras.whatsapp);
+  if (hayDatos) {
     bloques.push(
       "",
-      "💰 *RESUMEN:*",
-      `• Total a pagar en casa: ${formatGs(subtotalExternos)}`,
-      "",
-      "📌 *DATOS DE ENVÍO:*",
+      "📌 *DATOS DE ENTREGA:*",
       `• Nombre: ${extras?.nombre || "—"}`,
       `• Ciudad: ${extras?.ciudad || "—"}`,
       `• Dirección: ${extras?.direccion || "—"}`,
-      `• Teléfono: ${extras?.whatsapp || "—"}`,
-      "",
-      "¿Me confirman el pedido para coordinar el envío? 🙏"
+      `• Teléfono: ${extras?.whatsapp || "—"}`
     );
   }
 
-  // Si el carrito es mixto, agregar total consolidado al final
-  if (hayLocales && hayExternos) {
-    bloques.push("", `💎 *TOTAL GENERAL:* ${formatGs(total)}`);
-  }
+  bloques.push("", "¿Me confirman disponibilidad para coordinar el pago y el envío? 🙏");
 
-  const cuerpo = bloques.join("\n");
-  return `https://wa.me/${numero}?text=${encodeURIComponent(cuerpo)}`;
+  return `https://wa.me/${numero}?text=${encodeURIComponent(bloques.join("\n"))}`;
 }
 
 /** Subtotal sin descuento de cupón. */
