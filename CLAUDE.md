@@ -27,8 +27,14 @@ cambiás algo relevante acá, actualizala también).
 - Asistente IA (/admin): solo Gemini (datos) + foto + guardar en `perfumes`.
 - La anon key es formato nuevo `sb_publishable_…`; las dos apps usan la misma.
 - La pirámide olfativa la llena el HUB (Gemini) y llega por `notas_olfativas`
-  {salida,corazon,fondo}; el modal la renderiza tal cual. Si "no aparece", casi
-  siempre es una pestaña vieja del navegador (el catálogo se trae en vivo).
+  {salida,corazon,fondo}; el modal la renderiza tal cual.
+- GSAP en product-modal: la timeline va keyeada por `perfume?.id`, NUNCA por el
+  objeto — el CatalogProvider regenera identidades al refrescar y con `[perfume]`
+  la animación se reiniciaba en loop dejando los `.nota-chip` en opacity 0
+  ("la pirámide no aparece"). Ídem para cualquier animación futura con datos del provider.
+- Cinta "100% originales" del navbar: aparece ~6s y se auto-oculta (estado
+  `cintaVisible`). Catálogo móvil: 2 por fila. Marquee de marcas: tipográfico
+  (marcas-marquee.tsx), sin logos PNG a propósito.
 
 ## Comandos
 - Typecheck/build: `npx tsc --noEmit` · `npm run build`

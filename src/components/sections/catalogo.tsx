@@ -193,7 +193,7 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-6 sm:gap-y-12 lg:grid-cols-3 xl:grid-cols-4">
             {filtrados.map((p) => (
               <ProductCard
                 key={p.id}

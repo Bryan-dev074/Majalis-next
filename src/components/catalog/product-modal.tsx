@@ -75,14 +75,25 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
     };
   }, [perfume]);
 
-  // Timeline GSAP de entrada
+  // Timeline GSAP de entrada.
+  // ⚠️ Depende del ID (no del objeto): el CatalogProvider refresca el catálogo y
+  // regenera los objetos con nueva identidad → con [perfume] la timeline se
+  // reiniciaba en loop y los .nota-chip (lo ÚLTIMO de la timeline) nunca llegaban
+  // a hacerse visibles: "la pirámide olfativa no aparece". Con el id, anima UNA
+  // vez por producto abierto.
   useEffect(() => {
     if (!perfume || !innerRef.current) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) return;
 
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+      const tl = gsap.timeline({
+        defaults: { ease: "power3.out" },
+        // Seguro: pase lo que pase con la timeline, al final TODO queda visible.
+        onComplete: () => {
+          gsap.set(".nota-capa, .nota-chip", { clearProps: "opacity,transform" });
+        },
+      });
       tl.from(".modal-veil", { opacity: 0, duration: 0.4 })
         .from(".modal-image", { scale: 1.1, opacity: 0, duration: 1 }, "-=0.2")
         .from(
@@ -118,7 +129,8 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
     }, rootRef);
 
     return () => { ctx.revert(); };
-  }, [perfume]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- id a propósito (ver comentario arriba)
+  }, [perfume?.id]);
 
   // ESC para cerrar
   useEffect(() => {

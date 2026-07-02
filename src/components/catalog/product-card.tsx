@@ -39,7 +39,7 @@ export function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
           src={perfume.url_imagen}
           alt={perfume.nombre}
           fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 33vw, 25vw"
+          sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
           className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-110"
         />
 
@@ -104,18 +104,18 @@ export function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
         )}
       </div>
 
-      {/* Info */}
-      <div className="flex flex-1 flex-col justify-between p-5 text-center">
+      {/* Info — compacta en móvil (grid de 2 columnas), amplia en desktop */}
+      <div className="flex flex-1 flex-col justify-between p-3 text-center sm:p-5">
         <div>
-          <h3 className="font-display text-2xl leading-tight text-ivory">
+          <h3 className="font-display text-base leading-tight text-ivory sm:text-2xl">
             {perfume.nombre}
           </h3>
-          <div className="mt-1.5 flex items-center justify-center gap-2">
-            <p className="text-[0.6rem] uppercase tracking-regal text-gold">
+          <div className="mt-1.5 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
+            <p className="text-[0.55rem] uppercase tracking-regal text-gold sm:text-[0.6rem]">
               {perfume.categoria[1] ?? perfume.categoria[0]}
             </p>
             {concentracionDe(perfume) && (
-              <span className="rounded-full border border-gold/30 px-2 py-0.5 text-[0.5rem] font-bold uppercase tracking-regal text-gold-champagne">
+              <span className="rounded-full border border-gold/30 px-1.5 py-0.5 text-[0.45rem] font-bold uppercase tracking-regal text-gold-champagne sm:px-2 sm:text-[0.5rem]">
                 {concentracionDe(perfume)}
               </span>
             )}
@@ -123,15 +123,15 @@ export function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
         </div>
 
         {/* Precio — tratamiento elegante de oferta, más notorio */}
-        <div className="mt-5 flex items-end justify-center gap-3">
+        <div className="mt-3 flex flex-wrap items-end justify-center gap-1.5 sm:mt-5 sm:gap-3">
           {enOferta && (
-            <span className="price-strike !text-sm text-ivory/50">{formatGs(perfume.precio_regular)}</span>
+            <span className="price-strike !text-xs text-ivory/50 sm:!text-sm">{formatGs(perfume.precio_regular)}</span>
           )}
-          <span className="font-display text-3xl text-gold-gradient drop-shadow-[0_0_12px_rgba(212,175,55,0.25)]">
+          <span className="font-display text-lg text-gold-gradient drop-shadow-[0_0_12px_rgba(212,175,55,0.25)] sm:text-3xl">
             {formatGs(precio)}
           </span>
           {enOferta && (
-            <Sparkles className="mb-1.5 h-4 w-4 text-gold-light opacity-80" />
+            <Sparkles className="mb-1 h-3 w-3 text-gold-light opacity-80 sm:mb-1.5 sm:h-4 sm:w-4" />
           )}
         </div>
       </div>

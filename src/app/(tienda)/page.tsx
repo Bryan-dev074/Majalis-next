@@ -1,6 +1,7 @@
 import { Hero } from "@/components/sections/hero";
 import { Importacion } from "@/components/sections/importacion";
 import { CatalogoClient } from "@/components/sections/catalogo-client";
+import { MarcasMarquee } from "@/components/sections/marcas-marquee";
 
 /**
  * Página principal.
@@ -11,6 +12,7 @@ export default function HomePage() {
   return (
     <>
       <Hero />
+      <MarcasMarquee />
       <Importacion />
       <CatalogoClient />
     </>

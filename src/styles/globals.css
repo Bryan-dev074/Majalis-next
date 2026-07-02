@@ -698,3 +698,21 @@
     display: none;
   }
 }
+
+/* ── Marquee de casas perfumistas (marcas-marquee.tsx) ──
+   Dos copias de la fila; al llegar a -50% la segunda copia está donde arrancó
+   la primera → loop infinito sin salto. Pausa al pasar el mouse. */
+@keyframes marquee-luxe {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.marquee-luxe {
+  animation: marquee-luxe 38s linear infinite;
+  will-change: transform;
+}
+.marquee-luxe:hover {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-luxe { animation: none; }
+}

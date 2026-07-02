@@ -39,6 +39,14 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Cinta "100% originales": aparece un rato al cargar y se guarda sola con
+  // animación (en el teléfono ocupaba espacio todo el tiempo y se veía mal).
+  const [cintaVisible, setCintaVisible] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setCintaVisible(false), 6000);
+    return () => clearTimeout(t);
+  }, []);
+
   // Cerrar sugerencias al hacer clic fuera
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -121,15 +129,23 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
           : "bg-transparent"
       }`}
     >
-      {/* Cinta superior — sello de autenticidad (visible SIEMPRE, arriba de todo) */}
-      <div className="flex items-center justify-center border-b border-gold/20 bg-obsidian/85 px-4 py-1.5 backdrop-blur-md">
-        <p className="text-center text-[0.58rem] font-bold uppercase tracking-imperial text-gold drop-shadow-[0_0_10px_rgba(212,175,55,0.55)] md:text-[0.65rem]">
-          ✦ Perfumes 100% originales · Envío a todo el país ✦
-        </p>
-      </div>
+      {/* Cinta superior — sello de autenticidad. Aparece unos segundos al cargar y
+          se guarda sola (max-h + opacity animados) para no ocupar espacio en móvil. */}
       <div
-        className={`mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 transition-all duration-500 md:px-10 ${
-          scrolled ? "py-3" : "py-6"
+        className={`overflow-hidden transition-all duration-700 ease-in-out ${
+          cintaVisible ? "max-h-10 opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
+        <div className="flex items-center justify-center border-b border-gold/20 bg-obsidian/85 px-4 py-1.5 backdrop-blur-md">
+          <p className="text-center text-[0.58rem] font-bold uppercase tracking-imperial text-gold drop-shadow-[0_0_10px_rgba(212,175,55,0.55)] md:text-[0.65rem]">
+            ✦ Perfumes 100% originales · Envío a todo el país ✦
+          </p>
+        </div>
+      </div>
+      {/* En móvil: flex borde a borde (marca izquierda, botones derecha). En md+: grid con centro. */}
+      <div
+        className={`mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 transition-all duration-500 sm:px-6 md:grid md:grid-cols-[1fr_auto_1fr] md:gap-4 md:px-10 ${
+          scrolled ? "py-3" : "py-4 md:py-6"
         }`}
       >
         {/* Marca — forzada a la esquina izquierda */}
