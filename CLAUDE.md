@@ -19,6 +19,9 @@ cambiás algo relevante acá, actualizala también).
   (importación) + "Total del pedido" en el checkout. NO reintroducir "pago al recibir".
 - PRECIOS: siempre múltiplo de 500 Gs (los calcula/redondea el HUB — `redondearPrecio`
   en Scraping/src/lib/calc.ts y scraper/lib-precio.mjs). No setear precios "sueltos".
+- `perfumes.activo` puede ponerse en false AUTOMÁTICAMENTE: el botón "Actualizar mi
+  tienda" del HUB oculta los productos que quedaron SIN STOCK en todas las tiendas
+  de CDE. Nunca se reactivan solos (eso lo decide el dueño desde /admin).
 - `perfumes.porcentaje_descuento` es columna GENERADA: no incluirla en inserts.
 - next/image SOLO renderiza imágenes de `*.supabase.co` (+ unsplash/fimgs/notino) —
   por eso el HUB sube las fotos scrapeadas a Storage antes de estirarlas acá.
