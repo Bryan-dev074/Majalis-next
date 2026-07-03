@@ -713,6 +713,48 @@
 .marquee-luxe:hover {
   animation-play-state: paused;
 }
+
+/* Brillo dorado que RECORRE cada marca (rediseño 03-jul-2026): base oro pleno
+   (legible, ya no /60) con barrido marfil constante. El delay lo escalona el
+   componente → efecto ola a lo largo de la cinta. */
+@keyframes marca-shimmer {
+  0%   { background-position: 220% center; }
+  100% { background-position: -220% center; }
+}
+.marca-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    #9a7b2d 0%,
+    #d4af37 30%,
+    #f5efe0 50%,
+    #d4af37 70%,
+    #9a7b2d 100%
+  );
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: marca-shimmer 5.5s linear infinite;
+  text-shadow: 0 0 22px rgba(212, 175, 55, 0.16);
+}
+
+/* Las ✦ separadoras titilan suave, cada una a su tiempo. */
+@keyframes estrella-twinkle {
+  0%, 100% { opacity: 0.35; transform: scale(0.9); }
+  50%      { opacity: 0.95; transform: scale(1.12); }
+}
+.estrella-marquee {
+  display: inline-block;
+  animation: estrella-twinkle 2.8s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .marquee-luxe { animation: none; }
+  .marca-shimmer {
+    animation: none;
+    background: none;
+    color: #d4af37; /* oro pleno estático, igual de legible */
+    text-shadow: none;
+  }
+  .estrella-marquee { animation: none; }
 }
