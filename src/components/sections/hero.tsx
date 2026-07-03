@@ -5,7 +5,8 @@ import { ArrowDown, ShieldCheck } from "lucide-react";
 
 /**
  * Hero cinematográfico.
- * Apertura con la tesis de la marca: importación de Dubai + pago al recibir.
+ * Apertura con la tesis de la marca: importación de Dubai, 100% originales,
+ * envío asegurado a todo el país. (El "pago al recibir" se eliminó del sitio.)
  */
 export function Hero() {
   const rootRef = useRef<HTMLDivElement>(null);

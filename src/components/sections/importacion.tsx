@@ -26,8 +26,8 @@ export function Importacion() {
           <div className="gold-rule mx-auto mt-6" />
           <p className="mx-auto mt-6 max-w-xl text-sm leading-relaxed text-ivory/55">
             Tres pasos entre el secreto mejor guardado del Medio Oriente y
-            tu mano. Sin anticipos, sin riesgo: pagás únicamente cuando
-            recibís tu elixir.
+            tu mano: perfumes 100% originales, y tu elixir viaja asegurado
+            y con rastreo directo hasta tu puerta.
           </p>
         </div>
 
