@@ -41,11 +41,19 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
 
   // Cinta "100% originales": aparece un instante al cargar y se guarda sola con
   // animación (en el teléfono ocupaba espacio todo el tiempo y se veía mal).
-  // 2,2s: alcanza para leerla sin estorbar (antes 6s — pedido del dueño 03-jul).
+  // 3,5s en pantalla (2,2s era muy poco — pedido del dueño 03-jul) y además se
+  // oculta apenas el visitante scrollea un poco hacia abajo.
   const [cintaVisible, setCintaVisible] = useState(true);
   useEffect(() => {
-    const t = setTimeout(() => setCintaVisible(false), 2200);
-    return () => clearTimeout(t);
+    const t = setTimeout(() => setCintaVisible(false), 3500);
+    const onScroll = () => {
+      if (window.scrollY > 60) setCintaVisible(false);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("scroll", onScroll);
+    };
   }, []);
 
   // Cerrar sugerencias al hacer clic fuera
