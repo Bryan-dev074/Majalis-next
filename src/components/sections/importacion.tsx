@@ -49,7 +49,7 @@ export function Importacion() {
               icon: <Home className="h-7 w-7" strokeWidth={1} />,
               titulo: "Despacho exclusivo",
               texto:
-                "Procesamiento inmediato y despacho exclusivo: tu fragancia viaja asegurada y con rastreo directo hasta tu puerta.",
+                "Despachamos de inmediato, con seguimiento en todo el trayecto. Tu fragancia llega a la puerta de tu casa en un máximo de 3 a 5 días hábiles.",
               highlight: true,
             },
           ].map((paso, i) => (
