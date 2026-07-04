@@ -42,7 +42,7 @@ export function Hero() {
   return (
     <header
       ref={rootRef}
-      className="relative flex min-h-screen flex-col items-center justify-center px-6 text-center"
+      className="relative flex min-h-screen flex-col items-center justify-center overflow-x-clip px-6 text-center"
     >
       {/* Velo inferior para integrar con el fondo 3D */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-obsidian/40 via-transparent to-obsidian" />
@@ -66,29 +66,13 @@ export function Hero() {
           />
         </div>
 
-        {/* MAJALIS — wordmark con entrada cinematográfica letra por letra +
-            reflejo dorado en movimiento perpetuo + halo que respira detrás. */}
-        <h1
-          data-hero
-          aria-label="Majalis"
-          className="relative font-display text-6xl font-semibold leading-[0.95] tracking-imperial md:text-8xl"
-          style={{ perspective: "600px" }}
-        >
+        {/* MAJALIS — el LETTERING REAL del logo (máscara SVG) con el oro fluyendo
+            adentro de las letras: idéntico a la imagen de marca. Se "escribe" de
+            izquierda a derecha al entrar y el halo respira detrás. El ancho es
+            fluido (88vw tope) → en el teléfono entra SIEMPRE completo. */}
+        <h1 data-hero aria-label="Majalis" className="relative">
           <span aria-hidden className="majalis-halo" />
-          {"MAJALIS".split("").map((letra, i) => (
-            <span
-              key={i}
-              aria-hidden
-              className="majalis-letra logo-oro"
-              style={{
-                // entrada escalonada (arranca cuando el loader ya se fue) y
-                // reflejo dorado desfasado por letra → efecto de ola de oro
-                animationDelay: `${2.1 + i * 0.12}s, ${i * -0.28}s`,
-              }}
-            >
-              {letra}
-            </span>
-          ))}
+          <span aria-hidden className="marca-majalis marca-majalis--hero relative mx-auto" />
         </h1>
 
         <p

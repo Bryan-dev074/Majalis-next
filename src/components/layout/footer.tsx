@@ -33,8 +33,8 @@ export function Footer() {
         {/* Bloque superior — promesa de marca */}
         <div className="mb-14 grid gap-10 md:grid-cols-4">
           <div className="md:col-span-2">
-            <h2 className="logo-oro font-display text-3xl font-semibold tracking-imperial">
-              MAJALIS
+            <h2 aria-label="Majalis">
+              <span aria-hidden className="marca-majalis w-44" />
             </h2>
             <p className="text-elixir-shimmer font-display text-lg font-semibold italic tracking-imperial drop-shadow-[0_0_10px_rgba(212,175,55,0.35)]">
               Perfumería árabe · Paraguay

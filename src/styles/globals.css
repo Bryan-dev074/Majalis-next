@@ -790,17 +790,41 @@
   animation: oro-flujo 3.6s linear infinite;
 }
 
-@keyframes majalis-letra-in {
-  0%   { opacity: 0; transform: translateY(0.45em) rotateX(55deg) scale(0.9); filter: blur(12px); }
-  60%  { opacity: 1; filter: blur(0); }
-  100% { opacity: 1; transform: translateY(0) rotateX(0) scale(1); filter: blur(0); }
+/* El WORDMARK REAL del logo (majalis-wordmark.svg) como máscara: el trazo es
+   idéntico a la imagen de marca y el oro fluye ADENTRO de las letras.
+   El ancho se define donde se usa (w-*); el alto sale del aspect-ratio. */
+.marca-majalis {
+  display: block;
+  aspect-ratio: 1970 / 472;
+  background-image: linear-gradient(
+    100deg,
+    #8a6a2f 0%,
+    #c29651 20%,
+    #f8e3a3 38%,
+    #fffbe8 50%,
+    #f8e3a3 62%,
+    #c29651 80%,
+    #8a6a2f 100%
+  );
+  background-size: 200% auto;
+  -webkit-mask: url("/majalis-wordmark.svg") no-repeat center / contain;
+  mask: url("/majalis-wordmark.svg") no-repeat center / contain;
+  animation: oro-flujo 3.6s linear infinite;
 }
-.majalis-letra {
-  display: inline-block;
-  opacity: 0;
-  /* dos animaciones: entrada (una vez) + reflejo dorado (infinito, heredado de .logo-oro) */
+
+/* Variante HERO: tamaño fluido (nunca se corta en el teléfono: 88vw como tope)
+   + entrada cinematográfica — se "escribe" de izquierda a derecha con desenfoque
+   que se disipa, arrancando cuando el loader ya se fue. */
+@keyframes majalis-reveal {
+  0%   { clip-path: inset(-15% 105% -15% -5%); opacity: 0; filter: blur(10px); transform: translateY(14px); }
+  55%  { opacity: 1; }
+  100% { clip-path: inset(-15% -5% -15% -5%); opacity: 1; filter: blur(0); transform: translateY(0); }
+}
+.marca-majalis--hero {
+  width: min(88vw, 46rem);
+  filter: drop-shadow(0 6px 30px rgba(212, 175, 55, 0.3));
   animation:
-    majalis-letra-in 1.1s cubic-bezier(0.22, 1, 0.36, 1) forwards,
+    majalis-reveal 1.7s cubic-bezier(0.22, 1, 0.36, 1) 2.05s both,
     oro-flujo 3.6s linear infinite;
 }
 
@@ -835,7 +859,14 @@
     background: none;
     color: #d4af37;
   }
-  .majalis-letra { animation: none; opacity: 1; background: none; color: #d4af37; }
+  .marca-majalis,
+  .marca-majalis--hero {
+    animation: none;
+    background: #d4af37; /* oro pleno estático dentro de la máscara */
+    clip-path: none;
+    opacity: 1;
+    filter: none;
+  }
   .majalis-halo { animation: none; }
   .majalis-emblema { animation: none; }
 }

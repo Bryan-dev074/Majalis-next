@@ -163,9 +163,7 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
           className="group justify-self-start"
           aria-label="Inicio Majalis"
         >
-          <span className="logo-oro font-display text-2xl font-semibold tracking-imperial drop-shadow-[0_2px_10px_rgba(0,0,0,0.55)] md:text-3xl">
-            MAJALIS
-          </span>
+          <span aria-hidden className="marca-majalis w-32 drop-shadow-[0_2px_10px_rgba(0,0,0,0.55)] md:w-40" />
         </button>
 
         {/* Centro — navegación desktop */}

@@ -39,8 +39,8 @@ export function Loader() {
           Importación directa de Dubai
         </p>
 
-        <h1 className="logo-oro font-display text-4xl font-semibold md:text-6xl tracking-imperial leading-none">
-          MAJALIS
+        <h1 aria-label="Majalis">
+          <span aria-hidden className="marca-majalis mx-auto w-[min(70vw,20rem)]" />
         </h1>
 
         {/* Línea de carga con barrido dorado */}
