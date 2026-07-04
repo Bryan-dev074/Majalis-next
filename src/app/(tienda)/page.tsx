@@ -2,6 +2,7 @@ import { Hero } from "@/components/sections/hero";
 import { Importacion } from "@/components/sections/importacion";
 import { CatalogoClient } from "@/components/sections/catalogo-client";
 import { MarcasMarquee } from "@/components/sections/marcas-marquee";
+import { DisponiblesCta } from "@/components/sections/disponibles-cta";
 
 /**
  * Página principal.
@@ -12,6 +13,8 @@ export default function HomePage() {
   return (
     <>
       <Hero />
+      {/* Cuántos perfumes hay HOY + CTA de stock por WhatsApp (04-jul) */}
+      <DisponiblesCta />
       <MarcasMarquee />
       <Importacion />
       <CatalogoClient />

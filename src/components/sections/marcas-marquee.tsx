@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { ChevronDown, Search, X } from "lucide-react";
 import { useCatalog } from "@/hooks/use-catalog";
 
 /**
@@ -48,6 +49,19 @@ export function MarcasMarquee() {
   // Velocidad constante en px/s aunque crezca la lista: duración ∝ cantidad.
   const duracion = `${Math.max(60, marcas.length * 3.4)}s`;
 
+  // ── Explorador de marcas: desplegable + buscador (04-jul) ──
+  const [abierto, setAbierto] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
+  const filtradas = useMemo(() => {
+    const q = busqueda.trim().toLowerCase();
+    return q ? marcas.filter((m) => m.toLowerCase().includes(q)) : marcas;
+  }, [marcas, busqueda]);
+  const elegirMarca = (m: string) => {
+    // Mismo evento que usa el buscador del navbar → filtra el catálogo en vivo.
+    window.dispatchEvent(new CustomEvent("sultan:search", { detail: m }));
+    document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   // Dos copias seguidas: cuando la primera terminó de salir (-50%), la segunda
   // está exactamente donde arrancó la primera → loop perfecto sin saltos.
   const fila = (key: string) => (
@@ -83,6 +97,75 @@ export function MarcasMarquee() {
       <div className="marquee-luxe flex w-max" style={{ animationDuration: duracion }}>
         {fila("a")}
         {fila("b")}
+      </div>
+
+      {/* ── EXPLORADOR DE MARCAS (04-jul): con 80+ casas la cinta sola no alcanza.
+          Desplegable con buscador — clic en una marca filtra el catálogo. ── */}
+      <div className="relative z-20 mt-3 flex flex-col items-center px-4">
+        <button
+          onClick={() => { setAbierto((v) => !v); setBusqueda(""); }}
+          aria-expanded={abierto}
+          aria-controls="panel-marcas"
+          className="group inline-flex items-center gap-2 rounded-full border border-gold/25 bg-obsidian/60 px-5 py-2 text-[0.65rem] font-semibold uppercase tracking-regal text-gold/90 transition-all duration-300 hover:border-gold/60 hover:text-gold-champagne"
+        >
+          {abierto ? "Ocultar marcas" : `Explorar las ${marcas.length} marcas`}
+          <ChevronDown
+            className={`h-3.5 w-3.5 transition-transform duration-300 ${abierto ? "rotate-180" : ""}`}
+            strokeWidth={1.5}
+          />
+        </button>
+
+        <div
+          id="panel-marcas"
+          className={`grid w-full max-w-4xl transition-all duration-500 ease-in-out ${
+            abierto ? "mt-5 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+          }`}
+        >
+          <div className="overflow-hidden">
+            {/* Buscador de marca */}
+            <div className="relative mx-auto mb-4 max-w-sm">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gold/50" strokeWidth={1.5} />
+              <input
+                type="text"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Buscá tu casa perfumista…"
+                aria-label="Buscar marca"
+                className="w-full rounded-full border border-gold/25 bg-obsidian/70 py-2.5 pl-10 pr-9 text-sm text-ivory placeholder:text-ivory/35 outline-none transition-colors focus:border-gold/60"
+              />
+              {busqueda && (
+                <button
+                  onClick={() => setBusqueda("")}
+                  aria-label="Limpiar búsqueda"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-ivory/40 transition-colors hover:text-gold"
+                >
+                  <X className="h-4 w-4" strokeWidth={1.5} />
+                </button>
+              )}
+            </div>
+
+            {/* Chips: clic → filtra el catálogo y te lleva ahí */}
+            {filtradas.length ? (
+              <div className="grid grid-cols-2 gap-2 pb-5 sm:grid-cols-3 md:grid-cols-4">
+                {filtradas.map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => elegirMarca(m)}
+                    className="truncate rounded-lg border border-gold/15 bg-obsidian/50 px-3 py-2.5 text-[0.7rem] font-medium uppercase tracking-wider text-ivory/75 transition-all duration-300 hover:border-gold/55 hover:bg-gold/5 hover:text-gold-champagne"
+                    title={`Ver perfumes de ${m}`}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="pb-5 text-center text-sm text-ivory/50">
+                Ninguna marca coincide con “{busqueda}” — probá con otro nombre o{" "}
+                <span className="text-gold/80">consultanos por WhatsApp</span>.
+              </p>
+            )}
+          </div>
+        </div>
       </div>
     </section>
   );
