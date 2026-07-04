@@ -127,7 +127,7 @@ export function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
           {enOferta && (
             <span className="price-strike !text-xs text-ivory/50 sm:!text-sm">{formatGs(perfume.precio_regular)}</span>
           )}
-          <span className="font-display text-lg text-gold-gradient drop-shadow-[0_0_12px_rgba(212,175,55,0.25)] sm:text-3xl">
+          <span className="font-display text-2xl font-semibold text-gold-gradient drop-shadow-[0_0_14px_rgba(212,175,55,0.35)] sm:text-3xl">
             {formatGs(precio)}
           </span>
           {enOferta && (

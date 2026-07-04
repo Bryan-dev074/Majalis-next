@@ -916,3 +916,27 @@
   .wa-link::after { animation: none; background: #d4af37; }
   .wa-latido { animation: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   BOTÓN "Explorar las N marcas" (04-jul) — respira oro a tono con el
+   carrusel de casas perfumistas: glow que late + texto dorado en flujo.
+   ═══════════════════════════════════════════════════════════════ */
+@keyframes explorar-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+  50%      { box-shadow: 0 0 22px -5px rgba(212, 175, 55, 0.55); }
+}
+.btn-explorar.is-idle {
+  animation: explorar-glow 3.2s ease-in-out infinite;
+}
+.btn-explorar .explorar-txt {
+  background-image: linear-gradient(100deg, #c29651 12%, #f8e3a3 40%, #fffbe8 50%, #f8e3a3 60%, #c29651 88%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: oro-flujo 3.5s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-explorar.is-idle { animation: none; }
+  .btn-explorar .explorar-txt { animation: none; background: none; color: #e8c766; }
+}
