@@ -940,3 +940,79 @@
   .btn-explorar.is-idle { animation: none; }
   .btn-explorar .explorar-txt { animation: none; background: none; color: #e8c766; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   CATÁLOGO — buscador/expandir de marcas + PAGINACIÓN (04-jul)
+   ═══════════════════════════════════════════════════════════════ */
+/* Botón "Ver todas las N marcas" / "Ver menos" */
+.brand-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 1rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  background: rgba(212, 175, 55, 0.04);
+  color: rgba(212, 175, 55, 0.85);
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+.brand-toggle:hover {
+  border-color: rgba(212, 175, 55, 0.6);
+  color: var(--gold-champagne);
+  box-shadow: 0 0 18px -6px rgba(212, 175, 55, 0.5);
+}
+
+/* Cada cambio de página re-dispara esta entrada suave del grid */
+@keyframes catalogo-page-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.catalogo-page {
+  animation: catalogo-page-in 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Paginación — botones redondos de oro tenue, activo en oro pleno */
+.page-btn {
+  min-width: 2.5rem;
+  height: 2.5rem;
+  padding: 0 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgba(234, 227, 210, 0.14);
+  color: rgba(234, 227, 210, 0.7);
+  font-family: var(--font-cormorant), serif;
+  font-size: 1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition: all 0.3s ease;
+}
+.page-btn:hover:not(:disabled) {
+  border-color: rgba(212, 175, 55, 0.55);
+  color: var(--gold-champagne);
+}
+.page-btn.is-active {
+  background: linear-gradient(120deg, var(--gold-dark), var(--gold));
+  color: #0a0908;
+  border-color: var(--gold);
+  box-shadow: 0 0 20px -6px rgba(212, 175, 55, 0.7);
+}
+.page-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.page-ellipsis {
+  min-width: 1.5rem;
+  text-align: center;
+  color: rgba(234, 227, 210, 0.35);
+  align-self: flex-end;
+  padding-bottom: 0.5rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .catalogo-page { animation: none; }
+}

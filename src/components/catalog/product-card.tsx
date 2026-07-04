@@ -33,15 +33,25 @@ export function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
       onClick={() => onAbrirDetalle(perfume)}
       className="glass-luxe group relative flex cursor-pointer flex-col overflow-hidden rounded-sm"
     >
-      {/* Imagen */}
+      {/* Imagen — con placeholder premium si el perfume aún no tiene foto
+          (Next/Image revienta con src vacío; varios productos recién agregados
+          no tienen imagen todavía hasta que el scraper les consiga una). */}
       <div className="relative aspect-[3/4] overflow-hidden bg-coal">
-        <Image
-          src={perfume.url_imagen}
-          alt={perfume.nombre}
-          fill
-          sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
-          className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-110"
-        />
+        {perfume.url_imagen ? (
+          <Image
+            src={perfume.url_imagen}
+            alt={perfume.nombre}
+            fill
+            sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
+            className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-110"
+          />
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-gold/[0.08] via-obsidian to-obsidian px-4 text-center">
+            <span className="font-display text-3xl italic text-gold/40">M</span>
+            <span className="line-clamp-2 font-display text-sm text-ivory/45">{perfume.nombre}</span>
+            <span className="text-[0.5rem] uppercase tracking-imperial text-gold/40">Foto en camino</span>
+          </div>
+        )}
 
         {/* Velo al hover */}
         <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/20 to-transparent opacity-90 transition-opacity duration-500" />

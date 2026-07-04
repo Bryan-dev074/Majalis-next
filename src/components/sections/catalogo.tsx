@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { SearchX, X } from "lucide-react";
+import { SearchX, X, Search, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Perfume } from "@/types/database";
 import { ProductCard } from "@/components/catalog/product-card";
 import { useReveal } from "@/hooks/use-reveal";
@@ -27,9 +27,15 @@ interface CatalogoProps {
  *
  * Escucha el evento global `sultan:search` que dispara el Navbar.
  */
+const POR_PAGINA = 24; // múltiplo de 2/3/4 → completa las filas del grid en todos los tamaños
+const MARCAS_VISIBLES = 12; // pills que se muestran sin expandir
+
 export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: CatalogoProps) {
   const [marcaActiva, setMarcaActiva] = useState<string>("todas");
   const [familiaActiva, setFamiliaActiva] = useState<string>("todas");
+  const [marcasAbiertas, setMarcasAbiertas] = useState(false);
+  const [marcaBusqueda, setMarcaBusqueda] = useState("");
+  const [pagina, setPagina] = useState(1);
   const ref = useReveal<HTMLDivElement>({ stagger: 0.04, y: 24 });
 
   // Escuchar búsqueda global del navbar
@@ -101,6 +107,58 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
     onQueryChange("");
   };
 
+  // ── Buscador de marcas (con 100+ casas, la lista se vuelve inmanejable) ──
+  const marcasFiltradas = useMemo(() => {
+    const q = marcaBusqueda.trim().toLowerCase();
+    return q ? marcas.filter((m) => m.toLowerCase().includes(q)) : marcas;
+  }, [marcas, marcaBusqueda]);
+
+  // Colapsado: primeras N + la marca activa (para que siempre se vea seleccionada).
+  const marcasColapsadas = useMemo(() => {
+    const base = marcas.slice(0, MARCAS_VISIBLES);
+    if (marcaActiva !== "todas" && marcas.includes(marcaActiva) && !base.includes(marcaActiva)) {
+      return [marcaActiva, ...base.slice(0, MARCAS_VISIBLES - 1)];
+    }
+    return base;
+  }, [marcas, marcaActiva]);
+
+  // ── Paginación del grid (evita renderizar ~1.800 tarjetas de golpe) ──
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
+  const paginaSegura = Math.min(pagina, totalPaginas);
+  const visibles = filtrados.slice(
+    (paginaSegura - 1) * POR_PAGINA,
+    paginaSegura * POR_PAGINA
+  );
+
+  // Al cambiar cualquier filtro, volvemos a la página 1.
+  useEffect(() => {
+    setPagina(1);
+  }, [marcaActiva, familiaActiva, query]);
+
+  const irAPagina = (n: number) => {
+    const destino = Math.min(Math.max(1, n), totalPaginas);
+    setPagina(destino);
+    // Subir al inicio del catálogo para no quedar perdido a mitad de página.
+    document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // Números a mostrar: 1 … (p-1) [p] (p+1) … último (con elipsis).
+  const numerosPagina = useMemo<(number | "…")[]>(() => {
+    const total = totalPaginas;
+    const actual = paginaSegura;
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const nums = new Set<number>([1, total, actual, actual - 1, actual + 1]);
+    const orden = [...nums].filter((n) => n >= 1 && n <= total).sort((a, b) => a - b);
+    const out: (number | "…")[] = [];
+    let prev = 0;
+    for (const n of orden) {
+      if (n - prev > 1) out.push("…");
+      out.push(n);
+      prev = n;
+    }
+    return out;
+  }, [totalPaginas, paginaSegura]);
+
   return (
     <section
       id="catalogo"
@@ -134,25 +192,65 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
                 perfumes disponibles hoy
               </p>
             </div>
-            <div className="hide-scrollbar flex gap-2 overflow-x-auto pb-1">
+            {/* Buscador de marca — visible al expandir (con 100+ casas hace falta) */}
+            {marcasAbiertas && marcas.length > MARCAS_VISIBLES && (
+              <div className="relative max-w-xs">
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gold/50" strokeWidth={1.5} />
+                <input
+                  type="text"
+                  value={marcaBusqueda}
+                  onChange={(e) => setMarcaBusqueda(e.target.value)}
+                  placeholder="Buscá una casa perfumista…"
+                  aria-label="Buscar marca"
+                  className="w-full rounded-full border border-gold/25 bg-obsidian/70 py-2.5 pl-10 pr-9 text-sm text-ivory placeholder:text-ivory/35 outline-none transition-colors focus:border-gold/60"
+                />
+                {marcaBusqueda && (
+                  <button
+                    onClick={() => setMarcaBusqueda("")}
+                    aria-label="Limpiar búsqueda de marca"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-ivory/40 transition-colors hover:text-gold"
+                  >
+                    <X className="h-4 w-4" strokeWidth={1.5} />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Pills de marca. Colapsado: pocas + activa. Expandido: todas (scroll). */}
+            <div className={`flex flex-wrap gap-2 ${marcasAbiertas ? "max-h-56 overflow-y-auto pr-1" : ""}`}>
               <button
                 onClick={() => setMarcaActiva("todas")}
-                className={`filter-pill shrink-0 ${marcaActiva === "todas" ? "is-active" : ""}`}
+                className={`filter-pill ${marcaActiva === "todas" ? "is-active" : ""}`}
               >
                 Todas
               </button>
-              {marcas.map((m) => (
+              {(marcasAbiertas ? marcasFiltradas : marcasColapsadas).map((m) => (
                 <button
                   key={m}
                   onClick={() =>
                     setMarcaActiva((prev) => (prev === m ? "todas" : m))
                   }
-                  className={`filter-pill shrink-0 capitalize ${marcaActiva === m ? "is-active" : ""}`}
+                  className={`filter-pill capitalize ${marcaActiva === m ? "is-active" : ""}`}
                 >
                   {m}
                 </button>
               ))}
+              {marcasAbiertas && marcasFiltradas.length === 0 && (
+                <p className="px-2 py-1 text-sm text-ivory/45">Ninguna marca coincide con “{marcaBusqueda}”.</p>
+              )}
             </div>
+
+            {/* Botón para expandir/colapsar todas las marcas */}
+            {marcas.length > MARCAS_VISIBLES && (
+              <button
+                onClick={() => { setMarcasAbiertas((v) => !v); setMarcaBusqueda(""); }}
+                className="brand-toggle"
+                aria-expanded={marcasAbiertas}
+              >
+                {marcasAbiertas ? "Ver menos" : `Ver todas las ${marcas.length} marcas`}
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-300 ${marcasAbiertas ? "rotate-180" : ""}`} strokeWidth={1.5} />
+              </button>
+            )}
           </div>
 
           {/* Familias olfativas — chips selectivos */}
@@ -179,6 +277,9 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
           <div className="flex items-center justify-between border-t border-gold/10 pt-4">
             <p className="text-[0.65rem] uppercase tracking-regal text-ivory/45">
               {filtrados.length} {filtrados.length === 1 ? "fragancia" : "fragancias"}
+              {totalPaginas > 1 && (
+                <span className="text-ivory/30"> · pág. {paginaSegura} de {totalPaginas}</span>
+              )}
             </p>
             {hayFiltros && (
               <button
@@ -241,15 +342,63 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-6 sm:gap-y-12 lg:grid-cols-3 xl:grid-cols-4">
-            {filtrados.map((p) => (
-              <ProductCard
-                key={p.id}
-                perfume={p}
-                onAbrirDetalle={onAbrirDetalle}
-              />
-            ))}
-          </div>
+          <>
+            {/* key={paginaSegura} → cada cambio de página re-dispara la animación de entrada */}
+            <div
+              key={paginaSegura}
+              className="catalogo-page grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-6 sm:gap-y-12 lg:grid-cols-3 xl:grid-cols-4"
+            >
+              {visibles.map((p) => (
+                <ProductCard
+                  key={p.id}
+                  perfume={p}
+                  onAbrirDetalle={onAbrirDetalle}
+                />
+              ))}
+            </div>
+
+            {/* Paginación — elegante, dorada, con anterior/siguiente + números */}
+            {totalPaginas > 1 && (
+              <nav
+                aria-label="Paginación del catálogo"
+                className="mt-14 flex flex-wrap items-center justify-center gap-2"
+              >
+                <button
+                  onClick={() => irAPagina(paginaSegura - 1)}
+                  disabled={paginaSegura === 1}
+                  aria-label="Página anterior"
+                  className="page-btn"
+                >
+                  <ChevronLeft className="h-4 w-4" strokeWidth={2} />
+                </button>
+
+                {numerosPagina.map((n, i) =>
+                  n === "…" ? (
+                    <span key={`e${i}`} className="page-ellipsis">…</span>
+                  ) : (
+                    <button
+                      key={n}
+                      onClick={() => irAPagina(n)}
+                      aria-label={`Página ${n}`}
+                      aria-current={n === paginaSegura ? "page" : undefined}
+                      className={`page-btn ${n === paginaSegura ? "is-active" : ""}`}
+                    >
+                      {n}
+                    </button>
+                  )
+                )}
+
+                <button
+                  onClick={() => irAPagina(paginaSegura + 1)}
+                  disabled={paginaSegura === totalPaginas}
+                  aria-label="Página siguiente"
+                  className="page-btn"
+                >
+                  <ChevronRight className="h-4 w-4" strokeWidth={2} />
+                </button>
+              </nav>
+            )}
+          </>
         )}
       </div>
     </section>

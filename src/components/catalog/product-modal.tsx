@@ -167,14 +167,22 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
         <div className="overflow-hidden rounded-sm border border-gold/20 bg-coal/95 shadow-[0_0_80px_-20px_rgba(212,175,55,0.3)] md:grid md:grid-cols-2">
           {/* Imagen — en móvil tiene altura fija visible */}
           <div className="relative h-64 w-full md:h-auto md:min-h-[600px]">
-            <Image
-              src={perfume.url_imagen}
-              alt={perfume.nombre}
-              fill
-              sizes="(max-width: 768px) 100vw, 50vw"
-              className="modal-image object-cover object-top"
-              priority
-            />
+            {perfume.url_imagen ? (
+              <Image
+                src={perfume.url_imagen}
+                alt={perfume.nombre}
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="modal-image object-cover object-top"
+                priority
+              />
+            ) : (
+              <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-gold/[0.08] via-coal to-obsidian px-6 text-center">
+                <span className="font-display text-5xl italic text-gold/40">M</span>
+                <span className="font-display text-lg text-ivory/50">{perfume.nombre}</span>
+                <span className="text-[0.55rem] uppercase tracking-imperial text-gold/40">Foto en camino</span>
+              </div>
+            )}
             {/* Gradiente inferior para integrar con el panel de texto */}
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-coal/90 md:bg-gradient-to-t md:from-obsidian/60 md:via-transparent md:to-transparent" />
 
