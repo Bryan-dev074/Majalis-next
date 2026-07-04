@@ -108,9 +108,17 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
 
         {/* ────────── Filtros rediseñados ────────── */}
         <div className="mb-10 space-y-6" data-reveal>
-          {/* Marcas — pestañas horizontales */}
+          {/* Marcas — pestañas horizontales. A la derecha, EL DATO: cuántos hay hoy. */}
           <div className="space-y-3">
-            <p className="eyebrow !justify-start !text-[0.62rem] !text-gold/90 !opacity-100">Casas perfumistas</p>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <p className="eyebrow !justify-start !text-[0.62rem] !text-gold/90 !opacity-100">Casas perfumistas</p>
+              <p className="text-[0.6rem] font-semibold uppercase tracking-regal text-ivory/45">
+                <span className="text-gold-gradient font-display text-base font-semibold tabular-nums">
+                  {perfumes.length.toLocaleString("es-PY")}
+                </span>{" "}
+                perfumes disponibles hoy
+              </p>
+            </div>
             <div className="hide-scrollbar flex gap-2 overflow-x-auto pb-1">
               <button
                 onClick={() => setMarcaActiva("todas")}
