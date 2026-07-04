@@ -19,7 +19,7 @@ export function Importacion() {
     >
       <div className="mx-auto max-w-6xl">
         <div className="mb-16 text-center" data-reveal>
-          <p className="eyebrow justify-center">El proceso Sultan</p>
+          <p className="eyebrow justify-center">El proceso Majalis</p>
           <h2 className="mt-5 font-display text-4xl text-ivory md:text-5xl">
             De Dubai a tu puerta
           </h2>

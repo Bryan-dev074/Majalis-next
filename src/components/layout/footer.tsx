@@ -33,11 +33,11 @@ export function Footer() {
         {/* Bloque superior — promesa de marca */}
         <div className="mb-14 grid gap-10 md:grid-cols-4">
           <div className="md:col-span-2">
-            <h2 className="font-lapidary text-3xl tracking-regal text-ivory">
-              SULTAN OUD
+            <h2 className="logo-oro font-display text-3xl font-semibold tracking-imperial">
+              MAJALIS
             </h2>
             <p className="text-elixir-shimmer font-display text-lg font-semibold italic tracking-imperial drop-shadow-[0_0_10px_rgba(212,175,55,0.35)]">
-              Elixir · Paraguay
+              Perfumería árabe · Paraguay
             </p>
             <p className="mt-5 max-w-md text-base leading-relaxed text-ivory/85">
               Traemos las fragancias más codiciadas del Medio Oriente
@@ -113,7 +113,7 @@ export function Footer() {
           <div className="text-center md:text-right">
             <p className="font-display text-sm font-semibold tracking-regal text-ivory/90">
               © {new Date().getFullYear()}{" "}
-              <span className="text-gold-champagne">Sultan Oud Elixir</span>
+              <span className="text-gold-champagne">Majalis</span>
             </p>
           </div>
         </div>

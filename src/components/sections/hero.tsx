@@ -55,15 +55,40 @@ export function Hero() {
           La esencia de la realeza · Dubai → Paraguay
         </p>
 
+        {/* Emblema del logo (el frasco) flotando con brillo pulsante */}
+        <div data-hero className="mb-6 flex justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/majalis-emblema.svg"
+            alt=""
+            aria-hidden
+            className="majalis-emblema h-24 w-24 md:h-32 md:w-32"
+          />
+        </div>
+
+        {/* MAJALIS — wordmark con entrada cinematográfica letra por letra +
+            reflejo dorado en movimiento perpetuo + halo que respira detrás. */}
         <h1
           data-hero
-          className="font-display text-6xl leading-[0.95] text-ivory md:text-8xl drop-shadow-[0_4px_24px_rgba(0,0,0,0.6)]"
+          aria-label="Majalis"
+          className="relative font-display text-6xl font-semibold leading-[0.95] tracking-imperial md:text-8xl"
+          style={{ perspective: "600px" }}
         >
-          Sultan Oud
-          <br />
-          <span className="text-elixir-shimmer font-display italic">
-            Elixir
-          </span>
+          <span aria-hidden className="majalis-halo" />
+          {"MAJALIS".split("").map((letra, i) => (
+            <span
+              key={i}
+              aria-hidden
+              className="majalis-letra logo-oro"
+              style={{
+                // entrada escalonada (arranca cuando el loader ya se fue) y
+                // reflejo dorado desfasado por letra → efecto de ola de oro
+                animationDelay: `${2.1 + i * 0.12}s, ${i * -0.28}s`,
+              }}
+            >
+              {letra}
+            </span>
+          ))}
         </h1>
 
         <p

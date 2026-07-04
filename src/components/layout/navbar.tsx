@@ -157,17 +157,14 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
           scrolled ? "py-3" : "py-4 md:py-6"
         }`}
       >
-        {/* Marca — forzada a la esquina izquierda */}
+        {/* Marca — solo el wordmark MAJALIS con reflejo dorado en movimiento constante */}
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="group flex flex-col items-start justify-self-start"
-          aria-label="Inicio Sultan Oud Elixir"
+          className="group justify-self-start"
+          aria-label="Inicio Majalis"
         >
-          <span className="font-lapidary text-lg md:text-2xl tracking-regal text-ivory drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] transition-colors group-hover:text-gold-champagne">
-            SULTAN OUD
-          </span>
-          <span className="font-display text-base font-semibold italic tracking-imperial text-elixir-shimmer drop-shadow-[0_0_10px_rgba(212,175,55,0.4)] md:text-lg">
-            Elixir
+          <span className="logo-oro font-display text-2xl font-semibold tracking-imperial drop-shadow-[0_2px_10px_rgba(0,0,0,0.55)] md:text-3xl">
+            MAJALIS
           </span>
         </button>
 

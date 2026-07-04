@@ -4,7 +4,7 @@ import { Cupon } from "@/types/database";
 export const FALLBACK_CUPONES: Cupon[] = [
   {
     id: "fc-1",
-    codigo: "SULTAN10",
+    codigo: "MAJALIS10",
     porcentaje_descuento: 10,
     activo: true,
     limite_usos: 100,
@@ -14,7 +14,7 @@ export const FALLBACK_CUPONES: Cupon[] = [
   },
   {
     id: "fc-2",
-    codigo: "ELIXIR15",
+    codigo: "MAJALIS15",
     porcentaje_descuento: 15,
     activo: true,
     limite_usos: 50,

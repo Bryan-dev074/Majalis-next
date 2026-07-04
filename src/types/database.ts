@@ -1,5 +1,5 @@
 // ============================================================================
-//  Tipos estrictos del dominio Sultan Oud Elixir
+//  Tipos estrictos del dominio Majalis
 //  Reflejan exactamente la estructura de `schema.sql`.
 // ============================================================================
 

@@ -71,7 +71,7 @@ function LoginView() {
           </div>
           <h1 className="text-xl font-bold">Panel del Creador</h1>
           <p className="mt-1 text-sm" style={{ color: "var(--adm-text-muted)" }}>
-            Sultan Oud Elixir
+            Majalis
           </p>
         </div>
 
@@ -295,7 +295,7 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
               Panel del Creador
             </h1>
             <p className="mt-0.5 text-sm" style={{ color: "var(--adm-text-muted)" }}>
-              Sultan Oud Elixir · Gestión de inventario
+              Majalis · Gestión de inventario
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -1182,7 +1182,7 @@ function PerfumeForm({
               />
               <CheckField
                 label="Destacado"
-                help="Aparece en la sección Favoritos del Sultan"
+                help="Aparece en la sección Favoritos de Majalis"
                 checked={form.destacado}
                 onChange={(v) => set("destacado", v)}
               />
@@ -1389,10 +1389,10 @@ function CuponForm({
         <div className="space-y-4">
           <div>
             <label className="adm-label">Código *</label>
-            <span className="adm-help">Ej: SULTAN10 — Lo ingresa el cliente en el checkout</span>
+            <span className="adm-help">Ej: MAJALIS10 — Lo ingresa el cliente en el checkout</span>
             <input required value={form.codigo}
               onChange={(e) => set("codigo", e.target.value.toUpperCase())}
-              className="adm-input mt-1 font-mono" placeholder="SULTAN10" />
+              className="adm-input mt-1 font-mono" placeholder="MAJALIS10" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

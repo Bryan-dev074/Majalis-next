@@ -36,7 +36,7 @@ export function concentracionDe(
 }
 
 /**
- * Construye la URL de WhatsApp hacia el número del Sultan, con el mensaje
+ * Construye la URL de WhatsApp hacia el número de Majalis, con el mensaje
  * personalizado exigido por el brief:
  *   "Quiero hacer un pedido del perfume [Nombre del Perfume]"
  * Reemplaza dinámicamente el nombre exacto de la fragancia.
@@ -48,7 +48,7 @@ export function buildWhatsAppUrl(nombrePerfume: string, numero: string): string 
 
 /**
  * Genera el mensaje de WhatsApp para un carrito completo (checkout).
- * Un solo flujo: stock local de Sultan Oud Elixir. Los datos de entrega son
+ * Un solo flujo: stock local de Majalis. Los datos de entrega son
  * opcionales (si el cliente los cargó) y el pago/envío se coordina por WhatsApp.
  */
 export function buildWhatsAppCheckoutUrl(
@@ -59,7 +59,7 @@ export function buildWhatsAppCheckoutUrl(
   const total = subtotalCarrito(items);
 
   const bloques: string[] = [
-    "👑 *SULTAN OUD ELIXIR — NUEVO PEDIDO* 👑",
+    "👑 *MAJALIS — NUEVO PEDIDO* 👑",
     "---",
     "📦 *DETALLE DEL PEDIDO:*",
   ];

@@ -39,12 +39,9 @@ export function Loader() {
           Importación directa de Dubai
         </p>
 
-        <h1 className="font-lapidary text-3xl md:text-5xl tracking-regal text-ivory leading-none">
-          SULTAN OUD
+        <h1 className="logo-oro font-display text-4xl font-semibold md:text-6xl tracking-imperial leading-none">
+          MAJALIS
         </h1>
-        <h2 className="text-elixir-shimmer font-display text-4xl md:text-6xl italic tracking-imperial mt-2">
-          Elixir
-        </h2>
 
         {/* Línea de carga con barrido dorado */}
         <div className="relative mt-8 h-px w-56 overflow-hidden bg-smoke">

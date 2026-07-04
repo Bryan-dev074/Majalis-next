@@ -3,7 +3,7 @@ import { sesionValida } from "@/lib/supabase-admin";
 import AdminClient from "./admin-client";
 
 export const metadata = {
-  title: "Panel · Sultan Oud Elixir",
+  title: "Panel · Majalis",
   robots: { index: false, follow: false },
 };
 

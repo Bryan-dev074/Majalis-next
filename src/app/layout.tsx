@@ -25,7 +25,7 @@ const jost = Jost({
 });
 
 export const metadata: Metadata = {
-  title: "Sultan Oud Elixir · Perfumes Árabes de Ultra-Lujo en Paraguay",
+  title: "Majalis · Perfumes Árabes de Ultra-Lujo en Paraguay",
   description:
     "Importación directa de Dubai. La colección más exclusiva de fragancias árabes en Paraguay. Perfumes 100% originales · Envío a todo el país.",
   keywords: [
@@ -39,13 +39,13 @@ export const metadata: Metadata = {
     "importación Dubai",
   ],
   openGraph: {
-    title: "Sultan Oud Elixir",
+    title: "Majalis",
     description:
       "Importación directa de Dubai · Perfumes 100% originales · Envío a todo el país",
     type: "website",
     locale: "es_PY",
   },
-  metadataBase: new URL("https://sultan-oud-next.vercel.app"),
+  metadataBase: new URL("https://sulta-oud-elixir.vercel.app"),
 };
 
 /**

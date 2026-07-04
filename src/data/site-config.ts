@@ -1,5 +1,5 @@
 /**
- * Configuración central del sitio Sultan Oud Elixir.
+ * Configuración central del sitio Majalis.
  * ────────────────────────────────────────────────────────────────────────────
  *  👉 ESTE es el único archivo que tenés que tocar para cambiar:
  *       · Tu número de WhatsApp

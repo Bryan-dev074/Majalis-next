@@ -758,3 +758,84 @@
   }
   .estrella-marquee { animation: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   MAJALIS — marca en oro vivo (rebrand 04-jul-2026)
+   · .logo-oro         → texto con reflejo dorado EN MOVIMIENTO constante
+                         (navbar; también base del hero).
+   · .majalis-letra    → entrada cinematográfica letra por letra del hero
+                         (blur + elevación + leve giro 3D), compone con
+                         .logo-oro en el mismo span.
+   · .majalis-halo     → halo dorado que respira detrás del wordmark.
+   · .majalis-emblema  → el frasco del logo flotando con brillo pulsante.
+   ═══════════════════════════════════════════════════════════════ */
+@keyframes oro-flujo {
+  to { background-position: -200% center; }
+}
+.logo-oro {
+  background-image: linear-gradient(
+    100deg,
+    #8a6a2f 0%,
+    #c29651 20%,
+    #f8e3a3 38%,
+    #fffbe8 50%,
+    #f8e3a3 62%,
+    #c29651 80%,
+    #8a6a2f 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: oro-flujo 3.6s linear infinite;
+}
+
+@keyframes majalis-letra-in {
+  0%   { opacity: 0; transform: translateY(0.45em) rotateX(55deg) scale(0.9); filter: blur(12px); }
+  60%  { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0) rotateX(0) scale(1); filter: blur(0); }
+}
+.majalis-letra {
+  display: inline-block;
+  opacity: 0;
+  /* dos animaciones: entrada (una vez) + reflejo dorado (infinito, heredado de .logo-oro) */
+  animation:
+    majalis-letra-in 1.1s cubic-bezier(0.22, 1, 0.36, 1) forwards,
+    oro-flujo 3.6s linear infinite;
+}
+
+@keyframes majalis-halo-pulso {
+  0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+  50%      { opacity: 0.9; transform: translate(-50%, -50%) scale(1.18); }
+}
+.majalis-halo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 130%;
+  height: 200%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse at center, rgba(212, 175, 55, 0.22) 0%, rgba(212, 175, 55, 0.07) 42%, transparent 68%);
+  filter: blur(6px);
+  pointer-events: none;
+  animation: majalis-halo-pulso 5.2s ease-in-out infinite;
+}
+
+@keyframes majalis-flota {
+  0%, 100% { transform: translateY(0); filter: drop-shadow(0 6px 22px rgba(212, 175, 55, 0.35)); }
+  50%      { transform: translateY(-9px); filter: drop-shadow(0 16px 34px rgba(212, 175, 55, 0.55)); }
+}
+.majalis-emblema {
+  animation: majalis-flota 6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-oro {
+    animation: none;
+    background: none;
+    color: #d4af37;
+  }
+  .majalis-letra { animation: none; opacity: 1; background: none; color: #d4af37; }
+  .majalis-halo { animation: none; }
+  .majalis-emblema { animation: none; }
+}
