@@ -821,7 +821,9 @@
   100% { clip-path: inset(-15% -5% -15% -5%); opacity: 1; filter: blur(0); transform: translateY(0); }
 }
 .marca-majalis--hero {
-  width: min(88vw, 46rem);
+  /* 88vw manda en el teléfono (entra completo); en escritorio manda el tope en rem
+     → bajarlo achica SOLO el escritorio (pedido del dueño: ocupaba demasiado). */
+  width: min(88vw, 38rem);
   filter: drop-shadow(0 6px 30px rgba(212, 175, 55, 0.3));
   animation:
     majalis-reveal 1.7s cubic-bezier(0.22, 1, 0.36, 1) 2.05s both,
