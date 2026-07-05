@@ -99,6 +99,34 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
     };
   }, [perfume]);
 
+  // BOTÓN "ATRÁS" DEL TELÉFONO cierra el modal (no navega fuera / no cierra la app).
+  // Al abrir se empuja un estado al historial; "atrás" lo saca → popstate → cerrar.
+  // Si se cierra con la X/ESC, consumimos nuestro estado con history.back() SIN
+  // re-cerrar (el listener ya se removió). Funciona igual en desktop (botón atrás
+  // del navegador cierra el modal en vez de irse de la página).
+  const abierto = !!perfume;
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+  const cerradoPorAtras = useRef(false);
+  useEffect(() => {
+    if (!abierto) return;
+    cerradoPorAtras.current = false;
+    window.history.pushState({ majalisModal: true }, "");
+    const onPop = () => {
+      cerradoPorAtras.current = true;
+      onCloseRef.current();
+    };
+    window.addEventListener("popstate", onPop);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      // Cerrado con X/ESC/backdrop → sacar el estado que empujamos para que el
+      // PRÓXIMO "atrás" del usuario navegue normal (y no haga un no-op).
+      if (!cerradoPorAtras.current && window.history.state?.majalisModal) {
+        window.history.back();
+      }
+    };
+  }, [abierto]);
+
   // Timeline GSAP de entrada.
   // ⚠️ Depende del ID (no del objeto): el CatalogProvider refresca el catálogo y
   // regenera los objetos con nueva identidad → con [perfume] la timeline se
