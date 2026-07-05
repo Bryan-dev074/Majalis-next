@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { gsap } from "gsap";
-import { X, Plus, Minus, MessageCircle, Bell, Sparkles } from "lucide-react";
+import { X, Plus, Minus, MessageCircle, Bell, Sparkles, Share2, Check } from "lucide-react";
 import { Perfume } from "@/types/database";
 import { formatGs, precioEfectivo, buildWhatsAppUrl, concentracionDe } from "@/lib/format";
 import { WHATSAPP_NUMBER } from "@/data/site-config";
@@ -32,9 +32,33 @@ const CAPAS: { key: Capa; label: string; descripcion: string }[] = [
 export function ProductModal({ perfume, onClose }: ProductModalProps) {
   const { agregar } = useCart();
   const [cantidad, setCantidad] = useState(1);
+  const [copiado, setCopiado] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
   const notasRef = useRef<HTMLDivElement>(null);
+
+  // COMPARTIR: link directo a este perfume (?perfume=<id>, lo abre el provider).
+  // Usa el menú nativo del teléfono (navigator.share); en PC copia el link.
+  async function compartirPerfume(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!perfume) return;
+    const url = `${window.location.origin}${window.location.pathname}?perfume=${perfume.id}`;
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title: perfume.nombre, text: `${perfume.nombre} · Majalis`, url });
+        return;
+      } catch {
+        /* el usuario canceló o no se pudo → caemos a copiar */
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      /* sin clipboard: no hacemos nada ruidoso */
+    }
+  }
 
   const agotado = perfume ? perfume.stock_disponible <= 0 : false;
   const enOferta =
@@ -186,9 +210,9 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
             {/* Gradiente inferior para integrar con el panel de texto */}
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-coal/90 md:bg-gradient-to-t md:from-obsidian/60 md:via-transparent md:to-transparent" />
 
-            {/* Sello de oferta */}
+            {/* Sello de oferta — en desktop baja para no chocar con el botón compartir */}
             {enOferta && (
-              <div className="absolute left-4 top-4">
+              <div className="absolute left-4 top-4 md:top-[4.75rem]">
                 <div className="seal-offer">
                   <span className="flex flex-col items-center leading-none">
                     <span className="font-semibold text-[0.8rem]">
@@ -205,7 +229,7 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
               {perfume.marca}
             </div>
 
-            {/* Botón cerrar en móvil — encima de la imagen */}
+            {/* Botón cerrar en móvil — encima de la imagen, a la DERECHA */}
             <button
               onClick={onClose}
               className="absolute right-4 bottom-4 flex h-9 w-9 items-center justify-center rounded-full border border-gold/30 bg-obsidian/80 text-ivory/80 backdrop-blur-sm transition-colors hover:text-gold-champagne md:hidden"
@@ -213,6 +237,26 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
             >
               <X className="h-4 w-4" strokeWidth={1.5} />
             </button>
+
+            {/* Botón COMPARTIR — lado opuesto a la X: móvil abajo-IZQUIERDA,
+                desktop arriba-izquierda del perfume. Solo existe con el modal abierto. */}
+            <button
+              onClick={compartirPerfume}
+              aria-label="Compartir este perfume"
+              title="Compartir este perfume"
+              className="absolute left-4 bottom-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-gold/30 bg-obsidian/80 text-ivory/80 backdrop-blur-sm transition-colors hover:text-gold-champagne md:bottom-auto md:top-4"
+            >
+              {copiado ? (
+                <Check className="h-4 w-4 text-gold-champagne" strokeWidth={2} />
+              ) : (
+                <Share2 className="h-4 w-4" strokeWidth={1.5} />
+              )}
+            </button>
+            {copiado && (
+              <span className="absolute left-14 bottom-4 z-20 whitespace-nowrap rounded-full border border-gold/30 bg-obsidian/90 px-3 py-1.5 text-[0.6rem] uppercase tracking-regal text-gold-champagne backdrop-blur-sm md:bottom-auto md:top-4">
+                ¡Link copiado!
+              </span>
+            )}
           </div>
 
           {/* Detalle — en móvil también limita altura y hace scroll interno,

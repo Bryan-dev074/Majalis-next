@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   ReactNode,
 } from "react";
@@ -118,6 +119,19 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   }, [perfumesBase, token]);
 
   const abrirDetalle = useCallback((p: Perfume | null) => setDetalle(p), []);
+
+  // DEEP-LINK: si la URL trae ?perfume=<id> (link COMPARTIDO), abrir ese perfume
+  // una vez, en cuanto el catálogo terminó de cargar.
+  const deepLinkHecho = useRef(false);
+  useEffect(() => {
+    if (deepLinkHecho.current || !cargado || perfumes.length === 0) return;
+    deepLinkHecho.current = true;
+    const id = new URLSearchParams(window.location.search).get("perfume");
+    if (id) {
+      const p = perfumes.find((x) => x.id === id);
+      if (p) setDetalle(p);
+    }
+  }, [cargado, perfumes]);
 
   const value = useMemo(
     () => ({ perfumes, detalle, abrirDetalle, recargar, cargado }),
