@@ -54,18 +54,20 @@ export const REDES_SOCIALES: RedSocial[] = [
 
 /**
  * Contraseña del panel de administración (/admin).
- * Se lee de la variable de entorno ADMIN_PASSWORD si existe;
- * si no, usa este valor por defecto. Para cambiarla, editá aquí
- * o mejor: agregá ADMIN_PASSWORD en .env.local y en Vercel.
+ * SOLO se lee de la variable de entorno ADMIN_PASSWORD (.env.local en local,
+ * Environment Variables en Vercel). SIN DEFAULT a propósito: antes había una
+ * contraseña por defecto hardcodeada acá — cualquiera que viera el repo podía
+ * entrar al panel. Si la variable no está configurada, el login SIEMPRE falla
+ * (mejor un panel cerrado que uno con contraseña pública).
  */
-export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "sultan-admin-2026";
+export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "";
 
 /**
  * Secreto para firmar la cookie de sesión del panel /admin (HMAC).
  * En producción, definí ADMIN_SESSION_SECRET en Vercel con una cadena larga
- * y aleatoria. Si no está definida, deriva de ADMIN_PASSWORD para que
- * igualmente funcione (menos seguro, solo para desarrollo).
+ * y aleatoria. Si no está definida, deriva de ADMIN_PASSWORD (sin literal
+ * adivinable). Sin contraseña configurada, no hay sesiones válidas.
  */
 export const ADMIN_SESSION_SECRET =
   process.env.ADMIN_SESSION_SECRET ??
-  `sultan-session-${ADMIN_PASSWORD}-change-me`;
+  (ADMIN_PASSWORD ? `majalis-sesion-${ADMIN_PASSWORD}` : "");

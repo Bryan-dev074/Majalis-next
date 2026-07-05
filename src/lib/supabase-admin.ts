@@ -54,7 +54,9 @@ async function firmar(valor: string): Promise<string> {
 
 /** Crea la cookie de sesión si la contraseña es correcta. */
 export async function iniciarSesionAdmin(password: string): Promise<boolean> {
-  if (password !== ADMIN_PASSWORD) return false;
+  // Sin ADMIN_PASSWORD configurada (env), el panel queda CERRADO: nunca se
+  // acepta un login (no existe más el default hardcodeado en el repo).
+  if (!ADMIN_PASSWORD || password !== ADMIN_PASSWORD) return false;
   const expira = Date.now() + DURACION_MS;
   const firma = await firmar(String(expira));
   const valor = `${expira}.${firma}`;
