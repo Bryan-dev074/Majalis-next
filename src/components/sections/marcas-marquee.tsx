@@ -94,9 +94,9 @@ export function MarcasMarquee() {
           onClick={() => { setAbierto((v) => !v); setBusqueda(""); }}
           aria-expanded={abierto}
           aria-controls="panel-marcas"
-          className={`btn-explorar group inline-flex items-center gap-2 rounded-full border border-gold/30 bg-obsidian/60 px-5 py-2 text-[0.65rem] font-semibold uppercase tracking-regal transition-all duration-300 hover:border-gold/70 ${abierto ? "" : "is-idle"}`}
+          className="btn-explorar group inline-flex items-center gap-2 rounded-full border border-gold/30 bg-obsidian/60 px-5 py-2 text-[0.65rem] font-semibold uppercase tracking-regal transition-all duration-300 hover:border-gold/70"
         >
-          <Search className="h-3.5 w-3.5 text-gold" strokeWidth={1.5} />
+          <Search className="explorar-lupa h-3.5 w-3.5 text-gold" strokeWidth={1.5} />
           <span className="explorar-txt">
             {abierto ? "Ocultar marcas" : `Explorar las ${marcas.length} marcas`}
           </span>
