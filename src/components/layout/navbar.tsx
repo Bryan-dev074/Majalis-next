@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, ShoppingBag, Menu, X, ArrowRight } from "lucide-react";
 import Image from "next/image";
 import { useCart } from "@/hooks/use-cart";
+import { useCerrarConAtras } from "@/hooks/use-cerrar-con-atras";
 import { Perfume } from "@/types/database";
 import { formatGs, precioEfectivo } from "@/lib/format";
 
@@ -52,6 +53,9 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
+
+  // El botón "atrás" del teléfono cierra el menú móvil en vez de salir de la página.
+  useCerrarConAtras(menuMobile, () => setMenuMobile(false));
 
   const irA = (id: string) => {
     setMenuMobile(false);

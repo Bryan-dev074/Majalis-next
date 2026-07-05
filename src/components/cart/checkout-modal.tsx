@@ -9,6 +9,7 @@ import {
   DeliveryProfile,
 } from "@/components/cart/delivery-profile";
 import { useDeliveryProfile } from "@/hooks/use-delivery-profile";
+import { useCerrarConAtras } from "@/hooks/use-cerrar-con-atras";
 import { WHATSAPP_NUMBER } from "@/data/site-config";
 
 interface CheckoutModalProps {
@@ -45,6 +46,9 @@ export function CheckoutModal({ abierto, onClose }: CheckoutModalProps) {
       );
     };
   }, [abierto]);
+
+  // Botón "atrás" cierra el checkout (queda apilado sobre el carrito).
+  useCerrarConAtras(abierto, onClose);
 
   if (!abierto) return null;
 

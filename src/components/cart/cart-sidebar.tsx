@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight } from "lucide-react";
 import { useCart } from "@/hooks/use-cart";
+import { useCerrarConAtras } from "@/hooks/use-cerrar-con-atras";
 import { formatGs, precioEfectivo } from "@/lib/format";
 import { CheckoutModal } from "./checkout-modal";
 
@@ -29,8 +30,12 @@ export function CartSidebar() {
     setAbrirCart(false);
   };
 
+  // El botón "atrás" cierra el carrito. El carrito queda ABIERTO detrás del checkout
+  // (que lo tapa entero) → anidación real: la pila cierra primero el checkout y con
+  // otro "atrás" el carrito, sin carreras de historial.
+  useCerrarConAtras(abrirCart, cerrarDrawer);
+
   const abrirCheckout = () => {
-    setAbrirCart(false);
     setCheckoutAbierto(true);
   };
 
