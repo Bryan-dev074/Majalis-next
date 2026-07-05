@@ -53,6 +53,18 @@ export const REDES_SOCIALES: RedSocial[] = [
 ];
 
 /**
+ * Promo de envío que se muestra en el checkout, justo arriba del botón de
+ * WhatsApp (sello animado con camioncito).
+ * 👉 Cambiá `detalle` cuando venza la fecha, o poné `activo: false` para
+ *    ocultarlo del checkout sin tocar nada más.
+ */
+export const PROMO_ENVIO = {
+  activo: true,
+  titulo: "Envío incluido",
+  detalle: "Gratis en todos los pedidos hasta el 01/08",
+};
+
+/**
  * Contraseña del panel de administración (/admin).
  * SOLO se lee de la variable de entorno ADMIN_PASSWORD (.env.local en local,
  * Environment Variables en Vercel). SIN DEFAULT a propósito: antes había una

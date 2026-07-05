@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, MessageCircle, ShoppingBag, Tag, Check } from "lucide-react";
+import { X, MessageCircle, ShoppingBag, Tag, Check, Truck } from "lucide-react";
 import { useCart } from "@/hooks/use-cart";
 import { formatGs } from "@/lib/format";
 import { buildWhatsAppCheckoutUrl } from "@/lib/format";
@@ -10,7 +10,7 @@ import {
 } from "@/components/cart/delivery-profile";
 import { useDeliveryProfile } from "@/hooks/use-delivery-profile";
 import { useCerrarConAtras } from "@/hooks/use-cerrar-con-atras";
-import { WHATSAPP_NUMBER } from "@/data/site-config";
+import { WHATSAPP_NUMBER, PROMO_ENVIO } from "@/data/site-config";
 
 interface CheckoutModalProps {
   abierto: boolean;
@@ -232,10 +232,27 @@ export function CheckoutModal({ abierto, onClose }: CheckoutModalProps) {
                 </div>
               </div>
 
+              {/* Sello premium de envío — arriba del CTA, con camioncito animado */}
+              {PROMO_ENVIO.activo && (
+                <div className="envio-badge mt-6" role="status">
+                  <span className="envio-badge-icono">
+                    <Truck className="h-[1.15rem] w-[1.15rem]" strokeWidth={1.6} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-display text-sm tracking-wide text-gold-champagne">
+                      {PROMO_ENVIO.titulo}
+                    </span>
+                    <span className="block text-[0.62rem] uppercase tracking-regal text-ivory/60">
+                      {PROMO_ENVIO.detalle}
+                    </span>
+                  </span>
+                </div>
+              )}
+
               {/* CTA principal — WhatsApp */}
               <button
                 onClick={enviarWhatsApp}
-                className="wa-checkout-btn mt-6 flex w-full items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-[#1faa52] to-[#25D366] px-5 py-4 text-sm font-bold uppercase tracking-wide text-white shadow-[0_10px_30px_-10px_rgba(37,211,102,0.7)] sm:text-[0.78rem]"
+                className="wa-checkout-btn mt-3 flex w-full items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-[#1faa52] to-[#25D366] px-5 py-4 text-sm font-bold uppercase tracking-wide text-white shadow-[0_10px_30px_-10px_rgba(37,211,102,0.7)] sm:text-[0.78rem]"
               >
                 <MessageCircle className="h-5 w-5 shrink-0" strokeWidth={2.2} />
                 <span className="leading-tight">Enviar pedido por WhatsApp</span>

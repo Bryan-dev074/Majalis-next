@@ -1056,3 +1056,55 @@
   .precio-premium { animation: none; filter: none; }
   .premium-corona { animation: none; }
 }
+
+/* ── Sello "Envío incluido" del checkout ─────────────────────────────────────
+   Pill dorado premium con brillo que barre cada tanto y un camioncito que
+   "viaja" suave. Se apaga entero con prefers-reduced-motion. */
+.envio-badge {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  overflow: hidden;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 9999px;
+  padding: 0.65rem 1.1rem;
+  background:
+    linear-gradient(105deg, rgba(212, 175, 55, 0.10), rgba(212, 175, 55, 0.03) 45%, rgba(212, 175, 55, 0.12));
+  box-shadow: 0 0 24px -10px rgba(212, 175, 55, 0.45) inset, 0 6px 22px -14px rgba(212, 175, 55, 0.5);
+}
+.envio-badge::after {
+  /* brillo que barre el pill, como los wordmarks */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(246, 232, 195, 0.22) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: envio-brillo 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+.envio-badge-icono {
+  display: grid;
+  place-items: center;
+  width: 2.3rem;
+  height: 2.3rem;
+  flex: none;
+  border-radius: 9999px;
+  color: #f6e8c3;
+  background: radial-gradient(circle at 30% 30%, rgba(212, 175, 55, 0.35), rgba(212, 175, 55, 0.08));
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  animation: envio-camion 2.6s ease-in-out infinite;
+}
+@keyframes envio-brillo {
+  0%, 55% { transform: translateX(-100%); }
+  75%, 100% { transform: translateX(100%); }
+}
+@keyframes envio-camion {
+  0%, 100% { transform: translateX(0); }
+  30% { transform: translateX(3px); }
+  55% { transform: translateX(-2px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .envio-badge::after { animation: none; opacity: 0; }
+  .envio-badge-icono { animation: none; }
+}
