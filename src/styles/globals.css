@@ -1018,3 +1018,41 @@
 @media (prefers-reduced-motion: reduce) {
   .catalogo-page { animation: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   PRECIO PREMIUM (04-jul) — perfumes de 1.000.000 Gs o más: oro vivo
+   corriendo + halo dorado que respira. Comunica "esto es especial".
+   ═══════════════════════════════════════════════════════════════ */
+@keyframes precio-premium-flujo {
+  to { background-position: 200% center; }
+}
+@keyframes precio-premium-halo {
+  0%, 100% { filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.35)); }
+  50%      { filter: drop-shadow(0 0 15px rgba(244, 224, 136, 0.75)); }
+}
+.precio-premium {
+  background-image: linear-gradient(
+    100deg,
+    #b8860b 0%, #e8c766 22%, #fffbe8 50%, #e8c766 78%, #b8860b 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation:
+    precio-premium-flujo 2.4s linear infinite,
+    precio-premium-halo 2.8s ease-in-out infinite;
+}
+/* Coronita premium que titila al lado del precio */
+@keyframes premium-corona {
+  0%, 100% { opacity: 0.7; transform: scale(1) rotate(-4deg); }
+  50%      { opacity: 1; transform: scale(1.15) rotate(4deg); filter: drop-shadow(0 0 6px rgba(244, 224, 136, 0.8)); }
+}
+.premium-corona {
+  animation: premium-corona 2.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .precio-premium { animation: none; filter: none; }
+  .premium-corona { animation: none; }
+}

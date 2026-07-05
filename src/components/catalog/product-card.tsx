@@ -1,10 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus, Sparkles, Crown } from "lucide-react";
 import { Perfume } from "@/types/database";
 import { formatGs, precioEfectivo, concentracionDe } from "@/lib/format";
 import { useCart } from "@/hooks/use-cart";
+
+/** Desde 1.000.000 Gs, el precio recibe tratamiento premium (oro vivo + halo + corona). */
+const UMBRAL_PREMIUM = 1_000_000;
 
 interface ProductCardProps {
   perfume: Perfume;
@@ -25,6 +28,7 @@ export function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
   const agotado = perfume.stock_disponible <= 0;
   const enOferta = perfume.en_oferta && perfume.precio_descuento != null;
   const precio = precioEfectivo(perfume);
+  const esPremium = precio >= UMBRAL_PREMIUM;
 
   return (
     <article
@@ -132,16 +136,26 @@ export function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
           </div>
         </div>
 
-        {/* Precio — tratamiento elegante de oferta, más notorio */}
+        {/* Precio — tratamiento elegante de oferta + PREMIUM (1M+) más notorio */}
         <div className="mt-3 flex flex-wrap items-end justify-center gap-1.5 sm:mt-5 sm:gap-3">
           {enOferta && (
             <span className="price-strike !text-xs text-ivory/50 sm:!text-sm">{formatGs(perfume.precio_regular)}</span>
           )}
-          <span className="font-display text-2xl font-semibold text-gold-gradient drop-shadow-[0_0_14px_rgba(212,175,55,0.35)] sm:text-3xl">
+          <span
+            className={`font-display text-2xl font-semibold sm:text-3xl ${
+              esPremium
+                ? "precio-premium"
+                : "text-gold-gradient drop-shadow-[0_0_14px_rgba(212,175,55,0.35)]"
+            }`}
+          >
             {formatGs(precio)}
           </span>
-          {enOferta && (
-            <Sparkles className="mb-1 h-3 w-3 text-gold-light opacity-80 sm:mb-1.5 sm:h-4 sm:w-4" />
+          {esPremium ? (
+            <Crown className="premium-corona mb-1 h-3.5 w-3.5 text-gold-champagne sm:mb-1.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
+          ) : (
+            enOferta && (
+              <Sparkles className="mb-1 h-3 w-3 text-gold-light opacity-80 sm:mb-1.5 sm:h-4 sm:w-4" />
+            )
           )}
         </div>
       </div>

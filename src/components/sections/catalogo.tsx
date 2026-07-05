@@ -88,17 +88,28 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
 
   const filtrados = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return perfumes.filter((p) => {
-      const matchMarca = marcaActiva === "todas" || p.marca === marcaActiva;
-      const matchFamilia =
-        familiaActiva === "todas" || p.categoria.includes(familiaActiva);
-      const matchQuery =
-        !q ||
-        p.nombre.toLowerCase().includes(q) ||
-        p.marca.toLowerCase().includes(q) ||
-        p.descripcion.toLowerCase().includes(q);
-      return matchMarca && matchFamilia && matchQuery;
-    });
+    return perfumes
+      .filter((p) => {
+        const matchMarca = marcaActiva === "todas" || p.marca === marcaActiva;
+        const matchFamilia =
+          familiaActiva === "todas" || p.categoria.includes(familiaActiva);
+        const matchQuery =
+          !q ||
+          p.nombre.toLowerCase().includes(q) ||
+          p.marca.toLowerCase().includes(q) ||
+          p.descripcion.toLowerCase().includes(q);
+        return matchMarca && matchFamilia && matchQuery;
+      })
+      // ORDEN: primero LOS MÁS BUSCADOS (clicks_mensuales = veces que abrieron el
+      // detalle). Empate → destacados, luego alfabético por marca. Así al cargar
+      // "Todas" aparecen arriba los que la gente más mira.
+      .sort((a, b) => {
+        const clicksA = a.clicks_mensuales ?? 0;
+        const clicksB = b.clicks_mensuales ?? 0;
+        if (clicksB !== clicksA) return clicksB - clicksA;
+        if (a.destacado !== b.destacado) return a.destacado ? -1 : 1;
+        return a.marca.localeCompare(b.marca, "es");
+      });
   }, [perfumes, marcaActiva, familiaActiva, query]);
 
   const hayFiltros =

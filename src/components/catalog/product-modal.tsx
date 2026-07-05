@@ -253,9 +253,7 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
               <span>{perfume.volumen_ml} ml</span>
               <span className="h-3 w-px bg-gold/30" />
               <span>
-                {agotado
-                  ? "Agotado temporalmente"
-                  : `${perfume.stock_disponible} unidades disponibles`}
+                {agotado ? "Agotado temporalmente" : "Unidades disponibles"}
               </span>
             </div>
 
