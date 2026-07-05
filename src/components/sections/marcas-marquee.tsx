@@ -11,38 +11,24 @@ import { useCatalog } from "@/hooks/use-catalog";
  * de terceros.
  *
  * Rediseño 03-jul-2026 (pedido del dueño):
- *  · TODAS las marcas que maneja el negocio (MARCAS_BASE = las 82 del catálogo
- *    maestro del Hub, horneadas; se une con las del catálogo vivo de la tienda).
+ *  · Muestra las marcas REALES en stock (derivadas del catálogo vivo). MISMA
+ *    lógica que el filtro del catálogo → el conteo coincide SIEMPRE en los dos
+ *    lugares (antes se unía con una lista fija de 82 y daba 110 vs 105).
  *  · Cada nombre lleva un BRILLO dorado que lo recorre constantemente
  *    (.marca-shimmer en globals.css, con delays escalonados → efecto ola).
  *  · Mucho más legible: base oro pleno con barrido marfil, ya no /60 opaco.
  *  · Las ✦ titilan (.estrella-marquee). Pausa on-hover se mantiene.
  */
-const MARCAS_BASE = [
-  "Acqua di Parma", "Afnan", "Al Haramain", "Al Wataniah", "Antonio Banderas",
-  "Ariana Grande", "Armaf", "Azzaro", "Benetton", "Bharara", "Britney Spears",
-  "Burberry", "Bvlgari", "Byredo", "Cacharel", "Calvin Klein", "Carolina Herrera",
-  "Cartier", "Chanel", "Chloé", "Clinique", "Creed", "Davidoff", "Dior",
-  "Dolce & Gabbana", "Elie Saab", "Elizabeth Arden", "Escentric Molecules",
-  "Fragrance World", "French Avenue", "Giorgio Armani", "Givenchy", "Guerlain",
-  "Guy Laroche", "Hermès", "Hugo Boss", "Initio", "Issey Miyake", "Jacques Bogart",
-  "Jaguar", "Jean Paul Gaultier", "Jo Malone", "Joop!", "Juliette Has A Gun",
-  "Kenzo", "Kilian", "Lacoste", "Lalique", "Lancôme", "Lattafa", "Le Labo",
-  "Loewe", "Maison Alhambra", "Maison Francis K.", "Mancera", "Marc Jacobs",
-  "Montale", "Montblanc", "Moschino", "Mugler", "Narciso Rodriguez", "Nautica",
-  "Nina Ricci", "Nishane", "Orientica", "Paco Rabanne", "Parfums de Marly",
-  "Paris Corner", "Paris Hilton", "Perry Ellis", "Prada", "Ralph Lauren",
-  "Rasasi", "Rayhaan", "Shakira", "Ted Lapidus", "Tom Ford", "Valentino",
-  "Versace", "Viktor & Rolf", "Xerjoff", "Yves Saint Laurent",
-];
-
 export function MarcasMarquee() {
   const { perfumes } = useCatalog();
 
+  // Marcas reales del catálogo vivo — IDÉNTICA derivación que catalogo.tsx.
   const marcas = useMemo(() => {
-    // Unión: catálogo vivo de la tienda + todas las casas del negocio.
-    const set = new Set<string>(MARCAS_BASE);
-    for (const p of perfumes) if (p.marca?.trim()) set.add(p.marca.trim());
+    const set = new Set<string>();
+    for (const p of perfumes) {
+      const m = p.marca?.trim();
+      if (m) set.add(m);
+    }
     return Array.from(set).sort((a, b) => a.localeCompare(b, "es"));
   }, [perfumes]);
 
@@ -110,6 +96,7 @@ export function MarcasMarquee() {
           aria-controls="panel-marcas"
           className={`btn-explorar group inline-flex items-center gap-2 rounded-full border border-gold/30 bg-obsidian/60 px-5 py-2 text-[0.65rem] font-semibold uppercase tracking-regal transition-all duration-300 hover:border-gold/70 ${abierto ? "" : "is-idle"}`}
         >
+          <Search className="h-3.5 w-3.5 text-gold" strokeWidth={1.5} />
           <span className="explorar-txt">
             {abierto ? "Ocultar marcas" : `Explorar las ${marcas.length} marcas`}
           </span>

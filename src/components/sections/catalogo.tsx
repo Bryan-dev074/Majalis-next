@@ -62,11 +62,16 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
     return () => window.removeEventListener("majalis:filtrar-marca", handler);
   }, [onQueryChange]);
 
-  // Marcas derivadas de los datos reales
+  // Marcas derivadas de los datos reales. MISMA lógica que el marquee de casas
+  // perfumistas (trim + descarta vacíos + orden localizado) → el conteo coincide
+  // SIEMPRE en los dos lugares (antes: catálogo 105 vs marquee 110).
   const marcas = useMemo(() => {
     const set = new Set<string>();
-    perfumes.forEach((p) => set.add(p.marca));
-    return Array.from(set).sort();
+    for (const p of perfumes) {
+      const m = p.marca?.trim();
+      if (m) set.add(m);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "es"));
   }, [perfumes]);
 
   // Familias olfativas derivadas (todas las categorías excepto las que son marca)
@@ -247,6 +252,7 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
                 className="brand-toggle"
                 aria-expanded={marcasAbiertas}
               >
+                <Search className="h-3.5 w-3.5" strokeWidth={1.5} />
                 {marcasAbiertas ? "Ver menos" : `Ver todas las ${marcas.length} marcas`}
                 <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-300 ${marcasAbiertas ? "rotate-180" : ""}`} strokeWidth={1.5} />
               </button>
