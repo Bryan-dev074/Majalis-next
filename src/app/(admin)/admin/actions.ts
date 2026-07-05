@@ -665,16 +665,22 @@ export async function cargarDatosAdmin(): Promise<DatosAdmin> {
   const base = { configurado: true } as DatosAdmin;
 
   // 1) Perfumes (CRÍTICO: si falla, igual devolvemos el resto)
+  // ⚠️ PostgREST corta en 1.000 filas por request SIN error → con ~1.800 en la
+  // tienda hay que PAGINAR con .range() (el admin mostraba solo 1.000).
   let perfumes: Perfume[] = [];
   try {
-    const { data, error } = await supabase
-      .from("perfumes")
-      .select("*")
-      .order("created_at", { ascending: true });
-    if (error) {
-      console.error("[cargarDatosAdmin] Error leyendo perfumes:", error.message);
-    } else {
-      perfumes = (data ?? []) as unknown as Perfume[];
+    for (let desde = 0; ; desde += 1000) {
+      const { data, error } = await supabase
+        .from("perfumes")
+        .select("*")
+        .order("created_at", { ascending: true })
+        .range(desde, desde + 999);
+      if (error) {
+        console.error("[cargarDatosAdmin] Error leyendo perfumes:", error.message);
+        break;
+      }
+      perfumes.push(...((data ?? []) as unknown as Perfume[]));
+      if (!data || data.length < 1000) break;
     }
   } catch (e) {
     console.error("[cargarDatosAdmin] Excepción leyendo perfumes:", e);

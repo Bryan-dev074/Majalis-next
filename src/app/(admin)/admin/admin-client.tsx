@@ -7,6 +7,7 @@ import {
   Search, Star, Power, Tag, Boxes, X, ExternalLink,
   AlertTriangle, CheckCircle2, Sun, Moon,
   BarChart2, RefreshCw, ShieldAlert, Database, Sparkles,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { Perfume, Cupon, TiendaProducto } from "@/types/database";
 import { formatGs, precioEfectivo } from "@/lib/format";
@@ -549,6 +550,8 @@ function TablaStock({
 }) {
   const [query, setQuery] = useState("");
   const [filtroMarca, setFiltroMarca] = useState("todas");
+  const [pagina, setPagina] = useState(1);
+  const POR_PAGINA = 50;
 
   const marcas = useMemo(
     () => Array.from(new Set(perfumes.map((p) => p.marca))).sort(),
@@ -564,6 +567,23 @@ function TablaStock({
       return matchQ && (filtroMarca === "todas" || p.marca === filtroMarca);
     });
   }, [perfumes, query, filtroMarca]);
+
+  // ── Paginación: con ~1.800 productos la tabla era un scroll interminable
+  //    (y un DOM pesadísimo). 50 por página + controles abajo. ──
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
+  const paginaSegura = Math.min(pagina, totalPaginas);
+  const visibles = filtrados.slice((paginaSegura - 1) * POR_PAGINA, paginaSegura * POR_PAGINA);
+  useEffect(() => { setPagina(1); }, [query, filtroMarca]);
+  const numerosPagina = useMemo<(number | "…")[]>(() => {
+    if (totalPaginas <= 7) return Array.from({ length: totalPaginas }, (_, i) => i + 1);
+    const nums = [...new Set([1, totalPaginas, paginaSegura - 1, paginaSegura, paginaSegura + 1])]
+      .filter((n) => n >= 1 && n <= totalPaginas)
+      .sort((a, b) => a - b);
+    const out: (number | "…")[] = [];
+    let prev = 0;
+    for (const n of nums) { if (n - prev > 1) out.push("…"); out.push(n); prev = n; }
+    return out;
+  }, [totalPaginas, paginaSegura]);
 
   return (
     <div>
@@ -621,7 +641,7 @@ function TablaStock({
                   </td>
                 </tr>
               ) : (
-                filtrados.map((p) => (
+                visibles.map((p) => (
                   <tr key={p.id}>
                     <td>
                       <div className="flex items-center gap-3">
@@ -711,6 +731,53 @@ function TablaStock({
             </tbody>
           </table>
         </div>
+
+        {/* Paginación — 50 por página para que la lista no sea un scroll infinito */}
+        {totalPaginas > 1 && (
+          <div
+            className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3"
+            style={{ borderColor: "var(--adm-border)" }}
+          >
+            <p className="text-xs" style={{ color: "var(--adm-text-muted)" }}>
+              Mostrando {(paginaSegura - 1) * POR_PAGINA + 1}–{Math.min(paginaSegura * POR_PAGINA, filtrados.length)} de {filtrados.length}
+            </p>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setPagina((v) => Math.max(1, v - 1))}
+                disabled={paginaSegura === 1}
+                className="adm-btn adm-btn-ghost adm-btn-sm"
+                aria-label="Página anterior"
+                style={paginaSegura === 1 ? { opacity: 0.4, cursor: "not-allowed" } : undefined}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              {numerosPagina.map((n, i) =>
+                n === "…" ? (
+                  <span key={`e${i}`} className="px-1 text-xs" style={{ color: "var(--adm-text-muted)" }}>…</span>
+                ) : (
+                  <button
+                    key={n}
+                    onClick={() => setPagina(n)}
+                    aria-current={n === paginaSegura ? "page" : undefined}
+                    className={`adm-btn adm-btn-sm ${n === paginaSegura ? "adm-btn-primary" : "adm-btn-ghost"}`}
+                    style={{ minWidth: "2.25rem", justifyContent: "center" }}
+                  >
+                    {n}
+                  </button>
+                )
+              )}
+              <button
+                onClick={() => setPagina((v) => Math.min(totalPaginas, v + 1))}
+                disabled={paginaSegura === totalPaginas}
+                className="adm-btn adm-btn-ghost adm-btn-sm"
+                aria-label="Página siguiente"
+                style={paginaSegura === totalPaginas ? { opacity: 0.4, cursor: "not-allowed" } : undefined}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
