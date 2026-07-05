@@ -19,6 +19,44 @@ export function precioEfectivo(p: Pick<Perfume, "en_oferta" | "precio_descuento"
 }
 
 /**
+ * Normaliza texto para búsqueda: minúsculas, sin acentos, sin puntuación.
+ * "Fórmula / EDP" y "formula edp" quedan iguales.
+ */
+export function normalizarBusqueda(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9ñ]+/g, " ")
+    .trim();
+}
+
+/** Palabras vacías que NO exigen coincidencia (las tiendas las ponen o sacan
+ *  a gusto: "Club de Nuit" vs "Club Nuit"). */
+const STOPWORDS_BUSQUEDA = new Set(["de", "del", "la", "le", "el", "los", "las", "y", "the", "of", "and"]);
+
+/**
+ * Búsqueda por TOKENS sobre marca + nombre + categoría: cada palabra "real" de
+ * la consulta tiene que aparecer en algún lado de la ficha. Así
+ * "armaf club de nuit int" encuentra el "Club de Nuit Intense Man" de Armaf
+ * aunque ninguna columna sola contenga la frase completa; los acentos y las
+ * mayúsculas no importan. Con consulta vacía devuelve true (no filtra).
+ */
+export function coincideBusqueda(
+  p: Pick<Perfume, "nombre" | "marca"> & { categoria?: string[] },
+  consulta: string
+): boolean {
+  const tokens = normalizarBusqueda(consulta)
+    .split(" ")
+    .filter((t) => t && !STOPWORDS_BUSQUEDA.has(t));
+  if (!tokens.length) return true;
+  const ficha = normalizarBusqueda(
+    `${p.marca} ${p.nombre} ${(p.categoria ?? []).join(" ")}`
+  );
+  return tokens.every((t) => ficha.includes(t));
+}
+
+/**
  * Concentración (EDP / EDT / Parfum / Elixir / Cologne) derivada del nombre o la
  * categoría del perfume. Devuelve null si no se puede inferir (no muestra badge).
  * No requiere columna nueva: la mayoría de los nombres ya la incluyen ("… EDP").

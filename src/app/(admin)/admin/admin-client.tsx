@@ -10,7 +10,7 @@ import {
   ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { Perfume, Cupon, TiendaProducto } from "@/types/database";
-import { formatGs, precioEfectivo } from "@/lib/format";
+import { formatGs, precioEfectivo, coincideBusqueda } from "@/lib/format";
 import {
   loginAction, logoutAction, guardarPerfumeAction, eliminarPerfumeAction,
   ajustarStockAction, togglePerfumeAction, ocultarTodosAction, mostrarTodosAction,
@@ -558,12 +558,9 @@ function TablaStock({
     [perfumes]
   );
   const filtrados = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    // Tokens sin acentos sobre marca+nombre+sku ("armaf club de nuit int" ✓).
     return perfumes.filter((p) => {
-      const matchQ = !q
-        || p.nombre.toLowerCase().includes(q)
-        || p.marca.toLowerCase().includes(q)
-        || (p.sku ?? "").toLowerCase().includes(q);
+      const matchQ = coincideBusqueda({ nombre: `${p.nombre} ${p.sku ?? ""}`, marca: p.marca }, query);
       return matchQ && (filtroMarca === "todas" || p.marca === filtroMarca);
     });
   }, [perfumes, query, filtroMarca]);
@@ -802,13 +799,9 @@ function DemoView({
   const switchOn = activos === 0; // todos ocultos = switch "apagado" en tienda
 
   const filtrados = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return perfumes;
-    return perfumes.filter(
-      (p) =>
-        p.nombre.toLowerCase().includes(q) ||
-        p.marca.toLowerCase().includes(q) ||
-        (p.sku ?? "").toLowerCase().includes(q)
+    if (!query.trim()) return perfumes;
+    return perfumes.filter((p) =>
+      coincideBusqueda({ nombre: `${p.nombre} ${p.sku ?? ""}`, marca: p.marca }, query)
     );
   }, [perfumes, query]);
 

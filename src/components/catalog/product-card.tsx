@@ -68,6 +68,14 @@ export function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
           {perfume.marca}
         </div>
 
+        {/* Concentración (EDP / EDT / Parfum…) — esquina inferior de la foto,
+            para distinguir variantes del mismo perfume de un vistazo. */}
+        {concentracionDe(perfume) && (
+          <div className="absolute bottom-3 left-3 rounded-sm border border-gold/40 bg-obsidian/75 px-2 py-0.5 text-[0.55rem] font-bold uppercase tracking-regal text-gold-champagne backdrop-blur-sm">
+            {concentracionDe(perfume)}
+          </div>
+        )}
+
         {/* Sello de oferta — micro-sello dorado minimalista animado */}
         {enOferta && (
           <div className="absolute left-3 top-3" title={`${perfume.porcentaje_descuento}% de descuento`}>
@@ -128,11 +136,6 @@ export function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
             <p className="text-[0.55rem] uppercase tracking-regal text-gold sm:text-[0.6rem]">
               {perfume.categoria[1] ?? perfume.categoria[0]}
             </p>
-            {concentracionDe(perfume) && (
-              <span className="rounded-full border border-gold/30 px-1.5 py-0.5 text-[0.45rem] font-bold uppercase tracking-regal text-gold-champagne sm:px-2 sm:text-[0.5rem]">
-                {concentracionDe(perfume)}
-              </span>
-            )}
           </div>
         </div>
 

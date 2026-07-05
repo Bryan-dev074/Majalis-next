@@ -6,6 +6,7 @@ import { Perfume } from "@/types/database";
 import { ProductCard } from "@/components/catalog/product-card";
 import { useReveal } from "@/hooks/use-reveal";
 import { buildWaLink } from "@/data/site-config";
+import { coincideBusqueda, normalizarBusqueda } from "@/lib/format";
 
 interface CatalogoProps {
   perfumes: Perfume[];
@@ -87,27 +88,24 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
   }, [perfumes, marcas]);
 
   const filtrados = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return perfumes
       .filter((p) => {
         const matchMarca = marcaActiva === "todas" || p.marca === marcaActiva;
         const matchFamilia =
           familiaActiva === "todas" || p.categoria.includes(familiaActiva);
-        const matchQuery =
-          !q ||
-          p.nombre.toLowerCase().includes(q) ||
-          p.marca.toLowerCase().includes(q) ||
-          p.descripcion.toLowerCase().includes(q);
-        return matchMarca && matchFamilia && matchQuery;
+        // Búsqueda por TOKENS (marca + nombre + descripción, sin acentos):
+        // "armaf club de nuit int" encuentra el Club de Nuit aunque la frase
+        // completa no esté en ninguna columna sola.
+        return matchMarca && matchFamilia && coincideBusqueda(p, query);
       })
-      // ORDEN: primero LOS MÁS BUSCADOS (clicks_mensuales = veces que abrieron el
-      // detalle). Empate → destacados, luego alfabético por marca. Así al cargar
-      // "Todas" aparecen arriba los que la gente más mira.
+      // ORDEN: primero los DESTACADOS (la estrellita del panel /admin manda),
+      // después los más buscados (clicks_mensuales = veces que abrieron el
+      // detalle), y de último alfabético por marca.
       .sort((a, b) => {
+        if (a.destacado !== b.destacado) return a.destacado ? -1 : 1;
         const clicksA = a.clicks_mensuales ?? 0;
         const clicksB = b.clicks_mensuales ?? 0;
         if (clicksB !== clicksA) return clicksB - clicksA;
-        if (a.destacado !== b.destacado) return a.destacado ? -1 : 1;
         return a.marca.localeCompare(b.marca, "es");
       });
   }, [perfumes, marcaActiva, familiaActiva, query]);
@@ -125,8 +123,8 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
 
   // ── Buscador de marcas (con 100+ casas, la lista se vuelve inmanejable) ──
   const marcasFiltradas = useMemo(() => {
-    const q = marcaBusqueda.trim().toLowerCase();
-    return q ? marcas.filter((m) => m.toLowerCase().includes(q)) : marcas;
+    const q = normalizarBusqueda(marcaBusqueda);
+    return q ? marcas.filter((m) => normalizarBusqueda(m).includes(q)) : marcas;
   }, [marcas, marcaBusqueda]);
 
   // Colapsado: primeras N + la marca activa (para que siempre se vea seleccionada).
@@ -197,6 +195,29 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
 
         {/* ────────── Filtros rediseñados ────────── */}
         <div className="mb-10 space-y-6" data-reveal>
+          {/* Buscador GENERAL de perfumes — siempre visible. Mismo estado `query`
+              que el buscador del navbar (los dos filtran el grid por tokens). */}
+          <div className="relative mx-auto max-w-xl">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-[1.1rem] w-[1.1rem] -translate-y-1/2 text-gold/60" strokeWidth={1.5} />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
+              placeholder="Buscá tu perfume — nombre o marca…"
+              aria-label="Buscar perfume"
+              className="w-full rounded-full border border-gold/25 bg-obsidian/70 py-3 pl-11 pr-10 text-[0.95rem] text-ivory placeholder:text-ivory/35 outline-none transition-colors focus:border-gold/60"
+            />
+            {query && (
+              <button
+                onClick={() => onQueryChange("")}
+                aria-label="Limpiar búsqueda"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ivory/40 transition-colors hover:text-gold"
+              >
+                <X className="h-4 w-4" strokeWidth={1.5} />
+              </button>
+            )}
+          </div>
+
           {/* Marcas — pestañas horizontales. A la derecha, EL DATO: cuántos hay hoy. */}
           <div className="space-y-3">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">

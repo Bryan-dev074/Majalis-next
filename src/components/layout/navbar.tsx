@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useCart } from "@/hooks/use-cart";
 import { useCerrarConAtras } from "@/hooks/use-cerrar-con-atras";
 import { Perfume } from "@/types/database";
-import { formatGs, precioEfectivo } from "@/lib/format";
+import { formatGs, precioEfectivo, coincideBusqueda } from "@/lib/format";
 
 interface NavbarProps {
   perfumes: Perfume[];
@@ -31,6 +31,7 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
   const [sugerenciasAbiertas, setSugerenciasAbiertas] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const contenedorRef = useRef<HTMLDivElement>(null);
+  const movilRef = useRef<HTMLDivElement>(null);
   const { cantidadTotal, setAbrirCart } = useCart();
 
   useEffect(() => {
@@ -43,10 +44,11 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
   // (La cinta "100% originales" se ELIMINÓ el 04-jul a pedido del dueño:
   //  la promesa vive en el hero y el footer; arriba ya no gusta cómo se ve.)
 
-  // Cerrar sugerencias al hacer clic fuera
+  // Cerrar sugerencias al hacer clic fuera (desktop O barra móvil)
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
-      if (!contenedorRef.current?.contains(e.target as Node)) {
+      const t = e.target as Node;
+      if (!contenedorRef.current?.contains(t) && !movilRef.current?.contains(t)) {
         setSugerenciasAbiertas(false);
       }
     };
@@ -62,18 +64,11 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Sugerencias en vivo (máx 6)
+  // Sugerencias en vivo (máx 6) — búsqueda por TOKENS sin acentos: cada palabra
+  // tiene que aparecer en marca+nombre+categoría ("armaf club de nuit int" ✓).
   const sugerencias = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    return perfumes
-      .filter(
-        (p) =>
-          p.nombre.toLowerCase().includes(q) ||
-          p.marca.toLowerCase().includes(q) ||
-          p.categoria.some((c) => c.toLowerCase().includes(q))
-      )
-      .slice(0, 6);
+    if (!query.trim()) return [];
+    return perfumes.filter((p) => coincideBusqueda(p, query)).slice(0, 6);
   }, [query, perfumes]);
 
   const emitirBusqueda = (q: string) => {
@@ -119,6 +114,41 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
       setHighlightIndex(-1);
     }
   };
+
+  // Lista de sugerencias — la comparten el dropdown de desktop y la barra móvil.
+  const listaSugerencias = sugerencias.map((p, i) => {
+    const precio = precioEfectivo(p);
+    return (
+      <button
+        key={p.id}
+        onMouseEnter={() => setHighlightIndex(i)}
+        onClick={() => seleccionarSugerencia(p)}
+        className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors ${
+          i === highlightIndex ? "bg-gold/10" : "hover:bg-gold/5"
+        }`}
+      >
+        <div className="relative h-12 w-10 shrink-0 overflow-hidden rounded-sm bg-coal">
+          {p.url_imagen && (
+            <Image
+              src={p.url_imagen}
+              alt={p.nombre}
+              fill
+              sizes="40px"
+              className="object-cover object-top"
+            />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-display text-sm text-ivory">{p.nombre}</p>
+          <p className="text-[0.6rem] uppercase tracking-regal text-gold/70">{p.marca}</p>
+        </div>
+        <div className="text-right">
+          <p className="font-display text-xs text-gold-gradient">{formatGs(precio)}</p>
+          <ArrowRight className="ml-auto mt-1 h-3 w-3 text-ivory/40" />
+        </div>
+      </button>
+    );
+  });
 
   return (
     <nav
@@ -182,9 +212,9 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
               }}
               onKeyDown={onKeyDown}
               placeholder="Buscar fragancia…"
-              className={`bg-transparent text-sm text-ivory placeholder:text-ivory/30 transition-all duration-500 ease-out border-b border-gold/30 focus:outline-none focus:border-gold ${
+              className={`hidden bg-transparent text-sm text-ivory placeholder:text-ivory/30 transition-all duration-500 ease-out border-b border-gold/30 focus:outline-none focus:border-gold md:block ${
                 searchOpen
-                  ? "w-40 md:w-64 px-2 py-1 opacity-100"
+                  ? "md:w-64 px-2 py-1 opacity-100"
                   : "w-0 opacity-0 px-0"
               }`}
             />
@@ -202,48 +232,11 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
               <Search className="h-5 w-5" strokeWidth={1.25} />
             </button>
 
-            {/* Dropdown de sugerencias en vivo */}
+            {/* Dropdown de sugerencias en vivo (solo desktop — en móvil van
+                dentro de la barra de búsqueda de abajo) */}
             {sugerenciasAbiertas && sugerencias.length > 0 && (
-              <div className="absolute right-0 top-full z-50 mt-3 w-72 overflow-hidden rounded-sm border border-gold/20 bg-obsidian/98 shadow-[0_20px_60px_-15px_rgba(212,175,55,0.4)] backdrop-blur-2xl md:w-80">
-                {sugerencias.map((p, i) => {
-                  const precio = precioEfectivo(p);
-                  return (
-                    <button
-                      key={p.id}
-                      onMouseEnter={() => setHighlightIndex(i)}
-                      onClick={() => seleccionarSugerencia(p)}
-                      className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors ${
-                        i === highlightIndex
-                          ? "bg-gold/10"
-                          : "hover:bg-gold/5"
-                      }`}
-                    >
-                      <div className="relative h-12 w-10 shrink-0 overflow-hidden rounded-sm bg-coal">
-                        <Image
-                          src={p.url_imagen}
-                          alt={p.nombre}
-                          fill
-                          sizes="40px"
-                          className="object-cover object-top"
-                        />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-display text-sm text-ivory">
-                          {p.nombre}
-                        </p>
-                        <p className="text-[0.6rem] uppercase tracking-regal text-gold/70">
-                          {p.marca}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-display text-xs text-gold-gradient">
-                          {formatGs(precio)}
-                        </p>
-                        <ArrowRight className="ml-auto mt-1 h-3 w-3 text-ivory/40" />
-                      </div>
-                    </button>
-                  );
-                })}
+              <div className="absolute right-0 top-full z-50 mt-3 hidden w-72 overflow-hidden rounded-sm border border-gold/20 bg-obsidian/98 shadow-[0_20px_60px_-15px_rgba(212,175,55,0.4)] backdrop-blur-2xl md:block md:w-80">
+                {listaSugerencias}
               </div>
             )}
           </div>
@@ -276,6 +269,52 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
           </button>
         </div>
       </div>
+
+      {/* Barra de búsqueda MÓVIL — a todo el ancho debajo del navbar.
+          (El input inline de arriba en móvil quedaba aplastado por el flex a
+          ~0px: se veía que "no se abre" y no se veía lo que se escribía.) */}
+      {searchOpen && (
+        <div
+          ref={movilRef}
+          className="absolute top-full left-0 w-full border-b border-gold/10 bg-obsidian/95 backdrop-blur-xl md:hidden"
+        >
+          <div className="relative px-4 py-3">
+            <Search className="pointer-events-none absolute left-7 top-1/2 h-4 w-4 -translate-y-1/2 text-gold/50" strokeWidth={1.5} />
+            <input
+              type="text"
+              autoFocus
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setSugerenciasAbiertas(e.target.value.trim().length > 0);
+                setHighlightIndex(-1);
+                emitirBusqueda(e.target.value);
+              }}
+              onKeyDown={onKeyDown}
+              placeholder="Buscar fragancia…"
+              aria-label="Buscar fragancia"
+              className="w-full rounded-full border border-gold/25 bg-coal/60 py-2.5 pl-9 pr-10 text-sm text-ivory placeholder:text-ivory/35 outline-none focus:border-gold/60"
+            />
+            <button
+              onClick={() => {
+                setQuery("");
+                setSugerenciasAbiertas(false);
+                setSearchOpen(false);
+                emitirBusqueda("");
+              }}
+              aria-label="Cerrar búsqueda"
+              className="absolute right-7 top-1/2 -translate-y-1/2 text-ivory/50"
+            >
+              <X className="h-4 w-4" strokeWidth={1.5} />
+            </button>
+          </div>
+          {sugerenciasAbiertas && sugerencias.length > 0 && (
+            <div className="max-h-[55vh] overflow-y-auto border-t border-gold/10">
+              {listaSugerencias}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Menú mobile desplegable */}
       {menuMobile && (
