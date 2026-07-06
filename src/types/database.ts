@@ -31,6 +31,8 @@ export interface Perfume {
   porcentaje_descuento: number;
   stock_disponible: number;
   volumen_ml: number;
+  /** Concentración explícita (EDT/EDP/Parfum/…). Si falta, se infiere del nombre. */
+  concentracion?: string | null;
   activo: boolean;
   url_imagen: string;
   descripcion: string;

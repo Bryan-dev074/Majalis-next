@@ -68,13 +68,18 @@ export function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
           {perfume.marca}
         </div>
 
-        {/* Concentración (EDP / EDT / Parfum…) — esquina inferior de la foto,
-            para distinguir variantes del mismo perfume de un vistazo. */}
+        {/* Concentración (EDP / EDT / Parfum…) — esquina inferior IZQUIERDA de
+            la foto, para distinguir variantes del mismo perfume de un vistazo. */}
         {concentracionDe(perfume) && (
           <div className="absolute bottom-3 left-3 rounded-sm border border-gold/40 bg-obsidian/75 px-2 py-0.5 text-[0.55rem] font-bold uppercase tracking-regal text-gold-champagne backdrop-blur-sm">
             {concentracionDe(perfume)}
           </div>
         )}
+
+        {/* Volumen — esquina inferior DERECHA de la foto ("105 ml"). */}
+        <div className="absolute bottom-3 right-3 rounded-sm border border-gold/25 bg-obsidian/75 px-2 py-0.5 text-[0.55rem] font-bold uppercase tracking-regal text-ivory/85 backdrop-blur-sm">
+          {perfume.volumen_ml} ml
+        </div>
 
         {/* Sello de oferta — micro-sello dorado minimalista animado */}
         {enOferta && (

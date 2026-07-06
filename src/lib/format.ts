@@ -62,8 +62,11 @@ export function coincideBusqueda(
  * No requiere columna nueva: la mayoría de los nombres ya la incluyen ("… EDP").
  */
 export function concentracionDe(
-  p: Pick<Perfume, "nombre"> & { categoria?: string[] }
+  p: Pick<Perfume, "nombre"> & { categoria?: string[]; concentracion?: string | null }
 ): string | null {
+  // El dato explícito de la ficha manda (columna perfumes.concentracion);
+  // el parseo del nombre queda como fallback para fichas sin completar.
+  if (p.concentracion) return p.concentracion;
   const texto = `${p.nombre} ${(p.categoria ?? []).join(" ")}`.toLowerCase();
   if (/\beau de parfum\b|\bedp\b/.test(texto)) return "EDP";
   if (/\beau de toilette\b|\bedt\b/.test(texto)) return "EDT";

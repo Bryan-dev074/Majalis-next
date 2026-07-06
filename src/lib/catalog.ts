@@ -27,6 +27,7 @@ function normalizarPerfume(row: Record<string, unknown>): Perfume {
     porcentaje_descuento: Number(row.porcentaje_descuento ?? 0),
     stock_disponible: Number(row.stock_disponible ?? 0),
     volumen_ml: Number(row.volumen_ml ?? 100),
+    concentracion: row.concentracion ? String(row.concentracion) : null,
     activo: row.activo !== false,
     url_imagen: String(row.url_imagen ?? ""),
     descripcion: String(row.descripcion ?? ""),
