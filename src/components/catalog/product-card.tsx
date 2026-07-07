@@ -104,10 +104,11 @@ export function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
           </div>
         )}
 
-        {/* CTA al hover — centrado verticalmente en la imagen para no tapar
-            el sello de oferta (arriba) */}
+        {/* CTA al hover — SOLO desktop (hidden md:flex): en móvil no hay hover y
+            estos botones tapaban la foto; ahí el cliente toca la tarjeta y se
+            abre el detalle directo (onClick del <article>). */}
         {!agotado && (
-          <div className="absolute inset-0 flex translate-y-2 items-center justify-center gap-3 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
+          <div className="absolute inset-0 hidden translate-y-2 items-center justify-center gap-3 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100 md:flex">
             <button
               onClick={(e) => {
                 e.stopPropagation();
