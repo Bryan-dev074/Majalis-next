@@ -369,111 +369,107 @@
     box-shadow: 0 0 20px -6px rgba(212, 175, 55, 0.7);
   }
 
-  /* ── HORNACINAS de categoría: arcos de vitrina con luz interior ──
-     Cada categoría es un arco (como los nichos donde se exhiben perfumes en
-     los palacios del Golfo). La LUZ respira — el objeto queda quieto. */
-  .vitrinas-fila {
+  /* ── COLECCIONES: cabecera editorial de categorías (12-jul v3) ──
+     Navegación tipográfica de casa de lujo: mayúsculas espaciadas sobre una
+     línea base hairline, separadores de 1px, conteo en superíndice dorado y
+     subrayado dorado que crece bajo la activa. Nada de cajas ni brillos. */
+  .colecciones-fila {
     display: flex;
-    gap: 0.8rem;
-    padding: 0.5rem 0.25rem 0.75rem;
+    align-items: stretch;
+    justify-content: flex-start;
     overflow-x: auto;
-    scroll-snap-type: x proximity;
-    -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    border-bottom: 1px solid rgba(234, 227, 210, 0.1); /* línea base del masthead */
   }
-  .vitrinas-fila::-webkit-scrollbar { display: none; }
+  .colecciones-fila::-webkit-scrollbar { display: none; }
+  @media (max-width: 899px) {
+    .colecciones-fila {
+      padding-inline: 0.25rem;
+      mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+    }
+  }
   @media (min-width: 900px) {
-    .vitrinas-fila { justify-content: center; overflow-x: visible; }
+    .colecciones-fila { justify-content: center; overflow: visible; }
   }
 
-  .vitrina {
+  .coleccion {
     position: relative;
-    display: flex;
-    flex-direction: column;
+    display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.45rem;
     flex: none;
-    width: 7.3rem;
-    padding: 1.3rem 0.5rem 0.95rem;
+    padding: 0.85rem 1.15rem 1rem;
     scroll-snap-align: center;
-    border: 1px solid rgba(212, 175, 55, 0.22);
-    border-radius: 3.65rem 3.65rem 0.7rem 0.7rem; /* el ARCO */
-    background: linear-gradient(180deg, rgba(212, 175, 55, 0.05) 0%, rgba(10, 9, 8, 0.55) 65%);
-    box-shadow: inset 0 0 0 1px rgba(234, 227, 210, 0.05); /* doble marco filigrana */
-    overflow: hidden;
-    transition:
-      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-      border-color 0.45s ease,
-      background 0.45s ease,
-      box-shadow 0.45s ease;
+    color: rgba(234, 227, 210, 0.58);
+    transition: color 0.35s ease;
   }
-  /* la luz de la hornacina — respira como una vela */
-  .vitrina::before {
+  /* separador hairline entre ítems (estilo masthead de revista) */
+  .coleccion + .coleccion::before {
     content: "";
     position: absolute;
-    inset: 0;
-    background: radial-gradient(95% 60% at 50% 16%, rgba(212, 175, 55, 0.18), transparent 72%);
-    opacity: 0.45;
-    animation: vitrina-luz 4.8s ease-in-out infinite;
-    animation-delay: var(--luz-delay, 0s);
+    left: 0;
+    top: 30%;
+    bottom: 34%;
+    width: 1px;
+    background: rgba(234, 227, 210, 0.12);
   }
-  .vitrina > * { position: relative; }
-  .vitrina:hover {
-    transform: translateY(-4px);
-    border-color: rgba(212, 175, 55, 0.55);
-    box-shadow:
-      inset 0 0 0 1px rgba(234, 227, 210, 0.07),
-      0 16px 34px -20px rgba(212, 175, 55, 0.55);
+  .coleccion-icono {
+    width: 0.95rem;
+    height: 0.95rem;
+    color: rgba(212, 175, 55, 0.55);
+    transition: color 0.35s ease;
+    animation: coleccion-respira 3.8s ease-in-out infinite;
+    animation-delay: var(--resp-delay, 0s);
   }
-  .vitrina-icono {
-    display: grid;
-    place-items: center;
-    width: 2.3rem;
-    height: 2.3rem;
-    color: var(--gold-champagne);
-  }
-  .vitrina-label {
-    font-size: 0.55rem;
-    letter-spacing: 0.17em;
+  .coleccion-label {
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: rgba(234, 227, 210, 0.85);
     white-space: nowrap;
   }
-  .vitrina-n {
-    font-family: var(--font-cormorant), serif;
-    font-size: 1.05rem;
-    line-height: 1;
+  /* conteo en superíndice, como llamada de catálogo de joyería */
+  .coleccion-n {
+    font-size: 0.56rem;
+    color: rgba(212, 175, 55, 0.55);
     font-variant-numeric: tabular-nums;
-    color: rgba(234, 227, 210, 0.55);
-    transition: color 0.3s ease;
+    transform: translateY(-0.3em);
+    transition: color 0.35s ease;
   }
-  .vitrina.is-active {
-    border-color: var(--gold);
-    background: linear-gradient(180deg, rgba(212, 175, 55, 0.17), rgba(212, 175, 55, 0.03) 70%);
-    box-shadow:
-      inset 0 0 0 1px rgba(212, 175, 55, 0.25),
-      0 0 30px -10px rgba(212, 175, 55, 0.75);
-  }
-  .vitrina.is-active::before { opacity: 1; animation-duration: 3.2s; }
-  .vitrina.is-active .vitrina-label { color: var(--gold-champagne); }
-  /* diamante que marca la vitrina abierta */
-  .vitrina.is-active::after {
+  /* subrayado dorado que crece desde el centro sobre la línea base */
+  .coleccion::after {
     content: "";
     position: absolute;
-    left: 50%;
-    bottom: 0.42rem;
-    width: 0.32rem;
-    height: 0.32rem;
-    transform: translateX(-50%) rotate(45deg);
-    background: linear-gradient(135deg, var(--gold-champagne), var(--gold-dark));
-    box-shadow: 0 0 8px rgba(212, 175, 55, 0.8);
+    left: 1.15rem;
+    right: 1.15rem;
+    bottom: -1px;
+    height: 1.5px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  @keyframes vitrina-luz {
-    0%, 100% { opacity: 0.4; }
-    50% { opacity: 0.95; }
+  .coleccion:hover { color: var(--gold-champagne); }
+  .coleccion:hover .coleccion-icono { color: var(--gold-champagne); }
+  .coleccion:hover::after { transform: scaleX(0.55); }
+  .coleccion:focus-visible {
+    outline: 1px solid rgba(212, 175, 55, 0.6);
+    outline-offset: -4px;
+    border-radius: 2px;
+  }
+  .coleccion.is-active { color: var(--gold-champagne); }
+  .coleccion.is-active .coleccion-icono { color: var(--gold); animation-duration: 2.6s; }
+  .coleccion.is-active .coleccion-n { color: var(--gold); }
+  .coleccion.is-active::after { transform: scaleX(1); }
+  /* la respiración es SOLO de opacidad — nada se mueve */
+  @keyframes coleccion-respira {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .vitrina::before { animation: none !important; opacity: 0.7; }
+    .coleccion-icono { animation: none !important; opacity: 0.8; }
   }
 }
 

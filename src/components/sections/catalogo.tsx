@@ -232,37 +232,36 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
 
         {/* ────────── Filtros rediseñados ────────── */}
         <div className="mb-10 space-y-6" data-reveal>
-          {/* CATEGORÍAS — hornacinas de perfumería (12-jul): cada vitrina es un
-              ARCO con luz dorada interior que respira como una vela (delays
-              escalonados — la luz se mueve, no el objeto). Solo aparecen las
-              que tienen productos publicados. */}
+          {/* CATEGORÍAS — cabecera editorial (12-jul v3): navegación
+              tipográfica al estilo de las casas de lujo — mayúsculas
+              espaciadas, separadores hairline, conteo en superíndice dorado
+              y subrayado dorado que crece bajo la activa. El icono respira
+              apenas (solo opacidad). Sin cajas, sin brillos: el lujo es aire. */}
           {categorias.length > 1 && (
-            <div className="space-y-4">
+            <div className="space-y-1">
               <p className="eyebrow justify-center !text-[0.6rem]">Explorá la colección</p>
-              <div className="vitrinas-fila" role="tablist" aria-label="Categorías de la colección">
-                {[{ id: "todas" as CategoriaId, label: "Todos", n: perfumes.length }, ...categorias].map((c, i) => {
-                  const Icono = ICONO_CATEGORIA[c.id] ?? LayoutGrid;
-                  const activa = categoriaActiva === c.id;
-                  return (
-                    <button
-                      key={c.id}
-                      onClick={() => cambiarCategoria(c.id)}
-                      className={`vitrina ${activa ? "is-active" : ""}`}
-                      role="tab"
-                      aria-selected={activa}
-                      style={{ ["--luz-delay" as string]: `${i * 0.6}s` }}
-                    >
-                      <span className="vitrina-icono">
-                        <Icono className="h-5 w-5" strokeWidth={1.2} />
-                      </span>
-                      <span className="vitrina-label">{c.label}</span>
-                      <span className={`vitrina-n ${activa ? "text-gold-gradient" : ""}`}>
-                        {c.n.toLocaleString("es-PY")}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+              <nav className="colecciones" role="tablist" aria-label="Categorías de la colección">
+                <div className="colecciones-fila">
+                  {[{ id: "todas" as CategoriaId, label: "Todos", n: perfumes.length }, ...categorias].map((c, i) => {
+                    const Icono = ICONO_CATEGORIA[c.id] ?? LayoutGrid;
+                    const activa = categoriaActiva === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        onClick={() => cambiarCategoria(c.id)}
+                        className={`coleccion ${activa ? "is-active" : ""}`}
+                        role="tab"
+                        aria-selected={activa}
+                        style={{ ["--resp-delay" as string]: `${i * 0.5}s` }}
+                      >
+                        <Icono className="coleccion-icono" strokeWidth={1.3} aria-hidden />
+                        <span className="coleccion-label">{c.label}</span>
+                        <span className="coleccion-n">{c.n.toLocaleString("es-PY")}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </nav>
             </div>
           )}
 
