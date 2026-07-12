@@ -232,13 +232,14 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
 
         {/* ────────── Filtros rediseñados ────────── */}
         <div className="mb-10 space-y-6" data-reveal>
-          {/* CATEGORÍAS — la navegación principal de la vitrina. Medallones con
-              icono que "respira" (brillo dorado constante, delays escalonados);
-              solo aparecen las que tienen productos publicados. */}
+          {/* CATEGORÍAS — hornacinas de perfumería (12-jul): cada vitrina es un
+              ARCO con luz dorada interior que respira como una vela (delays
+              escalonados — la luz se mueve, no el objeto). Solo aparecen las
+              que tienen productos publicados. */}
           {categorias.length > 1 && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <p className="eyebrow justify-center !text-[0.6rem]">Explorá la colección</p>
-              <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3">
+              <div className="vitrinas-fila" role="tablist" aria-label="Categorías de la colección">
                 {[{ id: "todas" as CategoriaId, label: "Todos", n: perfumes.length }, ...categorias].map((c, i) => {
                   const Icono = ICONO_CATEGORIA[c.id] ?? LayoutGrid;
                   const activa = categoriaActiva === c.id;
@@ -246,15 +247,17 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
                     <button
                       key={c.id}
                       onClick={() => cambiarCategoria(c.id)}
-                      className={`cat-chip ${activa ? "is-active" : ""}`}
-                      aria-pressed={activa}
+                      className={`vitrina ${activa ? "is-active" : ""}`}
+                      role="tab"
+                      aria-selected={activa}
+                      style={{ ["--luz-delay" as string]: `${i * 0.6}s` }}
                     >
-                      <span className="cat-chip-medallon" style={{ animationDelay: `${i * 0.45}s` }}>
-                        <Icono className="h-[1.05rem] w-[1.05rem]" strokeWidth={1.4} />
+                      <span className="vitrina-icono">
+                        <Icono className="h-5 w-5" strokeWidth={1.2} />
                       </span>
-                      <span className="flex flex-col items-start leading-none">
-                        <span className="cat-chip-label">{c.label}</span>
-                        <span className="cat-chip-count">{c.n.toLocaleString("es-PY")}</span>
+                      <span className="vitrina-label">{c.label}</span>
+                      <span className={`vitrina-n ${activa ? "text-gold-gradient" : ""}`}>
+                        {c.n.toLocaleString("es-PY")}
                       </span>
                     </button>
                   );
