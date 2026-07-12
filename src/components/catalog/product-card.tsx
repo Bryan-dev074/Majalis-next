@@ -68,26 +68,26 @@ export function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
           {perfume.marca}
         </div>
 
-        {/* Categoría (Nicho / Desodorante / Kit) — bajo la marca. El nicho pesa
-            más que el tipo (dorado); las minis ya se distinguen por el ml. */}
-        {(perfume.es_nicho || perfume.tipo_producto === "deo" || perfume.tipo_producto === "kit") && (
-          <div
-            className={`absolute right-3 top-10 rounded-sm border px-2 py-0.5 text-[0.5rem] font-bold uppercase tracking-regal backdrop-blur-sm ${
-              perfume.es_nicho
-                ? "border-gold/50 bg-obsidian/80 text-gold-champagne"
-                : "border-ivory/20 bg-obsidian/75 text-ivory/75"
-            }`}
-          >
-            {perfume.es_nicho ? "Nicho" : perfume.tipo_producto === "deo" ? "Desodorante" : "Kit"}
+        {/* Tipo (Desodorante / Kit) — bajo la marca; las minis se distinguen por el ml. */}
+        {(perfume.tipo_producto === "deo" || perfume.tipo_producto === "kit") && (
+          <div className="absolute right-3 top-10 rounded-sm border border-ivory/20 bg-obsidian/75 px-2 py-0.5 text-[0.5rem] font-bold uppercase tracking-regal text-ivory/75 backdrop-blur-sm">
+            {perfume.tipo_producto === "deo" ? "Desodorante" : "Kit"}
           </div>
         )}
 
-        {/* Concentración (EDP / EDT / Parfum…) — esquina inferior IZQUIERDA de
-            la foto, para distinguir variantes del mismo perfume de un vistazo. */}
-        {concentracionDe(perfume) && (
-          <div className="absolute bottom-3 left-3 rounded-sm border border-gold/40 bg-obsidian/75 px-2 py-0.5 text-[0.55rem] font-bold uppercase tracking-regal text-gold-champagne backdrop-blur-sm">
-            {concentracionDe(perfume)}
+        {/* Esquina inferior IZQUIERDA: en los NICHO va el sello "Nicho" (dorado,
+            pedido del dueño 12-jul — reemplaza al EDP/EDT); en el resto, la
+            concentración para distinguir variantes de un vistazo. */}
+        {perfume.es_nicho ? (
+          <div className="absolute bottom-3 left-3 rounded-sm border border-gold/60 bg-obsidian/80 px-2 py-0.5 text-[0.55rem] font-bold uppercase tracking-regal text-gold-champagne backdrop-blur-sm">
+            Nicho
           </div>
+        ) : (
+          concentracionDe(perfume) && (
+            <div className="absolute bottom-3 left-3 rounded-sm border border-gold/40 bg-obsidian/75 px-2 py-0.5 text-[0.55rem] font-bold uppercase tracking-regal text-gold-champagne backdrop-blur-sm">
+              {concentracionDe(perfume)}
+            </div>
+          )
         )}
 
         {/* Volumen — esquina inferior DERECHA de la foto ("105 ml"). */}
