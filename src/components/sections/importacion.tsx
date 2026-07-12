@@ -43,7 +43,7 @@ export function Importacion() {
               icon: <ShieldCheck className="h-7 w-7" strokeWidth={1} />,
               titulo: "Preparación premium",
               texto:
-                "Verificamos la autenticidad de cada botella y preparamos tu pedido con embalaje protegido, listo para salir hacia vos.",
+                "Tu pedido se prepara el mismo día: embalaje protegido, presentación impecable y cada detalle cuidado antes de salir hacia vos.",
             },
             {
               icon: <Home className="h-7 w-7" strokeWidth={1} />,

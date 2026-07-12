@@ -1,4 +1,8 @@
 import { Perfume } from "@/types/database";
+import { precioEfectivo } from "@/lib/format";
+
+/** Desde 1.000.000 Gs un producto es ALTA GAMA (misma vara que la corona del precio). */
+export const UMBRAL_PREMIUM = 1_000_000;
 
 /**
  * Categorías de la tienda (jul-2026): además de perfumes, Majalis vende
@@ -8,7 +12,7 @@ import { Perfume } from "@/types/database";
  * `tipo_producto` viene del catálogo maestro (perfume | mini | deo | kit) y
  * `es_nicho` marca las casas de autor (Xerjoff, Nishane, Amouage, PdM…).
  */
-export type CategoriaId = "todas" | "perfume" | "nicho" | "mini" | "deo" | "kit";
+export type CategoriaId = "todas" | "perfume" | "nicho" | "mini" | "deo" | "kit" | "premium";
 
 export const CATEGORIAS_TIENDA: {
   id: Exclude<CategoriaId, "todas">;
@@ -21,6 +25,9 @@ export const CATEGORIAS_TIENDA: {
   { id: "mini", label: "Miniaturas", singular: "miniatura", plural: "miniaturas" },
   { id: "deo", label: "Desodorantes", singular: "desodorante", plural: "desodorantes" },
   { id: "kit", label: "Kits", singular: "kit", plural: "kits" },
+  // Corte por PRECIO, no por tipo: las joyas de más de 1.000.000 Gs (cruza
+  // categorías — un nicho de 2M vive en Nicho Y en Alta Gama).
+  { id: "premium", label: "Alta Gama", singular: "pieza de alta gama", plural: "piezas de alta gama" },
 ];
 
 /** ¿El producto pertenece a la categoría? "nicho" cruza tipos (una mini nicho
@@ -30,6 +37,7 @@ export function enCategoria(p: Perfume, id: CategoriaId): boolean {
   switch (id) {
     case "todas": return true;
     case "nicho": return p.es_nicho === true;
+    case "premium": return precioEfectivo(p) >= UMBRAL_PREMIUM;
     case "perfume": return tipo === "perfume" && !p.es_nicho;
     default: return tipo === id;
   }

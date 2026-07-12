@@ -4,10 +4,8 @@ import Image from "next/image";
 import { Plus, Sparkles, Crown } from "lucide-react";
 import { Perfume } from "@/types/database";
 import { formatGs, precioEfectivo, concentracionDe } from "@/lib/format";
+import { UMBRAL_PREMIUM } from "@/lib/categorias";
 import { useCart } from "@/hooks/use-cart";
-
-/** Desde 1.000.000 Gs, el precio recibe tratamiento premium (oro vivo + halo + corona). */
-const UMBRAL_PREMIUM = 1_000_000;
 
 interface ProductCardProps {
   perfume: Perfume;

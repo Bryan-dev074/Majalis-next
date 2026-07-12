@@ -1,13 +1,24 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { SearchX, X, Search, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { SearchX, X, Search, ChevronDown, ChevronLeft, ChevronRight, LayoutGrid, SprayCan, Gem, FlaskConical, Wind, Gift, Crown, type LucideIcon } from "lucide-react";
 import { Perfume } from "@/types/database";
 import { ProductCard } from "@/components/catalog/product-card";
 import { useReveal } from "@/hooks/use-reveal";
 import { buildWaLink } from "@/data/site-config";
 import { coincideBusqueda, normalizarBusqueda } from "@/lib/format";
 import { CATEGORIAS_TIENDA, CategoriaId, enCategoria, labelResultados } from "@/lib/categorias";
+
+/** Icono de cada vitrina (el medallón "respira" con un brillo dorado constante). */
+const ICONO_CATEGORIA: Record<string, LucideIcon> = {
+  todas: LayoutGrid,
+  perfume: SprayCan,
+  nicho: Gem,
+  mini: FlaskConical,
+  deo: Wind,
+  kit: Gift,
+  premium: Crown,
+};
 
 interface CatalogoProps {
   perfumes: Perfume[];
@@ -221,31 +232,34 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
 
         {/* ────────── Filtros rediseñados ────────── */}
         <div className="mb-10 space-y-6" data-reveal>
-          {/* CATEGORÍAS — la navegación principal de la vitrina. Cada una con su
-              conteo; solo aparecen las que tienen productos publicados. */}
+          {/* CATEGORÍAS — la navegación principal de la vitrina. Medallones con
+              icono que "respira" (brillo dorado constante, delays escalonados);
+              solo aparecen las que tienen productos publicados. */}
           {categorias.length > 1 && (
-            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
-              <button
-                onClick={() => cambiarCategoria("todas")}
-                className={`filter-pill !px-5 !py-2.5 !text-[0.7rem] ${categoriaActiva === "todas" ? "is-active" : ""}`}
-              >
-                Todos
-                <span className="ml-1.5 text-[0.6rem] tabular-nums opacity-60">
-                  {perfumes.length.toLocaleString("es-PY")}
-                </span>
-              </button>
-              {categorias.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => cambiarCategoria(c.id)}
-                  className={`filter-pill !px-5 !py-2.5 !text-[0.7rem] ${categoriaActiva === c.id ? "is-active" : ""}`}
-                >
-                  {c.label}
-                  <span className="ml-1.5 text-[0.6rem] tabular-nums opacity-60">
-                    {c.n.toLocaleString("es-PY")}
-                  </span>
-                </button>
-              ))}
+            <div className="space-y-3">
+              <p className="eyebrow justify-center !text-[0.6rem]">Explorá la colección</p>
+              <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3">
+                {[{ id: "todas" as CategoriaId, label: "Todos", n: perfumes.length }, ...categorias].map((c, i) => {
+                  const Icono = ICONO_CATEGORIA[c.id] ?? LayoutGrid;
+                  const activa = categoriaActiva === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => cambiarCategoria(c.id)}
+                      className={`cat-chip ${activa ? "is-active" : ""}`}
+                      aria-pressed={activa}
+                    >
+                      <span className="cat-chip-medallon" style={{ animationDelay: `${i * 0.45}s` }}>
+                        <Icono className="h-[1.05rem] w-[1.05rem]" strokeWidth={1.4} />
+                      </span>
+                      <span className="flex flex-col items-start leading-none">
+                        <span className="cat-chip-label">{c.label}</span>
+                        <span className="cat-chip-count">{c.n.toLocaleString("es-PY")}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
