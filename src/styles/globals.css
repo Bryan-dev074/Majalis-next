@@ -397,53 +397,56 @@
 
   .coleccion {
     position: relative;
-    display: inline-flex;
+    display: flex;
+    flex-direction: column; /* columna de galería: icono / nombre / cifra */
     align-items: center;
-    gap: 0.45rem;
+    gap: 0.5rem;
     flex: none;
-    padding: 0.85rem 1.15rem 1rem;
+    min-width: 7.5rem;
+    padding: 1.1rem 1.4rem 1.15rem;
     scroll-snap-align: center;
-    color: rgba(234, 227, 210, 0.58);
+    color: rgba(234, 227, 210, 0.6);
     transition: color 0.35s ease;
   }
-  /* separador hairline entre ítems (estilo masthead de revista) */
+  /* separador hairline entre columnas (señalética de boutique) */
   .coleccion + .coleccion::before {
     content: "";
     position: absolute;
     left: 0;
-    top: 30%;
-    bottom: 34%;
+    top: 22%;
+    bottom: 24%;
     width: 1px;
-    background: rgba(234, 227, 210, 0.12);
+    background: linear-gradient(180deg, transparent, rgba(234, 227, 210, 0.16), transparent);
   }
   .coleccion-icono {
-    width: 0.95rem;
-    height: 0.95rem;
-    color: rgba(212, 175, 55, 0.55);
-    transition: color 0.35s ease;
+    width: 1.35rem;
+    height: 1.35rem;
+    color: rgba(212, 175, 55, 0.6);
+    transition: color 0.35s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
     animation: coleccion-respira 3.8s ease-in-out infinite;
     animation-delay: var(--resp-delay, 0s);
   }
   .coleccion-label {
     font-size: 0.62rem;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
     white-space: nowrap;
   }
-  /* conteo en superíndice, como llamada de catálogo de joyería */
+  /* la cifra en la serif de la casa — el dato como pieza de catálogo */
   .coleccion-n {
-    font-size: 0.56rem;
-    color: rgba(212, 175, 55, 0.55);
+    font-family: var(--font-cormorant), serif;
+    font-size: 1.05rem;
+    line-height: 1;
+    color: rgba(234, 227, 210, 0.45);
     font-variant-numeric: tabular-nums;
-    transform: translateY(-0.3em);
     transition: color 0.35s ease;
   }
   /* subrayado dorado que crece desde el centro sobre la línea base */
   .coleccion::after {
     content: "";
     position: absolute;
-    left: 1.15rem;
-    right: 1.15rem;
+    left: 1.4rem;
+    right: 1.4rem;
     bottom: -1px;
     height: 1.5px;
     background: linear-gradient(90deg, transparent, var(--gold), transparent);
@@ -451,6 +454,7 @@
     transform-origin: center;
     transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
   }
+  .coleccion:hover .coleccion-icono { transform: translateY(-2px); }
   .coleccion:hover { color: var(--gold-champagne); }
   .coleccion:hover .coleccion-icono { color: var(--gold-champagne); }
   .coleccion:hover::after { transform: scaleX(0.55); }
@@ -461,7 +465,12 @@
   }
   .coleccion.is-active { color: var(--gold-champagne); }
   .coleccion.is-active .coleccion-icono { color: var(--gold); animation-duration: 2.6s; }
-  .coleccion.is-active .coleccion-n { color: var(--gold); }
+  .coleccion.is-active .coleccion-n {
+    background: linear-gradient(120deg, var(--gold-champagne), var(--gold));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
   .coleccion.is-active::after { transform: scaleX(1); }
   /* la respiración es SOLO de opacidad — nada se mueve */
   @keyframes coleccion-respira {
