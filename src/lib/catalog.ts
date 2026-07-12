@@ -49,6 +49,9 @@ function normalizarPerfume(row: Record<string, unknown>): Perfume {
     es_demo: Boolean(row.es_demo),
     // Contador de vistas del detalle (0 por defecto)
     clicks_mensuales: Number(row.clicks_mensuales ?? 0),
+    // Categoría (perfume | mini | deo | kit) + vitrina nicho (jul-2026)
+    tipo_producto: String(row.tipo_producto ?? "perfume"),
+    es_nicho: row.es_nicho === true,
     created_at: String(row.created_at ?? new Date().toISOString()),
     updated_at: String(row.updated_at ?? new Date().toISOString()),
   };

@@ -56,6 +56,11 @@ export interface Perfume {
   es_demo: boolean;
   /** Contador de vistas del detalle del perfume en el mes actual. */
   clicks_mensuales: number;
+  /** Categoría del producto: perfume (default) | mini | deo | kit.
+   *  Opcional para el seed de respaldo; ausente = "perfume". */
+  tipo_producto?: string;
+  /** True si es de una casa nicho (Xerjoff, Nishane, Amouage, PdM…). */
+  es_nicho?: boolean;
   created_at: string;
   updated_at: string;
 }

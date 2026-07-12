@@ -79,9 +79,9 @@ export function Hero() {
           data-hero
           className="mx-auto mt-8 max-w-xl text-balance text-lg font-light leading-relaxed text-ivory/80 md:text-xl"
         >
-          Importadores directos de Dubai. La colección más exclusiva de
-          fragancias árabes, ahora al alcance de tu mano en todo el
-          territorio paraguayo.
+          La colección de perfumes más completa de Paraguay. Fragancias
+          árabes, de diseñador y de nicho — 100% originales, con entrega
+          en todo el país.
         </p>
 
         {/* CTAs */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { MousePointerClick, Plane, Home } from "lucide-react";
+import { MousePointerClick, ShieldCheck, Home } from "lucide-react";
 import { useReveal } from "@/hooks/use-reveal";
 
 /**
@@ -40,10 +40,10 @@ export function Importacion() {
                 "Elegí entre las fragancias árabes más codiciadas del mundo. Autenticidad garantizada en cada botella.",
             },
             {
-              icon: <Plane className="h-7 w-7" strokeWidth={1} />,
-              titulo: "Importación",
+              icon: <ShieldCheck className="h-7 w-7" strokeWidth={1} />,
+              titulo: "Preparación premium",
               texto:
-                "Tu perfume viaja desde Dubai con trazabilidad y cuidado de temperatura. Frescura asegurada en cada envío.",
+                "Verificamos la autenticidad de cada botella y preparamos tu pedido con embalaje protegido, listo para salir hacia vos.",
             },
             {
               icon: <Home className="h-7 w-7" strokeWidth={1} />,

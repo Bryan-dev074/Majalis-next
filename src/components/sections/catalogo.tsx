@@ -7,6 +7,7 @@ import { ProductCard } from "@/components/catalog/product-card";
 import { useReveal } from "@/hooks/use-reveal";
 import { buildWaLink } from "@/data/site-config";
 import { coincideBusqueda, normalizarBusqueda } from "@/lib/format";
+import { CATEGORIAS_TIENDA, CategoriaId, enCategoria, labelResultados } from "@/lib/categorias";
 
 interface CatalogoProps {
   perfumes: Perfume[];
@@ -32,6 +33,7 @@ const POR_PAGINA = 24; // múltiplo de 2/3/4 → completa las filas del grid en 
 const MARCAS_VISIBLES = 12; // pills que se muestran sin expandir
 
 export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: CatalogoProps) {
+  const [categoriaActiva, setCategoriaActiva] = useState<CategoriaId>("todas");
   const [marcaActiva, setMarcaActiva] = useState<string>("todas");
   const [familiaActiva, setFamiliaActiva] = useState<string>("todas");
   const [marcasAbiertas, setMarcasAbiertas] = useState(false);
@@ -63,32 +65,54 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
     return () => window.removeEventListener("majalis:filtrar-marca", handler);
   }, [onQueryChange]);
 
+  // ── Categorías (Perfumes / Nicho / Miniaturas / Desodorantes / Kits) ──
+  // Conteos sobre el catálogo completo; solo se muestran las que tienen stock.
+  const categorias = useMemo(() => {
+    return CATEGORIAS_TIENDA
+      .map((c) => ({ ...c, n: perfumes.filter((p) => enCategoria(p, c.id)).length }))
+      .filter((c) => c.n > 0);
+  }, [perfumes]);
+
+  // Subconjunto de la categoría activa: las marcas/familias/resultados se
+  // derivan de ACÁ (en "Kits" solo se listan casas que tienen kits).
+  const enCat = useMemo(
+    () => perfumes.filter((p) => enCategoria(p, categoriaActiva)),
+    [perfumes, categoriaActiva]
+  );
+
+  const cambiarCategoria = (id: CategoriaId) => {
+    setCategoriaActiva((prev) => (prev === id ? "todas" : id));
+    // La marca/familia elegida puede no existir en la otra categoría → reset.
+    setMarcaActiva("todas");
+    setFamiliaActiva("todas");
+  };
+
   // Marcas derivadas de los datos reales. MISMA lógica que el marquee de casas
   // perfumistas (trim + descarta vacíos + orden localizado) → el conteo coincide
   // SIEMPRE en los dos lugares (antes: catálogo 105 vs marquee 110).
   const marcas = useMemo(() => {
     const set = new Set<string>();
-    for (const p of perfumes) {
+    for (const p of enCat) {
       const m = p.marca?.trim();
       if (m) set.add(m);
     }
     return Array.from(set).sort((a, b) => a.localeCompare(b, "es"));
-  }, [perfumes]);
+  }, [enCat]);
 
   // Familias olfativas derivadas (todas las categorías excepto las que son marca)
   const familias = useMemo(() => {
     const set = new Set<string>();
     const marcasSet = new Set(marcas.map((m) => m.toLowerCase()));
-    perfumes.forEach((p) => {
+    enCat.forEach((p) => {
       p.categoria.forEach((c) => {
         if (!marcasSet.has(c.toLowerCase())) set.add(c);
       });
     });
     return Array.from(set).sort();
-  }, [perfumes, marcas]);
+  }, [enCat, marcas]);
 
   const filtrados = useMemo(() => {
-    return perfumes
+    return enCat
       .filter((p) => {
         const matchMarca = marcaActiva === "todas" || p.marca === marcaActiva;
         const matchFamilia =
@@ -108,14 +132,16 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
         if (clicksB !== clicksA) return clicksB - clicksA;
         return a.marca.localeCompare(b.marca, "es");
       });
-  }, [perfumes, marcaActiva, familiaActiva, query]);
+  }, [enCat, marcaActiva, familiaActiva, query]);
 
   const hayFiltros =
+    categoriaActiva !== "todas" ||
     marcaActiva !== "todas" ||
     familiaActiva !== "todas" ||
     query.trim().length > 0;
 
   const limpiar = () => {
+    setCategoriaActiva("todas");
     setMarcaActiva("todas");
     setFamiliaActiva("todas");
     onQueryChange("");
@@ -147,7 +173,7 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
   // Al cambiar cualquier filtro, volvemos a la página 1.
   useEffect(() => {
     setPagina(1);
-  }, [marcaActiva, familiaActiva, query]);
+  }, [categoriaActiva, marcaActiva, familiaActiva, query]);
 
   const irAPagina = (n: number) => {
     const destino = Math.min(Math.max(1, n), totalPaginas);
@@ -195,6 +221,34 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
 
         {/* ────────── Filtros rediseñados ────────── */}
         <div className="mb-10 space-y-6" data-reveal>
+          {/* CATEGORÍAS — la navegación principal de la vitrina. Cada una con su
+              conteo; solo aparecen las que tienen productos publicados. */}
+          {categorias.length > 1 && (
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+              <button
+                onClick={() => cambiarCategoria("todas")}
+                className={`filter-pill !px-5 !py-2.5 !text-[0.7rem] ${categoriaActiva === "todas" ? "is-active" : ""}`}
+              >
+                Todos
+                <span className="ml-1.5 text-[0.6rem] tabular-nums opacity-60">
+                  {perfumes.length.toLocaleString("es-PY")}
+                </span>
+              </button>
+              {categorias.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => cambiarCategoria(c.id)}
+                  className={`filter-pill !px-5 !py-2.5 !text-[0.7rem] ${categoriaActiva === c.id ? "is-active" : ""}`}
+                >
+                  {c.label}
+                  <span className="ml-1.5 text-[0.6rem] tabular-nums opacity-60">
+                    {c.n.toLocaleString("es-PY")}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Buscador GENERAL de perfumes — siempre visible. Mismo estado `query`
               que el buscador del navbar (los dos filtran el grid por tokens). */}
           <div className="relative mx-auto max-w-xl">
@@ -224,9 +278,9 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
               <p className="eyebrow !justify-start !text-[0.62rem] !text-gold/90 !opacity-100">Casas perfumistas</p>
               <p className="text-[0.6rem] font-semibold uppercase tracking-regal text-ivory/45">
                 <span className="text-gold-gradient font-display text-base font-semibold tabular-nums">
-                  {perfumes.length.toLocaleString("es-PY")}
+                  {enCat.length.toLocaleString("es-PY")}
                 </span>{" "}
-                perfumes disponibles hoy
+                {categoriaActiva === "todas" ? "productos disponibles hoy" : `${labelResultados(categoriaActiva, enCat.length)} disponibles hoy`}
               </p>
             </div>
             {/* Buscador de marca — visible al expandir (con 100+ casas hace falta) */}
@@ -314,7 +368,7 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
           {/* Contador + limpiar */}
           <div className="flex items-center justify-between border-t border-gold/10 pt-4">
             <p className="text-[0.65rem] uppercase tracking-regal text-ivory/45">
-              {filtrados.length} {filtrados.length === 1 ? "fragancia" : "fragancias"}
+              {filtrados.length} {labelResultados(categoriaActiva, filtrados.length)}
               {totalPaginas > 1 && (
                 <span className="text-ivory/30"> · pág. {paginaSegura} de {totalPaginas}</span>
               )}
