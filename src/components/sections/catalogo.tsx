@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SearchX, X, Search, ChevronDown, ChevronLeft, ChevronRight, LayoutGrid, SprayCan, Gem, FlaskConical, Wind, Gift, Crown, type LucideIcon } from "lucide-react";
 import { Perfume } from "@/types/database";
 import { ProductCard } from "@/components/catalog/product-card";
@@ -52,11 +52,18 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
   const [pagina, setPagina] = useState(1);
   const ref = useReveal<HTMLDivElement>({ stagger: 0.04, y: 24 });
 
-  // Escuchar búsqueda global del navbar
+  // Escuchar búsqueda global del navbar. Es una búsqueda GLOBAL: resetea
+  // categoría/marca/familia — si no, buscando "yara" parado en Alta Gama
+  // daba 0 resultados sin explicación (bug 12-jul).
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<string>).detail ?? "";
       onQueryChange(detail);
+      if (detail.trim()) {
+        setCategoriaActiva("todas");
+        setMarcaActiva("todas");
+        setFamiliaActiva("todas");
+      }
     };
     window.addEventListener("sultan:search", handler);
     return () => window.removeEventListener("sultan:search", handler);
@@ -70,6 +77,9 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
       const marca = (e as CustomEvent<string>).detail ?? "todas";
       onQueryChange("");
       setFamiliaActiva("todas");
+      // El marquee lista TODAS las casas: si estabas en Kits y tocás Chanel
+      // (que no tiene kits) decía "no tenemos Chanel" — falso (bug 12-jul).
+      setCategoriaActiva("todas");
       setMarcaActiva(marca);
     };
     window.addEventListener("majalis:filtrar-marca", handler);
@@ -90,6 +100,31 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
     () => perfumes.filter((p) => enCategoria(p, categoriaActiva)),
     [perfumes, categoriaActiva]
   );
+
+  // ── Flechas de la fila de categorías: solo si hay contenido oculto ──
+  const filaRef = useRef<HTMLDivElement>(null);
+  const [scrollCat, setScrollCat] = useState({ izq: false, der: false });
+  const medirScroll = useCallback(() => {
+    const el = filaRef.current;
+    if (!el) return;
+    setScrollCat({
+      izq: el.scrollLeft > 8,
+      der: el.scrollLeft + el.clientWidth < el.scrollWidth - 8,
+    });
+  }, []);
+  useEffect(() => {
+    medirScroll();
+    const el = filaRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", medirScroll, { passive: true });
+    window.addEventListener("resize", medirScroll);
+    return () => {
+      el.removeEventListener("scroll", medirScroll);
+      window.removeEventListener("resize", medirScroll);
+    };
+  }, [medirScroll, categorias.length]);
+  const desplazarCategorias = (dir: 1 | -1) =>
+    filaRef.current?.scrollBy({ left: dir * 240, behavior: "smooth" });
 
   const cambiarCategoria = (id: CategoriaId) => {
     setCategoriaActiva((prev) => (prev === id ? "todas" : id));
@@ -240,8 +275,26 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
           {categorias.length > 1 && (
             <div className="space-y-1">
               <p className="eyebrow justify-center !text-[0.6rem]">Explorá la colección</p>
-              <nav className="colecciones" role="tablist" aria-label="Categorías de la colección">
-                <div className="colecciones-fila">
+              <nav className="colecciones relative" role="tablist" aria-label="Categorías de la colección">
+                {scrollCat.izq && (
+                  <button
+                    className="colecciones-flecha izq"
+                    onClick={() => desplazarCategorias(-1)}
+                    aria-label="Categorías anteriores"
+                  >
+                    <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
+                  </button>
+                )}
+                {scrollCat.der && (
+                  <button
+                    className="colecciones-flecha der"
+                    onClick={() => desplazarCategorias(1)}
+                    aria-label="Más categorías"
+                  >
+                    <ChevronRight className="h-4 w-4" strokeWidth={1.5} />
+                  </button>
+                )}
+                <div className="colecciones-fila" ref={filaRef}>
                   {[{ id: "todas" as CategoriaId, label: "Todos", n: perfumes.length }, ...categorias].map((c, i) => {
                     const Icono = ICONO_CATEGORIA[c.id] ?? LayoutGrid;
                     const activa = categoriaActiva === c.id;

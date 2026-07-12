@@ -83,6 +83,13 @@
 /* ----------------------------------------------------------------------------
    Componentes de marca
    ---------------------------------------------------------------------------- */
+/* ── ESCALA de la casa (12-jul): al dueño la página le gusta como se ve al
+   125% de zoom → en DESKTOP la base pasa de 16px a 20px (todo lo rem escala
+   parejo). El teléfono queda como está (ya le gusta). ── */
+@media (min-width: 1024px) {
+  html { font-size: 20px; }
+}
+
 @layer components {
   /* Texto con brillo dorado animado — identidad "ELIXIR" */
   .text-elixir-shimmer {
@@ -387,12 +394,44 @@
   @media (max-width: 899px) {
     .colecciones-fila {
       padding-inline: 0.25rem;
-      mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
-      -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+      mask-image: linear-gradient(90deg, transparent, #000 3%, #000 90%, transparent);
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 3%, #000 90%, transparent);
     }
   }
   @media (min-width: 900px) {
-    .colecciones-fila { justify-content: center; overflow: visible; }
+    /* "safe center": centrada cuando entra, scrolleable sin cortar el inicio
+       cuando no (con la base al 125% puede desbordar en laptops chicas). */
+    .colecciones-fila { justify-content: safe center; }
+  }
+
+  /* Flecha de desplazamiento: aparece SOLO si hay más categorías ocultas.
+     En el teléfono es la señal de "hay más" (antes había que adivinar). */
+  .colecciones-flecha {
+    position: absolute;
+    top: 42%;
+    transform: translateY(-50%);
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(212, 175, 55, 0.45);
+    background: rgba(10, 9, 8, 0.85);
+    color: var(--gold-champagne);
+    backdrop-filter: blur(4px);
+    transition: opacity 0.3s ease, border-color 0.3s ease;
+  }
+  .colecciones-flecha:hover { border-color: var(--gold); }
+  .colecciones-flecha.der { right: -0.4rem; }
+  .colecciones-flecha.izq { left: -0.4rem; }
+  .colecciones-flecha.der svg { animation: flecha-invita 2.2s ease-in-out infinite; }
+  @keyframes flecha-invita {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(2px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .colecciones-flecha svg { animation: none !important; }
   }
 
   .coleccion {
@@ -404,6 +443,9 @@
     flex: none;
     min-width: 7.5rem;
     padding: 1.1rem 1.4rem 1.15rem;
+  }
+  @media (max-width: 899px) {
+    .coleccion { min-width: 0; padding: 1rem 0.95rem 1.05rem; }
     scroll-snap-align: center;
     color: rgba(234, 227, 210, 0.6);
     transition: color 0.35s ease;
