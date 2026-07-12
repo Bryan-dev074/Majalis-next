@@ -43,17 +43,44 @@ const STOPWORDS_BUSQUEDA = new Set(["de", "del", "la", "le", "el", "los", "las",
  * mayúsculas no importan. Con consulta vacía devuelve true (no filtra).
  */
 export function coincideBusqueda(
-  p: Pick<Perfume, "nombre" | "marca"> & { categoria?: string[] },
+  p: Pick<Perfume, "nombre" | "marca"> & {
+    categoria?: string[];
+    volumen_ml?: number;
+    tipo_producto?: string;
+    es_nicho?: boolean;
+    concentracion?: string | null;
+  },
   consulta: string
 ): boolean {
-  const tokens = normalizarBusqueda(consulta)
-    .split(" ")
-    .filter((t) => t && !STOPWORDS_BUSQUEDA.has(t));
+  // "10 ml" → "10ml" (un solo token de volumen)
+  const cruda = normalizarBusqueda(consulta).replace(/(\d+)\s+ml\b/g, "$1ml");
+  const tokens = cruda.split(" ").filter((t) => t && !STOPWORDS_BUSQUEDA.has(t));
   if (!tokens.length) return true;
+  // La ficha buscable incluye TIPO (kit/desodorante/miniatura), nicho,
+  // concentración y volumen — "10ml", "kit lattafa" o "nicho oud" funcionan.
+  const TIPO_TXT: Record<string, string> = {
+    mini: "miniatura mini",
+    deo: "desodorante deo",
+    kit: "kit set estuche",
+    perfume: "perfume",
+  };
   const ficha = normalizarBusqueda(
-    `${p.marca} ${p.nombre} ${(p.categoria ?? []).join(" ")}`
+    [
+      p.marca,
+      p.nombre,
+      (p.categoria ?? []).join(" "),
+      TIPO_TXT[p.tipo_producto ?? "perfume"] ?? "",
+      p.es_nicho ? "nicho" : "",
+      p.concentracion ?? "",
+      p.volumen_ml ? `${p.volumen_ml}ml` : "",
+    ].join(" ")
   );
-  return tokens.every((t) => ficha.includes(t));
+  return tokens.every((t) => {
+    // token de VOLUMEN ("10ml") → coincidencia EXACTA de mililitros
+    const ml = t.match(/^(\d{1,3})ml$/);
+    if (ml) return Number(p.volumen_ml) === Number(ml[1]);
+    return ficha.includes(t);
+  });
 }
 
 /**

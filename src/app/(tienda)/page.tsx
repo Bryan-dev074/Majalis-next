@@ -13,8 +13,12 @@ export default function HomePage() {
     <>
       <Hero />
       <MarcasMarquee />
-      <Importacion />
-      <CatalogoClient />
+      {/* En TELÉFONO el proceso (01-02-03) va DESPUÉS de los productos, arriba
+          del footer; en desktop mantiene su lugar (pedido del dueño 12-jul). */}
+      <div className="flex flex-col">
+        <div className="order-2 md:order-1"><Importacion /></div>
+        <div className="order-1 md:order-2"><CatalogoClient /></div>
+      </div>
     </>
   );
 }

@@ -47,6 +47,7 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
   const [categoriaActiva, setCategoriaActiva] = useState<CategoriaId>("todas");
   const [marcaActiva, setMarcaActiva] = useState<string>("todas");
   const [familiaActiva, setFamiliaActiva] = useState<string>("todas");
+  const [mlActivo, setMlActivo] = useState<number | null>(null);
   const [marcasAbiertas, setMarcasAbiertas] = useState(false);
   const [marcaBusqueda, setMarcaBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
@@ -63,6 +64,7 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
         setCategoriaActiva("todas");
         setMarcaActiva("todas");
         setFamiliaActiva("todas");
+        setMlActivo(null);
       }
     };
     window.addEventListener("sultan:search", handler);
@@ -80,6 +82,7 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
       // El marquee lista TODAS las casas: si estabas en Kits y tocás Chanel
       // (que no tiene kits) decía "no tenemos Chanel" — falso (bug 12-jul).
       setCategoriaActiva("todas");
+      setMlActivo(null);
       setMarcaActiva(marca);
     };
     window.addEventListener("majalis:filtrar-marca", handler);
@@ -128,10 +131,26 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
 
   const cambiarCategoria = (id: CategoriaId) => {
     setCategoriaActiva((prev) => (prev === id ? "todas" : id));
-    // La marca/familia elegida puede no existir en la otra categoría → reset.
+    // La marca/familia/ml elegidos pueden no existir en la otra categoría → reset.
     setMarcaActiva("todas");
     setFamiliaActiva("todas");
+    setMlActivo(null);
   };
+
+  // ── Filtro de MILILITROS de la categoría activa (pedido 12-jul): al elegir
+  // una vitrina aparecen sus ml disponibles (en Miniaturas: 10/15/20/30…). ──
+  const mlsDisponibles = useMemo(() => {
+    if (categoriaActiva === "todas") return [] as { ml: number; n: number }[];
+    const m = new Map<number, number>();
+    for (const p of enCat) {
+      const v = Number(p.volumen_ml) || 0;
+      if (v > 0) m.set(v, (m.get(v) ?? 0) + 1);
+    }
+    let lista = Array.from(m.entries()).map(([ml, n]) => ({ ml, n }));
+    // con demasiadas variantes (Perfumes ~20), quedan las 12 más frecuentes
+    if (lista.length > 12) lista = lista.sort((a, b) => b.n - a.n).slice(0, 12);
+    return lista.sort((a, b) => a.ml - b.ml);
+  }, [enCat, categoriaActiva]);
 
   // Marcas derivadas de los datos reales. MISMA lógica que el marquee de casas
   // perfumistas (trim + descarta vacíos + orden localizado) → el conteo coincide
@@ -161,6 +180,8 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
     return enCat
       .filter((p) => {
         const matchMarca = marcaActiva === "todas" || p.marca === marcaActiva;
+        const matchMl = mlActivo === null || Number(p.volumen_ml) === mlActivo;
+        if (!matchMl) return false;
         const matchFamilia =
           familiaActiva === "todas" || p.categoria.includes(familiaActiva);
         // Búsqueda por TOKENS (marca + nombre + descripción, sin acentos):
@@ -178,15 +199,17 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
         if (clicksB !== clicksA) return clicksB - clicksA;
         return a.marca.localeCompare(b.marca, "es");
       });
-  }, [enCat, marcaActiva, familiaActiva, query]);
+  }, [enCat, marcaActiva, familiaActiva, query, mlActivo]);
 
   const hayFiltros =
+    mlActivo !== null ||
     categoriaActiva !== "todas" ||
     marcaActiva !== "todas" ||
     familiaActiva !== "todas" ||
     query.trim().length > 0;
 
   const limpiar = () => {
+    setMlActivo(null);
     setCategoriaActiva("todas");
     setMarcaActiva("todas");
     setFamiliaActiva("todas");
@@ -219,7 +242,7 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
   // Al cambiar cualquier filtro, volvemos a la página 1.
   useEffect(() => {
     setPagina(1);
-  }, [categoriaActiva, marcaActiva, familiaActiva, query]);
+  }, [categoriaActiva, marcaActiva, familiaActiva, query, mlActivo]);
 
   const irAPagina = (n: number) => {
     const destino = Math.min(Math.max(1, n), totalPaginas);
@@ -307,7 +330,10 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
                         aria-selected={activa}
                         style={{ ["--resp-delay" as string]: `${i * 0.5}s` }}
                       >
-                        <Icono className="coleccion-icono" strokeWidth={1.3} aria-hidden />
+                        <span className="coleccion-icono" aria-hidden>
+                          <Icono className="icono-base" strokeWidth={1.3} />
+                          <Icono className="icono-trazo" strokeWidth={1.6} />
+                        </span>
                         <span className="coleccion-label">{c.label}</span>
                         <span className="coleccion-n">{c.n.toLocaleString("es-PY")}</span>
                       </button>
@@ -315,6 +341,28 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
                   })}
                 </div>
               </nav>
+            </div>
+          )}
+
+          {/* Filtro de MILILITROS de la vitrina activa (aparece al elegir una) */}
+          {mlsDisponibles.length > 1 && (
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+              <span className="text-[0.58rem] uppercase tracking-regal text-ivory/40">Mililitros</span>
+              <button
+                onClick={() => setMlActivo(null)}
+                className={`filter-pill !px-3.5 !py-1.5 ${mlActivo === null ? "is-active" : ""}`}
+              >
+                Todos
+              </button>
+              {mlsDisponibles.map(({ ml, n }) => (
+                <button
+                  key={ml}
+                  onClick={() => setMlActivo((v) => (v === ml ? null : ml))}
+                  className={`filter-pill !px-3.5 !py-1.5 tabular-nums ${mlActivo === ml ? "is-active" : ""}`}
+                >
+                  {ml} ml <span className="ml-1 text-[0.55rem] opacity-60">{n}</span>
+                </button>
+              ))}
             </div>
           )}
 

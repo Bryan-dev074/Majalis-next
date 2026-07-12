@@ -461,12 +461,43 @@
     background: linear-gradient(180deg, transparent, rgba(234, 227, 210, 0.16), transparent);
   }
   .coleccion-icono {
+    position: relative;
     width: 1.35rem;
     height: 1.35rem;
     color: rgba(212, 175, 55, 0.6);
     transition: color 0.35s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
     animation: coleccion-respira 3.8s ease-in-out infinite;
     animation-delay: var(--resp-delay, 0s);
+  }
+  .coleccion-icono svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  /* RECORRIDO DORADO (pedido 12-jul): una chispa champagne viaja por el
+     contorno del icono, encima del trazo base — constante y sutil. */
+  .coleccion-icono .icono-trazo { color: var(--gold-champagne); }
+  .coleccion-icono .icono-trazo path,
+  .coleccion-icono .icono-trazo circle,
+  .coleccion-icono .icono-trazo rect,
+  .coleccion-icono .icono-trazo line,
+  .coleccion-icono .icono-trazo polyline,
+  .coleccion-icono .icono-trazo polygon {
+    stroke-dasharray: 5 31;
+    animation: icono-recorrido 3.6s linear infinite;
+    animation-delay: var(--resp-delay, 0s);
+  }
+  .coleccion.is-active .icono-trazo path,
+  .coleccion.is-active .icono-trazo circle,
+  .coleccion.is-active .icono-trazo rect,
+  .coleccion.is-active .icono-trazo line,
+  .coleccion.is-active .icono-trazo polyline,
+  .coleccion.is-active .icono-trazo polygon {
+    animation-duration: 2.2s;
+  }
+  @keyframes icono-recorrido {
+    to { stroke-dashoffset: -36; }
   }
   .coleccion-label {
     font-size: 0.62rem;
@@ -521,6 +552,7 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .coleccion-icono { animation: none !important; opacity: 0.8; }
+    .coleccion-icono .icono-trazo { display: none; }
   }
 }
 
