@@ -41,7 +41,7 @@ interface CatalogoProps {
  * Escucha el evento global `sultan:search` que dispara el Navbar.
  */
 const POR_PAGINA = 24; // múltiplo de 2/3/4 → completa las filas del grid en todos los tamaños
-const MARCAS_VISIBLES = 12; // pills que se muestran sin expandir
+const MARCAS_VISIBLES = 4; // pills sin expandir (pocas: que los productos aparezcan rápido — pedido 12-jul)
 
 export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: CatalogoProps) {
   const [categoriaActiva, setCategoriaActiva] = useState<CategoriaId>("todas");
