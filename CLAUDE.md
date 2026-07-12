@@ -23,6 +23,12 @@ cambiás algo relevante acá, actualizala también).
   tienda" del HUB oculta los productos que quedaron SIN STOCK en todas las tiendas
   de CDE. Nunca se reactivan solos (eso lo decide el dueño desde /admin).
 - `perfumes.porcentaje_descuento` es columna GENERADA: no incluirla en inserts.
+- CATEGORÍAS (jul-2026): `perfumes.tipo_producto` ∈ perfume|mini|deo|kit y
+  `perfumes.es_nicho` (bool). La vitrina (`src/lib/categorias.ts` + catalogo.tsx)
+  muestra pestañas Todos/Perfumes/Nicho/Miniaturas/Desodorantes/Kits con conteos —
+  SOLO las que tienen productos activos. "perfume" excluye nicho (vitrina propia);
+  una mini nicho vive en las dos. El Hub manda ambos campos en filaParaTienda;
+  filas viejas sin campo = perfume (default). Badge de tipo/nicho en product-card.
 - next/image SOLO renderiza imágenes de `*.supabase.co` (+ unsplash/fimgs/notino) —
   por eso el HUB sube las fotos scrapeadas a Storage antes de estirarlas acá.
 - Dropi / "Envío Express" YA SE ELIMINÓ (botón, badges, esExterno, split de checkout,
