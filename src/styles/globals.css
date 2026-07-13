@@ -83,11 +83,11 @@
 /* ----------------------------------------------------------------------------
    Componentes de marca
    ---------------------------------------------------------------------------- */
-/* ── ESCALA de la casa (12-jul): al dueño la página le gusta como se ve al
-   125% de zoom → en DESKTOP la base pasa de 16px a 20px (todo lo rem escala
-   parejo). El teléfono queda como está (ya le gusta). ── */
+/* ── ESCALA de la casa (12-jul, ajustada): el 125% (20px) quedó muy cerca →
+   base 18px (~112%) en DESKTOP: más presencia que el estándar, con aire.
+   El teléfono queda en 16px. ── */
 @media (min-width: 1024px) {
-  html { font-size: 20px; }
+  html { font-size: 18px; }
 }
 
 @layer components {
