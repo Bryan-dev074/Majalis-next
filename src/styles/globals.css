@@ -9,8 +9,10 @@
    ============================================================================ */
 
 :root {
-  /* Color base absoluto — negro profundo premium */
-  --obsidian: #050505;
+  /* Color base — obsidiana cálida, levantada del negro absoluto para que la
+     página no se vea tan oscura (13-jul, pedido del dueño). Sigue siendo un
+     fondo oscuro premium, solo con más luz. */
+  --obsidian: #14110d;
   --ebony: #0c0a08;
   --coal: #0a0908;
   --smoke: #1a1714;
@@ -43,6 +45,14 @@
 
   body {
     background-color: var(--obsidian);
+    /* Luz ambiente cálida muy sutil desde arriba: da profundidad y "levanta"
+       la página sin lavarla (no toca el negro de los bordes). */
+    background-image: radial-gradient(
+      130% 90% at 50% 0%,
+      rgba(212, 175, 55, 0.07),
+      transparent 55%
+    );
+    background-attachment: fixed;
     color: var(--ivory);
     font-feature-settings: "liga" 1, "kern" 1, "ss01" 1;
     -webkit-font-smoothing: antialiased;
