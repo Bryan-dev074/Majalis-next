@@ -1,6 +1,6 @@
 import { CartProvider } from "@/hooks/use-cart";
 import { CatalogProvider } from "@/hooks/use-catalog";
-import { ParticleFieldLazy } from "@/components/three/particle-field-lazy";
+import { ParticleField } from "@/components/three/particle-field";
 import { LiquidCursor } from "@/components/ui/liquid-cursor";
 import { Loader } from "@/components/ui/loader";
 import { Chrome } from "@/components/layout/chrome";
@@ -21,8 +21,8 @@ export default function TiendaLayout({
   return (
     <CartProvider>
       <CatalogProvider>
-        {/* Fondo 3D orgánico fijo (chunk diferido: three.js fuera del bundle crítico) */}
-        <ParticleFieldLazy />
+        {/* Fondo 3D orgánico fijo */}
+        <ParticleField />
         {/* Cursor premium con físicas líquidas */}
         <LiquidCursor />
         <Loader />
