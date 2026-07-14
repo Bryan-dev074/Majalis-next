@@ -136,19 +136,24 @@ export function ParticleField() {
       // ONDA DE CHOQUE sobre el CAMPO real: empuja las partículas del fondo que
       // están cerca del punto tocado (el resorte del loop las trae de vuelta).
       // El campo (`points`) rota, así que convierto el click a su espacio local.
-      const golpe = points.worldToLocal(pos.clone());
-      const RADIO = 26;
-      for (let i = 0; i < COUNT; i++) {
-        const dx = basePositions[i * 3] + offsets[i * 3] - golpe.x;
-        const dy = basePositions[i * 3 + 1] + offsets[i * 3 + 1] - golpe.y;
-        const dz = basePositions[i * 3 + 2] + offsets[i * 3 + 2] - golpe.z;
-        const d2 = dx * dx + dy * dy + dz * dz;
-        if (d2 > RADIO * RADIO) continue;
-        const d = Math.sqrt(d2) || 0.001;
-        const fuerza = (Math.exp(-d / (RADIO * 0.45)) * 2.4) / d; // fuerte cerca, suave lejos
-        offVel[i * 3] += dx * fuerza;
-        offVel[i * 3 + 1] += dy * fuerza;
-        offVel[i * 3 + 2] += dz * fuerza * 0.6;
+      // SOLO EN DESKTOP: en teléfono este barrido por COUNT (+ el resorte por
+      // frame) trababa el fondo → en móvil el click hace la explosión pero NO
+      // mueve el campo (comportamiento "como antes", pedido del dueño).
+      if (!esMovil) {
+        const golpe = points.worldToLocal(pos.clone());
+        const RADIO = 26;
+        for (let i = 0; i < COUNT; i++) {
+          const dx = basePositions[i * 3] + offsets[i * 3] - golpe.x;
+          const dy = basePositions[i * 3 + 1] + offsets[i * 3 + 1] - golpe.y;
+          const dz = basePositions[i * 3 + 2] + offsets[i * 3 + 2] - golpe.z;
+          const d2 = dx * dx + dy * dy + dz * dz;
+          if (d2 > RADIO * RADIO) continue;
+          const d = Math.sqrt(d2) || 0.001;
+          const fuerza = (Math.exp(-d / (RADIO * 0.45)) * 2.4) / d; // fuerte cerca, suave lejos
+          offVel[i * 3] += dx * fuerza;
+          offVel[i * 3 + 1] += dy * fuerza;
+          offVel[i * 3 + 2] += dz * fuerza * 0.6;
+        }
       }
 
       const N = 80;
@@ -218,24 +223,36 @@ export function ParticleField() {
       if (minInterval && t - lastRender < minInterval) return;
       lastRender = t;
 
-      // Movimiento orgánico: cada partícula oscila alrededor de su base
+      // Movimiento orgánico: cada partícula oscila alrededor de su base.
+      // En DESKTOP se suma el desplazamiento de la onda de choque (con su
+      // resorte); en MÓVIL se omite por completo → base + vaivén nada más,
+      // como el fondo original, sin el costo del loop extra por frame.
       const posAttr = geometry.getAttribute("position") as THREE.BufferAttribute;
-      for (let i = 0; i < COUNT; i++) {
-        const ph = phases[i];
-        // Resorte de la onda de choque: cada eje vuelve a 0 con amortiguación
-        // (en reposo offsets≈0 y el fondo queda EXACTO al original).
-        for (let k = 0; k < 3; k++) {
-          const idx = i * 3 + k;
-          offVel[idx] += -offsets[idx] * 0.02;
-          offVel[idx] *= 0.9;
-          offsets[idx] += offVel[idx];
+      if (esMovil) {
+        for (let i = 0; i < COUNT; i++) {
+          const ph = phases[i];
+          posAttr.array[i * 3] = basePositions[i * 3] + Math.sin(t * 0.4 + ph) * 0.6;
+          posAttr.array[i * 3 + 1] = basePositions[i * 3 + 1] + Math.cos(t * 0.3 + ph * 1.3) * 0.6;
+          posAttr.array[i * 3 + 2] = basePositions[i * 3 + 2] + Math.sin(t * 0.25 + ph * 0.7) * 0.5;
         }
-        posAttr.array[i * 3] =
-          basePositions[i * 3] + Math.sin(t * 0.4 + ph) * 0.6 + offsets[i * 3];
-        posAttr.array[i * 3 + 1] =
-          basePositions[i * 3 + 1] + Math.cos(t * 0.3 + ph * 1.3) * 0.6 + offsets[i * 3 + 1];
-        posAttr.array[i * 3 + 2] =
-          basePositions[i * 3 + 2] + Math.sin(t * 0.25 + ph * 0.7) * 0.5 + offsets[i * 3 + 2];
+      } else {
+        for (let i = 0; i < COUNT; i++) {
+          const ph = phases[i];
+          // Resorte de la onda de choque: cada eje vuelve a 0 con amortiguación
+          // (en reposo offsets≈0 y el fondo queda EXACTO al original).
+          for (let k = 0; k < 3; k++) {
+            const idx = i * 3 + k;
+            offVel[idx] += -offsets[idx] * 0.02;
+            offVel[idx] *= 0.9;
+            offsets[idx] += offVel[idx];
+          }
+          posAttr.array[i * 3] =
+            basePositions[i * 3] + Math.sin(t * 0.4 + ph) * 0.6 + offsets[i * 3];
+          posAttr.array[i * 3 + 1] =
+            basePositions[i * 3 + 1] + Math.cos(t * 0.3 + ph * 1.3) * 0.6 + offsets[i * 3 + 1];
+          posAttr.array[i * 3 + 2] =
+            basePositions[i * 3 + 2] + Math.sin(t * 0.25 + ph * 0.7) * 0.5 + offsets[i * 3 + 2];
+        }
       }
       posAttr.needsUpdate = true;
 
