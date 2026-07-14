@@ -207,9 +207,12 @@ export function ParticleField() {
     // ----- Loop de animación -----
     const clock = new THREE.Clock();
     let frameId = 0;
-    // Throttle de FPS: en móvil el vaivén es tan lento que 30fps es
-    // imperceptible pero corta a la mitad el costo de GPU/CPU.
-    const minInterval = esMovil ? 1 / 30 : 0;
+    // Throttle de FPS ADAPTATIVO en móvil: cuando el fondo está QUIETO se
+    // dibuja a 30fps (el vaivén lento es imperceptible y ahorra batería), pero
+    // mientras hay una explosión de toque/click ACTIVA se dibuja a fondo (60fps)
+    // para que ESA animación se vea fluida. Antes el toque quedaba capado a
+    // 30fps y se veía entrecortado.
+    const idleInterval = esMovil ? 1 / 30 : 0;
     let lastRender = -1;
 
     const animate = () => {
@@ -218,8 +221,10 @@ export function ParticleField() {
       // throttle que ya hace el navegador).
       if (document.hidden) return;
       const t = clock.getElapsedTime();
-      // Límite de FPS en móvil (el clock sigue avanzando → el movimiento no se
-      // acelera ni se traba, solo se dibujan menos cuadros).
+      // Con explosión activa (ripples) → sin límite (fluido); quieto → 30fps.
+      const minInterval = ripples.length > 0 ? 0 : idleInterval;
+      // El clock sigue avanzando → el movimiento no se acelera ni se traba,
+      // solo se dibujan menos cuadros cuando no hace falta.
       if (minInterval && t - lastRender < minInterval) return;
       lastRender = t;
 
