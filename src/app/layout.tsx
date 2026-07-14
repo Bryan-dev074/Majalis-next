@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Cinzel, Cormorant_Garamond, Jost } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "@/styles/globals.css";
 
 const cinzel = Cinzel({
@@ -51,6 +53,8 @@ export const metadata: Metadata = {
 /**
  * Layout raíz — solo define <html>/<body> y las fuentes.
  * Cada route group ((tienda) / (admin)) tiene su propio layout con su chrome.
+ * ⚠️ <Analytics/> y <SpeedInsights/> van SOLO acá: montarlos también en los
+ * layouts de los route groups duplicaría el tracking de cada visita.
  */
 export default function RootLayout({
   children,
@@ -62,7 +66,11 @@ export default function RootLayout({
       lang="es"
       className={`${cinzel.variable} ${cormorant.variable} ${jost.variable}`}
     >
-      <body className="font-sans antialiased">{children}</body>
+      <body className="font-sans antialiased">
+        {children}
+        <Analytics />
+        <SpeedInsights />
+      </body>
     </html>
   );
 }
