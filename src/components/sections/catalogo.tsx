@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { SearchX, X, Search, ChevronDown, ChevronLeft, ChevronRight, LayoutGrid, SprayCan, Gem, FlaskConical, Wind, Gift, Crown, type LucideIcon } from "lucide-react";
 import { Perfume } from "@/types/database";
 import { ProductCard } from "@/components/catalog/product-card";
@@ -51,6 +51,10 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
   const [marcasAbiertas, setMarcasAbiertas] = useState(false);
   const [marcaBusqueda, setMarcaBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
+  // El texto que FILTRA va diferido: el <input> se mueve con `query` (tipeo
+  // instantáneo) y el filtrado pesado (~1.800 items) usa `queryDiferida`, que
+  // React actualiza sin bloquear la escritura. Cero cambio visual.
+  const queryDiferida = useDeferredValue(query);
   const ref = useReveal<HTMLDivElement>({ stagger: 0.04, y: 24 });
 
   // Escuchar búsqueda global del navbar. Es una búsqueda GLOBAL: resetea
@@ -187,7 +191,7 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
         // Búsqueda por TOKENS (marca + nombre + descripción, sin acentos):
         // "armaf club de nuit int" encuentra el Club de Nuit aunque la frase
         // completa no esté en ninguna columna sola.
-        return matchMarca && matchFamilia && coincideBusqueda(p, query);
+        return matchMarca && matchFamilia && coincideBusqueda(p, queryDiferida);
       })
       // ORDEN: primero los DESTACADOS (la estrellita del panel /admin manda),
       // después los más buscados (clicks_mensuales = veces que abrieron el
@@ -199,7 +203,7 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
         if (clicksB !== clicksA) return clicksB - clicksA;
         return a.marca.localeCompare(b.marca, "es");
       });
-  }, [enCat, marcaActiva, familiaActiva, query, mlActivo]);
+  }, [enCat, marcaActiva, familiaActiva, queryDiferida, mlActivo]);
 
   const hayFiltros =
     mlActivo !== null ||
@@ -272,7 +276,7 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
     <section
       id="catalogo"
       ref={ref}
-      className="relative z-10 bg-ebony/70 px-6 py-24 backdrop-blur-md md:py-32"
+      className="relative z-10 bg-ebony/80 px-6 py-24 md:bg-ebony/70 md:py-32 md:backdrop-blur-md"
     >
       <div className="mx-auto max-w-7xl">
         {/* Encabezado */}

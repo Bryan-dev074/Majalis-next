@@ -35,39 +35,64 @@ export function LiquidCursor() {
     let scale = 1;
     let targetScale = 1;
     let frame = 0;
+    let running = false;
+    let pressed = false;
+    let lastHit = 0;
+
+    const lerp = reduceMotion ? 1 : 0.18;
+    const scaleStep = reduceMotion ? 1 : 0.15;
+
+    const asentado = () =>
+      Math.abs(mouseX - haloX) < 0.1 &&
+      Math.abs(mouseY - haloY) < 0.1 &&
+      Math.abs(targetScale - scale) < 0.01;
+
+    const loop = (t: number) => {
+      // Hit-test throttled a ~9 Hz FUERA del mousemove (que dispara 60-120/s y
+      // forzaba un recálculo de layout sincrónico en cada evento).
+      if (t - lastHit > 110) {
+        lastHit = t;
+        const el = document.elementFromPoint(mouseX, mouseY);
+        const interactive = el?.closest(
+          'a, button, [data-cursor="luxe"], input, [role="button"]'
+        );
+        targetScale = pressed ? 0.7 : interactive ? 2.1 : 1;
+      }
+      haloX += (mouseX - haloX) * lerp;
+      haloY += (mouseY - haloY) * lerp;
+      scale += (targetScale - scale) * scaleStep;
+      halo.style.transform = `translate(${haloX - 20}px, ${haloY - 20}px) scale(${scale})`;
+      // Descansar cuando todo quedó quieto: no seguir pidiendo rAF eternamente
+      // (antes corría 60fps para siempre aunque el mouse estuviera parado).
+      if (asentado()) {
+        running = false;
+        return;
+      }
+      frame = requestAnimationFrame(loop);
+    };
+    const arrancar = () => {
+      if (!running) {
+        running = true;
+        frame = requestAnimationFrame(loop);
+      }
+    };
 
     const onMove = (e: MouseEvent) => {
       mouseX = e.clientX;
       mouseY = e.clientY;
-      // El núcleo sigue casi instantáneamente
+      // El núcleo sigue casi instantáneamente (una sola escritura de transform).
       core.style.transform = `translate(${mouseX - 4}px, ${mouseY - 4}px)`;
-
-      // Detectar elementos interactivos bajo el cursor para agrandar el halo
-      const el = document.elementFromPoint(mouseX, mouseY);
-      const interactive = el?.closest(
-        'a, button, [data-cursor="luxe"], input, [role="button"]'
-      );
-      targetScale = interactive ? 2.1 : 1;
+      arrancar();
     };
-
     const onDown = () => {
+      pressed = true;
       targetScale = 0.7;
+      arrancar();
     };
     const onUp = () => {
-      targetScale = 1;
+      pressed = false;
+      arrancar();
     };
-
-    const loop = () => {
-      frame = requestAnimationFrame(loop);
-      // Física líquida del halo: lerp suave
-      const lerp = reduceMotion ? 1 : 0.18;
-      haloX += (mouseX - haloX) * lerp;
-      haloY += (mouseY - haloY) * lerp;
-      scale += (targetScale - scale) * 0.15;
-
-      halo.style.transform = `translate(${haloX - 20}px, ${haloY - 20}px) scale(${scale})`;
-    };
-    loop();
 
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mousedown", onDown);

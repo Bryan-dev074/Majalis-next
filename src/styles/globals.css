@@ -45,20 +45,29 @@
 
   body {
     background-color: var(--obsidian);
-    /* Luz ambiente cálida muy sutil desde arriba: da profundidad y "levanta"
-       la página sin lavarla (no toca el negro de los bordes). */
-    background-image: radial-gradient(
-      130% 90% at 50% 0%,
-      rgba(212, 175, 55, 0.07),
-      transparent 55%
-    );
-    background-attachment: fixed;
     color: var(--ivory);
     font-feature-settings: "liga" 1, "kern" 1, "ss01" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
     font-size: 17px; /* base ligeramente más grande para mejor legibilidad */
+  }
+
+  /* Luz ambiente cálida muy sutil desde arriba (levanta la página sin lavarla).
+     Va en un pseudo-elemento FIJO en su propia capa: se mantiene visible en
+     todo el scroll SIN el costo de 'background-attachment: fixed', que en
+     móviles repinta el viewport en cada frame y genera lag de scroll. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(
+      130% 90% at 50% 0%,
+      rgba(212, 175, 55, 0.07),
+      transparent 55%
+    );
   }
 
   ::selection {
@@ -135,13 +144,23 @@
 
   /* Tarjeta de vidrio con borde dorado tenue — la base del catálogo */
   .glass-luxe {
-    background: var(--glass);
-    backdrop-filter: blur(14px) saturate(120%);
-    -webkit-backdrop-filter: blur(14px) saturate(120%);
+    /* En MÓVIL: fondo sólido semiopaco, SIN backdrop-filter. El blur de vidrio
+       es de lo más caro en GPU móvil y se recalcula en cada frame de scroll
+       (era la causa #1 de scroll con tirones en el catálogo). Sobre el fondo
+       oscuro este sólido se ve casi igual. */
+    background: rgba(20, 17, 13, 0.6);
     border: 1px solid var(--glass-border);
     position: relative;
     transition: border-color 0.5s ease, transform 0.5s ease,
       box-shadow 0.5s ease;
+  }
+  /* El vidrio real (blur) queda SOLO en desktop, donde no cuesta scroll. */
+  @media (min-width: 1024px) {
+    .glass-luxe {
+      background: var(--glass);
+      backdrop-filter: blur(14px) saturate(120%);
+      -webkit-backdrop-filter: blur(14px) saturate(120%);
+    }
   }
 
   .glass-luxe::before {
@@ -944,6 +963,31 @@
   animation: estrella-twinkle 2.8s ease-in-out infinite;
 }
 
+/* PAUSA cuando la cinta está FUERA de viewport (IntersectionObserver en el
+   componente pone la clase): no gastar paint en animaciones que no se ven. */
+.marquee-off .marquee-luxe,
+.marquee-off .marca-shimmer,
+.marquee-off .estrella-marquee {
+  animation-play-state: paused;
+}
+
+/* En MÓVIL: oro pleno estático en cada marca (sin los ~200 repaints de
+   background-position por frame) y estrellas quietas. La cinta se sigue
+   desplazando (translateX es GPU) → mantiene la sensación premium sin el
+   costo de paint que ahogaba a gama baja. */
+@media (max-width: 1023px) {
+  .marca-shimmer {
+    animation: none;
+    background: none;
+    color: #d4af37;
+    text-shadow: none;
+  }
+  .estrella-marquee {
+    animation: none;
+    opacity: 0.65;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .marquee-luxe { animation: none; }
   .marca-shimmer {
@@ -1236,9 +1280,18 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
-  animation:
-    precio-premium-flujo 2.4s linear infinite,
-    precio-premium-halo 2.8s ease-in-out infinite;
+  /* En móvil solo el flujo de oro (background-position). El halo pulsante
+     (filter: drop-shadow, se recalcula cada frame y NO se compone en GPU)
+     queda para desktop: con 20-40 precios visibles era paint constante que
+     ahogaba a gama baja durante el scroll. */
+  animation: precio-premium-flujo 2.4s linear infinite;
+}
+@media (min-width: 1024px) {
+  .precio-premium {
+    animation:
+      precio-premium-flujo 2.4s linear infinite,
+      precio-premium-halo 2.8s ease-in-out infinite;
+  }
 }
 /* Coronita premium que titila al lado del precio */
 @keyframes premium-corona {

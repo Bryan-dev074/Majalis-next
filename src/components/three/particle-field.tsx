@@ -24,6 +24,16 @@ export function ParticleField() {
       "(prefers-reduced-motion: reduce)"
     ).matches;
 
+    // Perfil del dispositivo: móviles y gama baja pagan MUCHO menos (menos
+    // partículas, menor pixel-ratio, sin MSAA, render a 30fps). En desktop el
+    // look queda idéntico al original.
+    const esMovil =
+      window.matchMedia("(pointer: coarse)").matches ||
+      Math.min(window.innerWidth, window.innerHeight) <= 768;
+    const cores = navigator.hardwareConcurrency || 4;
+    const memGB = (navigator as { deviceMemory?: number }).deviceMemory || 4;
+    const gamaBaja = cores <= 4 || memGB <= 4;
+
     // ----- Escena -----
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x050505, 0.012);
@@ -38,16 +48,20 @@ export function ParticleField() {
 
     const renderer = new THREE.WebGLRenderer({
       alpha: true,
-      antialias: true,
+      antialias: !esMovil, // los sprites ya son suaves por la textura → MSAA solo cuesta en móvil
       powerPreference: "high-performance",
     });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // dpr más bajo en móvil: los sprites son difusos, 1.5 vs 2 es indistinguible
+    // pero baja ~44% el fill-rate en pantallas de alta densidad.
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, esMovil ? 1.5 : 2));
     renderer.setClearColor(0x050505, 0);
     container.appendChild(renderer.domElement);
 
     // ----- Geometría base de partículas doradas -----
-    const COUNT = reduceMotion ? 400 : 1400;
+    // Densidad escalada por dispositivo (solo cambia la cantidad; el look se
+    // mantiene). Un móvil de gama baja ya no paga 1400 sprites + su loop JS.
+    const COUNT = reduceMotion ? 400 : esMovil ? 600 : gamaBaja ? 900 : 1400;
     const positions = new Float32Array(COUNT * 3);
     const basePositions = new Float32Array(COUNT * 3);
     const phases = new Float32Array(COUNT); // fase individual para organicidad
@@ -188,10 +202,21 @@ export function ParticleField() {
     // ----- Loop de animación -----
     const clock = new THREE.Clock();
     let frameId = 0;
+    // Throttle de FPS: en móvil el vaivén es tan lento que 30fps es
+    // imperceptible pero corta a la mitad el costo de GPU/CPU.
+    const minInterval = esMovil ? 1 / 30 : 0;
+    let lastRender = -1;
 
     const animate = () => {
       frameId = requestAnimationFrame(animate);
+      // Pestaña oculta → no gastar GPU/batería (belt-and-suspenders sobre el
+      // throttle que ya hace el navegador).
+      if (document.hidden) return;
       const t = clock.getElapsedTime();
+      // Límite de FPS en móvil (el clock sigue avanzando → el movimiento no se
+      // acelera ni se traba, solo se dibujan menos cuadros).
+      if (minInterval && t - lastRender < minInterval) return;
+      lastRender = t;
 
       // Movimiento orgánico: cada partícula oscila alrededor de su base
       const posAttr = geometry.getAttribute("position") as THREE.BufferAttribute;

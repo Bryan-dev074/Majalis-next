@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Search, X } from "lucide-react";
 import { useCatalog } from "@/hooks/use-catalog";
 
@@ -34,6 +34,19 @@ export function MarcasMarquee() {
 
   // Velocidad constante en px/s aunque crezca la lista: duración ∝ cantidad.
   const duracion = `${Math.max(60, marcas.length * 3.4)}s`;
+
+  // Pausar las animaciones de la cinta cuando NO se ve (ahorra paint/batería).
+  const seccionRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = seccionRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([e]) => el.classList.toggle("marquee-off", !e.isIntersecting),
+      { rootMargin: "200px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   // ── Explorador de marcas: desplegable + buscador (04-jul) ──
   const [abierto, setAbierto] = useState(false);
@@ -75,6 +88,7 @@ export function MarcasMarquee() {
 
   return (
     <section
+      ref={seccionRef}
       aria-label="Casas perfumistas disponibles"
       className="relative overflow-hidden border-y border-gold/15 bg-obsidian/40 py-4 md:py-5"
     >

@@ -1,8 +1,17 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import { Navbar } from "@/components/layout/navbar";
-import { ProductModal } from "@/components/catalog/product-modal";
 import { useCatalog } from "@/hooks/use-catalog";
+
+// El modal (y con él GSAP, ~30 KB gz) se carga recién al abrir un producto,
+// no en el primer load de la home. Se muestra condicional, así que diferirlo
+// no cambia el comportamiento.
+const ProductModal = dynamic(
+  () => import("@/components/catalog/product-modal").then((m) => m.ProductModal),
+  { ssr: false }
+);
 
 /**
  * "Chrome" de la app: navbar + modal global de producto.

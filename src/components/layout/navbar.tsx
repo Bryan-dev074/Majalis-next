@@ -154,7 +154,7 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
     <nav
       className={`fixed top-0 left-0 z-50 w-full transition-all duration-500 ${
         scrolled
-          ? "bg-obsidian/80 backdrop-blur-xl border-b border-gold/10"
+          ? "bg-obsidian/90 md:bg-obsidian/80 md:backdrop-blur-xl border-b border-gold/10"
           : "bg-transparent"
       }`}
     >

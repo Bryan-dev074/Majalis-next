@@ -7,12 +7,21 @@ import { useEffect, useState } from "react";
  * Se desvanece tras 1.8s. Respeta reduced-motion (CSS global).
  */
 export function Loader() {
+  // Una sola vez por sesión: el visitante recurrente (navega entre páginas o
+  // vuelve) NO paga la intro de nuevo → entra directo.
   const [oculto, setOculto] = useState(false);
   const [fase, setFase] = useState<"in" | "out">("in");
 
   useEffect(() => {
-    const t1 = setTimeout(() => setFase("out"), 1500);
-    const t2 = setTimeout(() => setOculto(true), 2100);
+    if (sessionStorage.getItem("majalis_intro")) {
+      setOculto(true);
+      return;
+    }
+    sessionStorage.setItem("majalis_intro", "1");
+    // Tiempos recortados (antes 1500/2100) para acelerar el time-to-interactive
+    // sin perder la entrada cinemática.
+    const t1 = setTimeout(() => setFase("out"), 1100);
+    const t2 = setTimeout(() => setOculto(true), 1650);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);

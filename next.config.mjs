@@ -2,6 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
+    // AVIF primero (soporte >95%): ~20-35% menos peso por foto que WebP, con
+    // caída automática a WebP por Accept-header. Clave en redes móviles lentas.
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "plus.unsplash.com" },

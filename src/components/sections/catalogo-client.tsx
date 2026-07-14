@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Favoritos } from "@/components/sections/favoritos";
 import { Catalogo } from "@/components/sections/catalogo";
 import { useCatalog } from "@/hooks/use-catalog";
@@ -14,7 +14,13 @@ export function CatalogoClient() {
   const { perfumes, abrirDetalle } = useCatalog();
   const [query, setQuery] = useState("");
 
-  const destacados = perfumes.filter((p) => p.destacado).slice(0, 6);
+  // useMemo: sin esto, cada tecla del buscador re-corría los ~1.800 perfumes y
+  // pasaba un array NUEVO a <Favoritos>, re-renderizando toda la banda de
+  // destacados en cada pulsación (no tiene nada que ver con la búsqueda).
+  const destacados = useMemo(
+    () => perfumes.filter((p) => p.destacado).slice(0, 6),
+    [perfumes]
+  );
 
   return (
     <>

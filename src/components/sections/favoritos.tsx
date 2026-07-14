@@ -65,13 +65,23 @@ export function Favoritos({ perfumes, onAbrirDetalle }: FavoritosProps) {
               className="glass-luxe group relative flex min-w-[280px] flex-1 cursor-pointer snap-center flex-col overflow-hidden rounded-sm md:min-w-[340px]"
             >
               <div className="relative h-[420px] overflow-hidden bg-coal">
-                <Image
-                  src={p.url_imagen}
-                  alt={p.nombre}
-                  fill
-                  sizes="340px"
-                  className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-110"
-                />
+                {/* Guarda contra src vacío: next/image crashea con "" (destacado
+                    recién agregado sin foto todavía). Placeholder como en las tarjetas. */}
+                {p.url_imagen ? (
+                  <Image
+                    src={p.url_imagen}
+                    alt={p.nombre}
+                    fill
+                    sizes="(max-width: 768px) 280px, 340px"
+                    className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-110"
+                  />
+                ) : (
+                  <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-gold/[0.08] via-obsidian to-obsidian px-4 text-center">
+                    <span className="font-display text-3xl italic text-gold/40">M</span>
+                    <span className="line-clamp-2 font-display text-sm text-ivory/45">{p.nombre}</span>
+                    <span className="text-[0.5rem] uppercase tracking-imperial text-gold/40">Foto en camino</span>
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/30 to-transparent" />
 
                 {/* Etiqueta best seller */}

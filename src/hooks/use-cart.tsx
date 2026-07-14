@@ -143,24 +143,43 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // Precio efectivo re-exportado para consistencia tipada en la UI
   void precioEfectivo;
 
-  const value: CartContextValue = {
-    items,
-    cuponesDisponibles: FALLBACK_CUPONES,
-    cuponAplicado,
-    estadoCupon,
-    abrirCart,
-    agregar,
-    quitar,
-    cambiarCantidad,
-    vaciar,
-    aplicarCodigo,
-    quitarCupon,
-    setAbrirCart,
-    cantidadTotal: derivados.cantidadTotal,
-    subtotal: derivados.subtotal,
-    descuento: derivados.descuento,
-    total: derivados.total,
-  };
+  // value memoizado: sin esto se creaba un objeto nuevo en CADA render del
+  // provider y re-renderizaba a TODOS los consumidores de useCart (las tarjetas
+  // visibles) aunque el carrito no hubiera cambiado. Los callbacks ya son
+  // estables (useCallback), así que solo cambia cuando cambian los datos reales.
+  const value = useMemo<CartContextValue>(
+    () => ({
+      items,
+      cuponesDisponibles: FALLBACK_CUPONES,
+      cuponAplicado,
+      estadoCupon,
+      abrirCart,
+      agregar,
+      quitar,
+      cambiarCantidad,
+      vaciar,
+      aplicarCodigo,
+      quitarCupon,
+      setAbrirCart,
+      cantidadTotal: derivados.cantidadTotal,
+      subtotal: derivados.subtotal,
+      descuento: derivados.descuento,
+      total: derivados.total,
+    }),
+    [
+      items,
+      cuponAplicado,
+      estadoCupon,
+      abrirCart,
+      agregar,
+      quitar,
+      cambiarCantidad,
+      vaciar,
+      aplicarCodigo,
+      quitarCupon,
+      derivados,
+    ]
+  );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

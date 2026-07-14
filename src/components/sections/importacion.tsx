@@ -15,7 +15,7 @@ export function Importacion() {
     <section
       id="importacion"
       ref={ref}
-      className="relative z-10 border-y border-gold/10 bg-coal/60 px-6 py-28 backdrop-blur-md md:py-36"
+      className="relative z-10 border-y border-gold/10 bg-coal/80 px-6 py-28 md:bg-coal/60 md:py-36 md:backdrop-blur-md"
     >
       <div className="mx-auto max-w-6xl">
         <div className="mb-16 text-center" data-reveal>

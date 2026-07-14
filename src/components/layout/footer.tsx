@@ -27,7 +27,7 @@ export function Footer() {
   return (
     <footer
       id="atelier"
-      className="relative z-10 border-t border-gold/20 bg-coal/80 backdrop-blur-md"
+      className="relative z-10 border-t border-gold/20 bg-coal/90 md:bg-coal/80 md:backdrop-blur-md"
     >
       <div className="mx-auto max-w-7xl px-6 py-16 md:px-10">
         {/* Bloque superior — promesa de marca */}

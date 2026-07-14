@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import Image from "next/image";
 import { Plus, Sparkles, Crown } from "lucide-react";
 import { Perfume } from "@/types/database";
@@ -21,7 +22,10 @@ interface ProductCardProps {
  *  - Stock agotado: botón pasa a estado sofisticado "Agotado", deshabilitado.
  *  - Hover: la imagen se eleva y aparece un velo dorado + CTA.
  */
-export function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
+// memo: al escribir en el buscador el catálogo re-renderiza, pero las tarjetas
+// cuyo `perfume` no cambió no vuelven a renderizar (los callbacks ya son
+// estables con useCallback). Menos trabajo por cada tecla.
+export const ProductCard = memo(function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
   const { agregar } = useCart();
   const agotado = perfume.stock_disponible <= 0;
   const enOferta = perfume.en_oferta && perfume.precio_descuento != null;
@@ -182,4 +186,4 @@ export function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
       </div>
     </article>
   );
-}
+});
