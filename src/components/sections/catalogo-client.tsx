@@ -11,7 +11,7 @@ import { useCatalog } from "@/hooks/use-catalog";
  * - El modal de detalle vive en el layout (compartido con el Navbar).
  */
 export function CatalogoClient() {
-  const { perfumes, abrirDetalle } = useCatalog();
+  const { perfumes, abrirDetalle, cargado } = useCatalog();
   const [query, setQuery] = useState("");
 
   // useMemo: sin esto, cada tecla del buscador re-corría los ~1.800 perfumes y
@@ -30,6 +30,7 @@ export function CatalogoClient() {
       )}
       <Catalogo
         perfumes={perfumes}
+        cargando={!cargado}
         query={query}
         onQueryChange={setQuery}
         onAbrirDetalle={abrirDetalle}

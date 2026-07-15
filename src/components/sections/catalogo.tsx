@@ -4,6 +4,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { SearchX, X, Search, ChevronDown, ChevronLeft, ChevronRight, LayoutGrid, SprayCan, Gem, FlaskConical, Wind, Gift, Crown, type LucideIcon } from "lucide-react";
 import { Perfume } from "@/types/database";
 import { ProductCard } from "@/components/catalog/product-card";
+import { CatalogoSkeleton } from "@/components/catalog/catalogo-skeleton";
 import { useReveal } from "@/hooks/use-reveal";
 import { buildWaLink } from "@/data/site-config";
 import { coincideBusqueda, normalizarBusqueda } from "@/lib/format";
@@ -22,6 +23,8 @@ const ICONO_CATEGORIA: Record<string, LucideIcon> = {
 
 interface CatalogoProps {
   perfumes: Perfume[];
+  /** true mientras /api/catalogo no resolvió → mostramos el skeleton, no el vacío. */
+  cargando?: boolean;
   query: string;
   onQueryChange: (q: string) => void;
   onAbrirDetalle: (p: Perfume) => void;
@@ -43,7 +46,7 @@ interface CatalogoProps {
 const POR_PAGINA = 24; // múltiplo de 2/3/4 → completa las filas del grid en todos los tamaños
 const MARCAS_VISIBLES = 4; // pills sin expandir (pocas: que los productos aparezcan rápido — pedido 12-jul)
 
-export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: CatalogoProps) {
+export function Catalogo({ perfumes, cargando = false, query, onQueryChange, onAbrirDetalle }: CatalogoProps) {
   const [categoriaActiva, setCategoriaActiva] = useState<CategoriaId>("todas");
   const [marcaActiva, setMarcaActiva] = useState<string>("todas");
   const [familiaActiva, setFamiliaActiva] = useState<string>("todas");
@@ -302,7 +305,11 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
           {categorias.length > 1 && (
             <div className="space-y-1">
               <p className="eyebrow justify-center !text-[0.6rem]">Explorá la colección</p>
-              <nav className="colecciones relative" role="tablist" aria-label="Categorías de la colección">
+              {/* Es un FILTRO (sin tabpanels ni nav por teclado), no un widget de
+                  pestañas → semántica de botón-toggle (aria-pressed), no role=tablist:
+                  un tablist exige hijos role=tab y acá conviven las flechas de scroll.
+                  (PageSpeed / a11y: "tablist must contain tab children"). */}
+              <nav className="colecciones relative" aria-label="Categorías de la colección">
                 {scrollCat.izq && (
                   <button
                     className="colecciones-flecha izq"
@@ -330,8 +337,7 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
                         key={c.id}
                         onClick={() => cambiarCategoria(c.id)}
                         className={`coleccion ${activa ? "is-active" : ""}`}
-                        role="tab"
-                        aria-selected={activa}
+                        aria-pressed={activa}
                         style={{ ["--resp-delay" as string]: `${i * 0.5}s` }}
                       >
                         <span className="coleccion-icono" aria-hidden>
@@ -507,8 +513,12 @@ export function Catalogo({ perfumes, query, onQueryChange, onAbrirDetalle }: Cat
         </div>
 
         {/* Grid */}
-        {perfumes.length === 0 ? (
-          // Catálogo realmente vacío (todavía no hay productos activos).
+        {cargando && perfumes.length === 0 ? (
+          // Aún cargando el catálogo desde el server → skeleton premium (no el
+          // mensaje de vacío, que haría creer que no hay productos).
+          <CatalogoSkeleton />
+        ) : perfumes.length === 0 ? (
+          // Catálogo realmente vacío (ya cargó y no hay productos activos).
           <div className="flex flex-col items-center py-20 text-center text-ivory/40">
             <SearchX className="mb-4 h-10 w-10 opacity-40" strokeWidth={1} />
             <p className="text-sm">Estamos preparando nuestro catálogo.</p>

@@ -3,6 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "description": "Sultan Oud Elixir — E-commerce de fragancias árabes de ultra-lujo para Paraguay",
+  "//browserslist": "Navegadores modernos: evita que SWC transpile Array.at/flat/flatMap, Object.fromEntries/hasOwn, String.trimStart/End (PageSpeed: -12 KiB de polyfills que nadie necesita hoy).",
+  "browserslist": [
+    "chrome >= 91",
+    "edge >= 91",
+    "firefox >= 90",
+    "safari >= 15",
+    "ios >= 15",
+    "not dead"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",

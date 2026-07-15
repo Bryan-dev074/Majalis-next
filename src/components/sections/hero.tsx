@@ -64,6 +64,13 @@ export function Hero() {
             src="/majalis-emblema.svg"
             alt=""
             aria-hidden
+            // Es el elemento LCP en móvil → alta prioridad y carga inmediata
+            // (PageSpeed: el recurso LCP no debe ser lazy y debe ir fetchpriority=high).
+            fetchPriority="high"
+            loading="eager"
+            decoding="async"
+            width={128}
+            height={128}
             className="majalis-emblema h-24 w-24 md:h-32 md:w-32"
           />
         </div>

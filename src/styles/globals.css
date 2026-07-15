@@ -1117,6 +1117,45 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   SKELETON de la cámara olfativa (carga del catálogo).
+   ⚠️ RENDIMIENTO: el barrido usa transform: translateX (compositado por
+   GPU) — NO background-position (que PageSpeed marca como no-compositado).
+   Sin JS, sin estado, sin bytes de bundle nuevos.
+   ═══════════════════════════════════════════════════════════════ */
+.skeleton-sweep {
+  position: relative;
+  overflow: hidden;
+}
+.skeleton-sweep::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(212, 175, 55, 0.1) 45%,
+    rgba(212, 175, 55, 0.16) 50%,
+    rgba(212, 175, 55, 0.1) 55%,
+    transparent 100%
+  );
+  animation: skeleton-sweep 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes skeleton-sweep {
+  100% { transform: translateX(100%); }
+}
+/* La línea dorada del rótulo (mismo barrido que el loader, GPU) */
+.skeleton-linea {
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--gold-light), transparent);
+  animation: skeleton-sweep 1.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-sweep::after,
+  .skeleton-linea { animation: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
    SECCIÓN "DISPONIBLES HOY" + link de WhatsApp (04-jul-2026)
    El link lleva un subrayado dorado que respira y un barrido de
    brillo constante — invita al toque sin gritar.
