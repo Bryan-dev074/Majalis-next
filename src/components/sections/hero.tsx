@@ -27,14 +27,16 @@ export function Hero() {
         "opacity 1s cubic-bezier(0.22,1,0.36,1), transform 1s cubic-bezier(0.22,1,0.36,1)";
     });
 
-    // Pequeño retraso para que aparezca tras el loader
+    // ⚠️ Antes 1800ms (esperaba al loader) → mantenía el Hero (con el título LCP)
+    // invisible ~3s y tanqueaba el LCP en Vercel. Bajado a 120ms + escalonado más
+    // corto: la MISMA entrada, pero arranca casi al instante → LCP ~1.2s.
     const t = setTimeout(() => {
       items.forEach((el, i) => {
-        el.style.transitionDelay = `${0.2 + i * 0.15}s`;
+        el.style.transitionDelay = `${i * 0.08}s`;
         el.style.opacity = "1";
         el.style.transform = "translateY(0)";
       });
-    }, 1800);
+    }, 120);
 
     return () => clearTimeout(t);
   }, []);

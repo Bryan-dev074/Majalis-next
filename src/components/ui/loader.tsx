@@ -18,10 +18,11 @@ export function Loader() {
       return;
     }
     sessionStorage.setItem("majalis_intro", "1");
-    // Tiempos recortados (antes 1500/2100) para acelerar el time-to-interactive
-    // sin perder la entrada cinemática.
-    const t1 = setTimeout(() => setFase("out"), 1100);
-    const t2 = setTimeout(() => setOculto(true), 1650);
+    // Tiempos recortados (antes 1500/2100 → 1100/1650 → 600/1000) para que el loader
+    // NO sea el techo del LCP en la primera visita: en cuanto se levanta, el Hero ya
+    // está escrito debajo. Sigue siendo una apertura de marca, pero snappy.
+    const t1 = setTimeout(() => setFase("out"), 600);
+    const t2 = setTimeout(() => setOculto(true), 1100);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -32,7 +33,7 @@ export function Loader() {
 
   return (
     <div
-      className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-obsidian transition-opacity duration-700 ${
+      className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-obsidian transition-opacity duration-500 ${
         fase === "out" ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
       aria-hidden="true"

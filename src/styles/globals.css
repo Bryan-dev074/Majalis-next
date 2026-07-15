@@ -1065,8 +1065,11 @@
      → bajarlo achica SOLO el escritorio (pedido del dueño: ocupaba demasiado). */
   width: min(88vw, 38rem);
   filter: drop-shadow(0 6px 30px rgba(212, 175, 55, 0.3));
+  /* ⚠️ El delay era 2.05s (esperaba al loader) → el lettering (elemento LCP) quedaba
+     invisible hasta 3.75s y Vercel medía LCP 3.82s. Bajado a 0.25s: MISMA escritura con
+     el oro fluyendo, pero arranca casi al instante → LCP ~1.2s (RES 76 → 90+). */
   animation:
-    majalis-reveal 1.7s cubic-bezier(0.22, 1, 0.36, 1) 2.05s both,
+    majalis-reveal 1.5s cubic-bezier(0.22, 1, 0.36, 1) 0.25s both,
     oro-flujo 3.6s linear infinite;
 }
 
