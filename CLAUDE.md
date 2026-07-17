@@ -31,6 +31,16 @@ cambiás algo relevante acá, actualizala también).
   filas viejas sin campo = perfume (default). Badge de tipo/nicho en product-card.
 - next/image SOLO renderiza imágenes de `*.supabase.co` (+ unsplash/fimgs/notino) —
   por eso el HUB sube las fotos scrapeadas a Storage antes de estirarlas acá.
+- ⚠️ FOTOS DE PRODUCTO SIN OPTIMIZADOR DE VERCEL (17-jul): la cuota de Image
+  Optimization (5.000 transform/mes en Hobby) se agotaba — cada foto nueva/cambiada
+  paga transformaciones. TODA foto de producto va por `<FotoProducto>`
+  (`src/components/ui/foto-producto.tsx`): `unoptimized` + variante de tarjeta
+  PRE-GENERADA por el pipeline del scraper (480w webp ~20-40KB en Storage,
+  `{carpeta}/card/{slug}.webp`). `fotoCard()` en `src/lib/foto.ts` mapea la URL
+  (misma convención que `rutaCard()` en scraper/generar-variantes-card.mjs — sync
+  manual). El modal usa `variante="original"`; onError cae al original si la
+  variante aún no existe. Foto de producto nueva = usar FotoProducto, NUNCA
+  `next/image` pelado (volvería a comer cuota).
 - Dropi / "Envío Express" YA SE ELIMINÓ (botón, badges, esExterno, split de checkout,
   pestaña Origen Externo, proveedores, sync). `es_dropi`/`tiendas` dormidos. No volver.
 - Asistente IA (/admin): solo Gemini (datos) + foto + guardar en `perfumes`.

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, ShoppingBag, Menu, X, ArrowRight } from "lucide-react";
-import Image from "next/image";
+import { FotoProducto } from "@/components/ui/foto-producto";
 import { useCart } from "@/hooks/use-cart";
 import { useCerrarConAtras } from "@/hooks/use-cerrar-con-atras";
 import { Perfume } from "@/types/database";
@@ -129,11 +129,9 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
       >
         <div className="relative h-12 w-10 shrink-0 overflow-hidden rounded-sm bg-coal">
           {p.url_imagen && (
-            <Image
+            <FotoProducto
               src={p.url_imagen}
               alt={p.nombre}
-              fill
-              sizes="40px"
               className="object-cover object-top"
             />
           )}

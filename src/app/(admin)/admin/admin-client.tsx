@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition, useCallback } from "react";
-import Image from "next/image";
+import { FotoProducto } from "@/components/ui/foto-producto";
 import {
   Lock, Eye, EyeOff, LogOut, Plus, Minus, Pencil, Trash2,
   Search, Star, Power, Tag, Boxes, X, ExternalLink,
@@ -644,7 +644,7 @@ function TablaStock({
                       <div className="flex items-center gap-3">
                         <div className="relative h-11 w-9 shrink-0 overflow-hidden rounded" style={{ background: "var(--adm-surface-2)" }}>
                           {p.url_imagen && (
-                            <Image src={p.url_imagen} alt={p.nombre} fill sizes="36px" className="object-cover" />
+                            <FotoProducto src={p.url_imagen} alt={p.nombre} className="object-cover" />
                           )}
                         </div>
                         <div className="min-w-0">
@@ -889,7 +889,7 @@ function DemoView({
                       <div className="flex items-center gap-3">
                         <div className="relative h-10 w-8 shrink-0 overflow-hidden rounded" style={{ background: "var(--adm-surface-2)" }}>
                           {p.url_imagen && (
-                            <Image src={p.url_imagen} alt={p.nombre} fill sizes="32px" className="object-cover" />
+                            <FotoProducto src={p.url_imagen} alt={p.nombre} className="object-cover" />
                           )}
                         </div>
                         <div>

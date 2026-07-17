@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import Image from "next/image";
+import { FotoProducto } from "@/components/ui/foto-producto";
 import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
 import { Perfume } from "@/types/database";
 import { formatGs, precioEfectivo } from "@/lib/format";
@@ -68,11 +68,9 @@ export function Favoritos({ perfumes, onAbrirDetalle }: FavoritosProps) {
                 {/* Guarda contra src vacío: next/image crashea con "" (destacado
                     recién agregado sin foto todavía). Placeholder como en las tarjetas. */}
                 {p.url_imagen ? (
-                  <Image
+                  <FotoProducto
                     src={p.url_imagen}
                     alt={p.nombre}
-                    fill
-                    sizes="(max-width: 768px) 280px, 340px"
                     className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-110"
                   />
                 ) : (

@@ -1,8 +1,8 @@
 "use client";
 
 import { memo } from "react";
-import Image from "next/image";
 import { Plus, Sparkles, Crown } from "lucide-react";
+import { FotoProducto } from "@/components/ui/foto-producto";
 import { Perfume } from "@/types/database";
 import { formatGs, precioEfectivo, concentracionDe } from "@/lib/format";
 import { UMBRAL_PREMIUM } from "@/lib/categorias";
@@ -44,11 +44,9 @@ export const ProductCard = memo(function ProductCard({ perfume, onAbrirDetalle }
           no tienen imagen todavía hasta que el scraper les consiga una). */}
       <div className="relative aspect-[3/4] overflow-hidden bg-coal">
         {perfume.url_imagen ? (
-          <Image
+          <FotoProducto
             src={perfume.url_imagen}
             alt={perfume.nombre}
-            fill
-            sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
             className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-110"
           />
         ) : (

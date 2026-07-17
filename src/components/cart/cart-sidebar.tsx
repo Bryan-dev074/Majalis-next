@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import { FotoProducto } from "@/components/ui/foto-producto";
 import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight } from "lucide-react";
 import { useCart } from "@/hooks/use-cart";
 import { useCerrarConAtras } from "@/hooks/use-cerrar-con-atras";
@@ -104,11 +104,9 @@ export function CartSidebar() {
                     className="flex gap-4 rounded-sm border border-gold/10 bg-ivory/[0.03] p-3"
                   >
                     <div className="relative h-20 w-16 shrink-0 overflow-hidden rounded-sm bg-coal">
-                      <Image
+                      <FotoProducto
                         src={it.perfume.url_imagen}
                         alt={it.perfume.nombre}
-                        fill
-                        sizes="64px"
                         className="object-cover object-top"
                       />
                     </div>

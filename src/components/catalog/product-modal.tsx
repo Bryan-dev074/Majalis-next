@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { gsap } from "gsap";
+import { FotoProducto } from "@/components/ui/foto-producto";
 import { X, Plus, Minus, MessageCircle, Bell, Sparkles, Share2, Check } from "lucide-react";
 import { Perfume } from "@/types/database";
 import { formatGs, precioEfectivo, buildWhatsAppUrl, concentracionDe } from "@/lib/format";
@@ -196,11 +196,10 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
           {/* Imagen — en móvil tiene altura fija visible */}
           <div className="relative h-64 w-full md:h-auto md:min-h-[600px]">
             {perfume.url_imagen ? (
-              <Image
+              <FotoProducto
                 src={perfume.url_imagen}
                 alt={perfume.nombre}
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
+                variante="original"
                 className="modal-image object-cover object-top"
                 priority
               />
