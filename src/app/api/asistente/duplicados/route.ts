@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sesionValida, adminConfigurado, supabaseAdmin } from "@/lib/supabase-admin";
 import { similitud } from "@/lib/similitud";
+import { leerJsonLimitado, validarPostMismoOrigen } from "@/lib/request-security";
 
 /**
  * POST /api/asistente/duplicados
@@ -22,30 +23,46 @@ export async function POST(req: NextRequest) {
   if (!adminConfigurado()) {
     return NextResponse.json({ ok: false, error: "Supabase no configurado." }, { status: 500 });
   }
+  const errorSolicitud = validarPostMismoOrigen(req);
+  if (errorSolicitud) return NextResponse.json({ ok: false, error: errorSolicitud }, { status: 403 });
 
-  let nombre = "";
-  try {
-    nombre = String((await req.json()).nombre ?? "").trim();
-  } catch {
-    return NextResponse.json({ ok: false, error: "Body inválido." }, { status: 400 });
-  }
+  const lectura = await leerJsonLimitado<{ nombre?: unknown }>(req, 2_048);
+  if (!lectura.ok) return NextResponse.json({ ok: false, error: lectura.mensaje }, { status: lectura.status });
+  const nombre = String(lectura.valor.nombre ?? "").trim();
   if (nombre.length < 3) {
     return NextResponse.json({ ok: true, hayDuplicado: false, exacto: false, candidatos: [] });
+  }
+  if (nombre.length > 200) {
+    return NextResponse.json({ ok: false, error: "Nombre demasiado largo." }, { status: 400 });
   }
 
   try {
     const supabase = supabaseAdmin();
-    const { data, error } = await supabase.from("perfumes").select("id, nombre, marca");
-    if (error) {
-      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    const perfumes: Array<{ id: string; nombre: string; marca: string }> = [];
+    for (let desde = 0; ; desde += 1000) {
+      const { data, error } = await supabase
+        .from("perfumes")
+        .select("id, nombre, marca")
+        .order("id", { ascending: true })
+        .range(desde, desde + 999);
+      if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+      if (!Array.isArray(data)) {
+        return NextResponse.json({ ok: false, error: "Supabase devolvió una respuesta inválida." }, { status: 500 });
+      }
+      perfumes.push(...data.map((fila) => ({
+        id: String(fila.id),
+        nombre: String(fila.nombre ?? ""),
+        marca: String(fila.marca ?? ""),
+      })));
+      if (data.length < 1000) break;
     }
 
-    const candidatos = (data ?? [])
+    const candidatos = perfumes
       .map((p) => ({
-        id: p.id as string,
-        nombre: p.nombre as string,
-        marca: p.marca as string,
-        similitud: Number(similitud(nombre, p.nombre as string).toFixed(3)),
+        id: p.id,
+        nombre: p.nombre,
+        marca: p.marca,
+        similitud: Number(similitud(nombre, p.nombre).toFixed(3)),
       }))
       .filter((c) => c.similitud >= UMBRAL_ALERTA)
       .sort((a, b) => b.similitud - a.similitud)

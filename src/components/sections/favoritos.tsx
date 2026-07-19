@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { FotoProducto } from "@/components/ui/foto-producto";
 import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
 import { Perfume } from "@/types/database";
-import { formatGs, precioEfectivo } from "@/lib/format";
+import { concentracionDe, formatGs, precioEfectivo } from "@/lib/format";
 import { useCart } from "@/hooks/use-cart";
 
 interface FavoritosProps {
@@ -110,7 +110,9 @@ export function Favoritos({ perfumes, onAbrirDetalle }: FavoritosProps) {
                     {p.nombre}
                   </h3>
                   <p className="mt-1 line-clamp-1 text-xs text-ivory/45">
-                    {p.descripcion}
+                    {[concentracionDe(p), `${p.volumen_ml} ml`]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </p>
                   <div className="mt-3 flex items-center gap-3">
                     {p.en_oferta && p.precio_descuento != null && (

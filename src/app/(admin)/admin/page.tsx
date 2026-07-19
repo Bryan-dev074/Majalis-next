@@ -14,7 +14,7 @@ export default async function AdminPage() {
     return (
       <AdminClient
         autenticado={false}
-        datos={{ perfumes: [], cupones: [], configurado: false, top5: [], proveedor: null }}
+        datos={{ perfumes: [], cupones: [], configurado: false, top5: [], erroresCarga: [] }}
       />
     );
   }

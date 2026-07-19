@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sesionValida } from "@/lib/supabase-admin";
 import { buscarEnTodasLasTiendas } from "@/lib/scraper-tiendas";
 import { cacheGet, cacheSet, claveCache, verificarRitmo } from "@/lib/asistente-cache";
+import { leerJsonLimitado, validarPostMismoOrigen } from "@/lib/request-security";
 
 /**
  * POST /api/asistente/tiendas
@@ -17,14 +18,16 @@ export async function POST(req: NextRequest) {
   if (!(await sesionValida())) {
     return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
   }
-  let nombre = "";
-  try {
-    nombre = String((await req.json()).nombre ?? "").trim();
-  } catch {
-    return NextResponse.json({ ok: false, error: "Body inválido." }, { status: 400 });
-  }
+  const errorSolicitud = validarPostMismoOrigen(req);
+  if (errorSolicitud) return NextResponse.json({ ok: false, error: errorSolicitud }, { status: 403 });
+  const lectura = await leerJsonLimitado<{ nombre?: unknown }>(req, 2_048);
+  if (!lectura.ok) return NextResponse.json({ ok: false, error: lectura.mensaje }, { status: lectura.status });
+  const nombre = String(lectura.valor.nombre ?? "").trim();
   if (nombre.length < 3) {
     return NextResponse.json({ ok: false, error: "Nombre demasiado corto." }, { status: 400 });
+  }
+  if (nombre.length > 200) {
+    return NextResponse.json({ ok: false, error: "Nombre demasiado largo." }, { status: 400 });
   }
 
   // 1) Caché (misma consulta → sin re-scrapear ni gastar créditos).

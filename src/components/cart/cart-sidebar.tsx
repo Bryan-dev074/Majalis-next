@@ -22,6 +22,9 @@ export function CartSidebar() {
     quitar,
     subtotal,
     cantidadTotal,
+    catalogoListoParaComprar,
+    verificandoCatalogo,
+    recargarCatalogo,
   } = useCart();
 
   const [checkoutAbierto, setCheckoutAbierto] = useState(false);
@@ -191,9 +194,26 @@ export function CartSidebar() {
               Descuentos y cupones se aplican al finalizar
             </p>
 
+            {!catalogoListoParaComprar && (
+              <div className="mb-3 rounded-sm border border-amber-400/25 bg-amber-400/[0.06] p-3 text-center">
+                <p className="text-xs leading-relaxed text-amber-100/80">
+                  Estamos verificando precio y stock antes de confirmar tu pedido.
+                </p>
+                <button
+                  type="button"
+                  onClick={recargarCatalogo}
+                  disabled={verificandoCatalogo}
+                  className="mt-2 text-[0.62rem] uppercase tracking-regal text-gold-champagne underline underline-offset-4 disabled:opacity-50"
+                >
+                  {verificandoCatalogo ? "Verificando…" : "Verificar ahora"}
+                </button>
+              </div>
+            )}
+
             <button
               onClick={abrirCheckout}
-              className="btn-luxe flex w-full items-center justify-center gap-2"
+              disabled={!catalogoListoParaComprar}
+              className="btn-luxe flex w-full items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-45"
             >
               Finalizar pedido
               <ArrowRight className="h-4 w-4" strokeWidth={1.5} />

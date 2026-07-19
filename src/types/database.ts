@@ -36,11 +36,11 @@ export interface Perfume {
   activo: boolean;
   url_imagen: string;
   descripcion: string;
-  notas_olfativas: FragranceNotes;
+  notas_olfativas?: FragranceNotes;
   categoria: string[];
   /** Tiendas/proveedores externos donde también se consigue este producto. */
-  tiendas: TiendaProducto[];
-  sku: string | null;
+  tiendas?: TiendaProducto[];
+  sku?: string | null;
   destacado: boolean;
   /**
    * Origen del perfume:
@@ -48,12 +48,12 @@ export interface Perfume {
    *  · true            → Catálogo Dropi (importado por API futura).
    * Discrimina también por SKU con prefijo "DROPI-".
    */
-  es_dropi: boolean;
+  es_dropi?: boolean;
   /**
    * True si es uno de los perfumes de prueba (seed inicial del sistema).
    * Sirve para identificarlos y ocultarlos en bloque cuando arranques a vender.
    */
-  es_demo: boolean;
+  es_demo?: boolean;
   /** Contador de vistas del detalle del perfume en el mes actual. */
   clicks_mensuales: number;
   /** Categoría del producto: perfume (default) | mini | deo | kit.
@@ -61,8 +61,8 @@ export interface Perfume {
   tipo_producto?: string;
   /** True si es de una casa nicho (Xerjoff, Nishane, Amouage, PdM…). */
   es_nicho?: boolean;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 /** Cupón de descuento aplicable en checkout. */
@@ -75,6 +75,12 @@ export interface Cupon {
   usos_actuales: number;
   fecha_expiracion: string | null;
   created_at: string;
+}
+
+/** Únicos datos de un cupón que necesita conocer el comprador. */
+export interface CuponPublico {
+  codigo: string;
+  porcentaje_descuento: number;
 }
 
 /** Perfil de usuario opcional (acelera el delivery en Paraguay). */
@@ -127,11 +133,4 @@ export interface Pedido {
 export interface CartItem {
   perfume: Perfume;
   cantidad: number;
-}
-
-/** Resultado de validación de un cupón. */
-export interface CuponResult {
-  valido: boolean;
-  cupon: Cupon | null;
-  mensaje: string;
 }

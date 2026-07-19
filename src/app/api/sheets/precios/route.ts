@@ -23,7 +23,9 @@ export async function POST() {
   }
   try {
     const res = await aplicarPreciosDesdeComparador();
-    if (res.ok) {
+    // Una respuesta parcial es un fallo para el usuario, pero los precios que sí
+    // llegaron a escribirse también deben invalidar el catálogo cacheado.
+    if (res.aplicados > 0) {
       revalidatePath("/");
       revalidatePath("/admin");
     }

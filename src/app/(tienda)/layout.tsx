@@ -19,8 +19,8 @@ export default function TiendaLayout({
   children: React.ReactNode;
 }) {
   return (
-    <CartProvider>
-      <CatalogProvider>
+    <CatalogProvider>
+      <CartProvider>
         {/* Fondo 3D orgánico fijo (chunk diferido: three.js fuera del bundle crítico) */}
         <ParticleFieldLazy />
         {/* Cursor premium con físicas líquidas */}
@@ -36,7 +36,7 @@ export default function TiendaLayout({
 
         {/* Botón flotante de WhatsApp — asistencia */}
         <WhatsAppButton />
-      </CatalogProvider>
-    </CartProvider>
+      </CartProvider>
+    </CatalogProvider>
   );
 }

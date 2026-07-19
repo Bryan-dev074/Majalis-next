@@ -4,11 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { FotoProducto } from "@/components/ui/foto-producto";
 import { X, Plus, Minus, MessageCircle, Bell, Sparkles, Share2, Check } from "lucide-react";
-import { Perfume } from "@/types/database";
+import type { FragranceNotes, Perfume } from "@/types/database";
 import { formatGs, precioEfectivo, buildWhatsAppUrl, concentracionDe } from "@/lib/format";
 import { WHATSAPP_NUMBER } from "@/data/site-config";
 import { useCart } from "@/hooks/use-cart";
 import { useCerrarConAtras } from "@/hooks/use-cerrar-con-atras";
+import { useCatalog } from "@/hooks/use-catalog";
 import { NoteIcon } from "./note-icon";
 
 interface ProductModalProps {
@@ -16,12 +17,13 @@ interface ProductModalProps {
   onClose: () => void;
 }
 
-type Capa = keyof Perfume["notas_olfativas"];
+type Capa = keyof FragranceNotes;
 const CAPAS: { key: Capa; label: string; descripcion: string }[] = [
   { key: "salida", label: "Salida", descripcion: "Las primeras impresiones, efímeras y luminosas." },
   { key: "corazon", label: "Corazón", descripcion: "El alma de la fragancia, donde vive su carácter." },
   { key: "fondo", label: "Fondo", descripcion: "El rastro que perdura, cálido y memorable." },
 ];
+const MAX_CANTIDAD_ITEM = 99;
 
 /**
  * Vista cinemática inmersiva del producto.
@@ -32,6 +34,14 @@ const CAPAS: { key: Capa; label: string; descripcion: string }[] = [
  */
 export function ProductModal({ perfume, onClose }: ProductModalProps) {
   const { agregar } = useCart();
+  const {
+    catalogoListoParaComprar,
+    verificando,
+    recargar,
+    detalleCargando,
+    errorDetalle,
+    reintentarDetalle,
+  } = useCatalog();
   const [cantidad, setCantidad] = useState(1);
   const [copiado, setCopiado] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -69,6 +79,15 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
   useEffect(() => {
     setCantidad(1);
   }, [perfume?.id]);
+
+  // Si un refresh reduce el stock mientras el modal sigue abierto, no mostrar
+  // una cantidad que ya no se puede agregar.
+  useEffect(() => {
+    if (!perfume) return;
+    setCantidad((actual) =>
+      Math.max(1, Math.min(actual, perfume.stock_disponible, MAX_CANTIDAD_ITEM))
+    );
+  }, [perfume]);
 
   // Contar +1 en clicks_mensuales cuando un cliente abre el detalle.
   // Fire-and-forget: no bloquea la UX si falla.
@@ -115,11 +134,19 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
     if (reduce) return;
 
     const ctx = gsap.context(() => {
+      const capas = Array.from(
+        notasRef.current?.querySelectorAll(".nota-capa") ?? []
+      );
+      const chips = Array.from(
+        notasRef.current?.querySelectorAll(".nota-chip") ?? []
+      );
       const tl = gsap.timeline({
         defaults: { ease: "power3.out" },
         // Seguro: pase lo que pase con la timeline, al final TODO queda visible.
         onComplete: () => {
-          gsap.set(".nota-capa, .nota-chip", { clearProps: "opacity,transform" });
+          if (capas.length + chips.length > 0) {
+            gsap.set([...capas, ...chips], { clearProps: "opacity,transform" });
+          }
         },
       });
       tl.from(".modal-veil", { opacity: 0, duration: 0.4 })
@@ -143,16 +170,19 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
         );
 
       // Notas olfativas: aparecen en stagger por capa
-      if (notasRef.current) {
+      if (capas.length > 0) {
         tl.from(
-          ".nota-capa",
+          capas,
           { y: 30, opacity: 0, duration: 0.7, stagger: 0.18 },
           "-=0.3"
-        ).from(
-          ".nota-chip",
-          { y: 14, opacity: 0, duration: 0.4, stagger: 0.04 },
-          "-=0.4"
         );
+        if (chips.length > 0) {
+          tl.from(
+            chips,
+            { y: 14, opacity: 0, duration: 0.4, stagger: 0.04 },
+            "-=0.4"
+          );
+        }
       }
     }, rootRef);
 
@@ -172,6 +202,10 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
   if (!perfume) return null;
 
   const precio = precioEfectivo(perfume);
+  const notasOlfativas = perfume.notas_olfativas;
+  const tieneNotas = CAPAS.some(
+    (capa) => (notasOlfativas?.[capa.key]?.length ?? 0) > 0
+  );
 
   return (
     <div
@@ -290,10 +324,23 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
               </div>
             )}
 
-            {/* Descripción con mejor contraste */}
-            <p className="modal-desc mt-4 text-sm leading-relaxed text-ivory/85 md:text-base">
-              {perfume.descripcion}
-            </p>
+            {/* La descripción vive en la ficha bajo demanda, no en las 4.000+
+                tarjetas del listado inicial. */}
+            {perfume.descripcion ? (
+              <p className="modal-desc mt-4 text-sm leading-relaxed text-ivory/85 md:text-base">
+                {perfume.descripcion}
+              </p>
+            ) : detalleCargando ? (
+              <div className="modal-desc mt-4 space-y-2" role="status" aria-live="polite">
+                <span className="text-xs text-ivory/55">Cargando descripción…</span>
+                <div className="h-3 w-full animate-pulse rounded-full bg-ivory/[0.07]" />
+                <div className="h-3 w-4/5 animate-pulse rounded-full bg-ivory/[0.07]" />
+              </div>
+            ) : (
+              <p className="modal-desc mt-4 text-sm italic text-ivory/50">
+                Descripción no disponible por el momento.
+              </p>
+            )}
 
             {/* Volumen + stock */}
             <div className="mt-4 flex items-center gap-4 text-xs uppercase tracking-regal text-ivory/60">
@@ -337,7 +384,9 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
                   </span>
                   <button
                     onClick={() =>
-                      setCantidad((c) => Math.min(perfume.stock_disponible, c + 1))
+                      setCantidad((c) =>
+                        Math.min(perfume.stock_disponible, MAX_CANTIDAD_ITEM, c + 1)
+                      )
                     }
                     className="flex h-8 w-8 items-center justify-center rounded-full text-ivory/80 transition-colors hover:bg-gold/10 hover:text-gold-champagne"
                     aria-label="Sumar"
@@ -359,7 +408,7 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
             )}
 
             {/* CTA WhatsApp directo */}
-            {!agotado ? (
+            {!agotado && catalogoListoParaComprar ? (
               <a
                 href={buildWhatsAppUrl(perfume.nombre, WHATSAPP_NUMBER)}
                 target="_blank"
@@ -369,6 +418,16 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
                 <MessageCircle className="h-4 w-4" strokeWidth={1.5} />
                 Pedir ahora por WhatsApp
               </a>
+            ) : !agotado ? (
+              <button
+                type="button"
+                onClick={recargar}
+                disabled={verificando}
+                className="modal-cta mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-amber-300/30 py-3 text-[0.65rem] uppercase tracking-regal text-amber-100/75 transition-all hover:border-amber-300/50 disabled:opacity-50"
+              >
+                <MessageCircle className="h-4 w-4" strokeWidth={1.5} />
+                {verificando ? "Verificando precio y stock…" : "Verificar antes de pedir"}
+              </button>
             ) : (
               <a
                 href={buildWhatsAppUrl(
@@ -386,39 +445,96 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
 
             {/* Notas olfativas — desglose cinemático en 3 capas */}
             <div ref={notasRef} className="mt-8 border-t border-gold/15 pt-6">
-              <h3 className="eyebrow mb-5 text-[0.65rem]">Pirámide olfativa</h3>
-              <div className="space-y-5">
-                {CAPAS.map((capa) => {
-                  const notas = perfume.notas_olfativas[capa.key] ?? [];
-                  return (
-                    <div key={capa.key} className="nota-capa">
-                      <div className="mb-2 flex items-baseline gap-3">
-                        <span className="font-lapidary text-sm font-medium tracking-regal text-gold">
-                          {capa.label}
-                        </span>
-                        <span className="h-px flex-1 bg-gold/15" />
-                        <span className="hidden text-[0.6rem] italic text-ivory/50 md:inline">
-                          {capa.descripcion}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {notas.map((n, i) => (
-                          <span
-                            key={`${n}-${i}`}
-                            className="nota-chip group flex items-center gap-1.5 rounded-full border border-gold/20 bg-ivory/[0.04] px-3 py-1.5 text-xs font-medium text-ivory/85 transition-all hover:border-gold/50 hover:text-gold-champagne"
-                          >
-                            <NoteIcon
-                              nota={n}
-                              className="h-3.5 w-3.5 text-gold/80"
-                            />
-                            {n}
-                          </span>
-                        ))}
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <h3 className="eyebrow text-[0.65rem]">Pirámide olfativa</h3>
+                {detalleCargando && tieneNotas && (
+                  <span
+                    className="text-[0.55rem] uppercase tracking-regal text-ivory/45"
+                    aria-live="polite"
+                  >
+                    Actualizando ficha…
+                  </span>
+                )}
+              </div>
+
+              {detalleCargando && !tieneNotas ? (
+                <div className="space-y-4" role="status" aria-live="polite">
+                  <p className="text-xs text-ivory/60">
+                    Cargando notas olfativas…
+                  </p>
+                  {CAPAS.map((capa) => (
+                    <div key={capa.key} className="animate-pulse">
+                      <div className="mb-2 h-3 w-24 rounded-full bg-gold/15" />
+                      <div className="flex gap-2">
+                        <span className="h-7 w-24 rounded-full bg-ivory/[0.06]" />
+                        <span className="h-7 w-32 rounded-full bg-ivory/[0.06]" />
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
+              ) : tieneNotas ? (
+                <div className="space-y-5">
+                  {CAPAS.map((capa) => {
+                    const notas = notasOlfativas?.[capa.key] ?? [];
+                    return (
+                      <div key={capa.key} className="nota-capa">
+                        <div className="mb-2 flex items-baseline gap-3">
+                          <span className="font-lapidary text-sm font-medium tracking-regal text-gold">
+                            {capa.label}
+                          </span>
+                          <span className="h-px flex-1 bg-gold/15" />
+                          <span className="hidden text-[0.6rem] italic text-ivory/50 md:inline">
+                            {capa.descripcion}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {notas.length > 0 ? (
+                            notas.map((n, i) => (
+                              <span
+                                key={`${n}-${i}`}
+                                className="nota-chip group flex items-center gap-1.5 rounded-full border border-gold/20 bg-ivory/[0.04] px-3 py-1.5 text-xs font-medium text-ivory/85 transition-all hover:border-gold/50 hover:text-gold-champagne"
+                              >
+                                <NoteIcon
+                                  nota={n}
+                                  className="h-3.5 w-3.5 text-gold/80"
+                                />
+                                {n}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs italic text-ivory/40">
+                              Sin notas registradas
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : !errorDetalle ? (
+                <p className="text-sm leading-relaxed text-ivory/55">
+                  Esta fragancia todavía no tiene notas olfativas registradas.
+                </p>
+              ) : null}
+
+              {errorDetalle && (
+                <div
+                  className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-sm border border-amber-300/20 bg-amber-300/[0.04] px-4 py-3"
+                  role="alert"
+                >
+                  <p className="text-xs leading-relaxed text-amber-100/75">
+                    {errorDetalle}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={reintentarDetalle}
+                    disabled={detalleCargando}
+                    className="text-[0.6rem] font-semibold uppercase tracking-regal text-gold-champagne transition-opacity hover:opacity-75 disabled:opacity-40"
+                  >
+                    {detalleCargando ? "Reintentando…" : "Reintentar detalles"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

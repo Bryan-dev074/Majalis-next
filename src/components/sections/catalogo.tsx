@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { SearchX, X, Search, ChevronDown, ChevronLeft, ChevronRight, LayoutGrid, SprayCan, Gem, FlaskConical, Wind, Gift, Crown, type LucideIcon } from "lucide-react";
+import { SearchX, X, Search, ChevronDown, ChevronLeft, ChevronRight, LayoutGrid, SprayCan, Gem, FlaskConical, Wind, Gift, Crown, RefreshCw, WifiOff, type LucideIcon } from "lucide-react";
 import { Perfume } from "@/types/database";
 import { ProductCard } from "@/components/catalog/product-card";
 import { CatalogoSkeleton } from "@/components/catalog/catalogo-skeleton";
@@ -25,6 +25,12 @@ interface CatalogoProps {
   perfumes: Perfume[];
   /** true mientras /api/catalogo no resolvió → mostramos el skeleton, no el vacío. */
   cargando?: boolean;
+  /** Hubo al menos una respuesta válida del catálogo. */
+  catalogoValido: boolean;
+  /** La última comprobación falló; no equivale a un catálogo válido vacío. */
+  errorCatalogo: string | null;
+  reintentando: boolean;
+  onReintentar: () => void;
   query: string;
   onQueryChange: (q: string) => void;
   onAbrirDetalle: (p: Perfume) => void;
@@ -46,7 +52,17 @@ interface CatalogoProps {
 const POR_PAGINA = 24; // múltiplo de 2/3/4 → completa las filas del grid en todos los tamaños
 const MARCAS_VISIBLES = 4; // pills sin expandir (pocas: que los productos aparezcan rápido — pedido 12-jul)
 
-export function Catalogo({ perfumes, cargando = false, query, onQueryChange, onAbrirDetalle }: CatalogoProps) {
+export function Catalogo({
+  perfumes,
+  cargando = false,
+  catalogoValido,
+  errorCatalogo,
+  reintentando,
+  onReintentar,
+  query,
+  onQueryChange,
+  onAbrirDetalle,
+}: CatalogoProps) {
   const [categoriaActiva, setCategoriaActiva] = useState<CategoriaId>("todas");
   const [marcaActiva, setMarcaActiva] = useState<string>("todas");
   const [familiaActiva, setFamiliaActiva] = useState<string>("todas");
@@ -512,11 +528,53 @@ export function Catalogo({ perfumes, cargando = false, query, onQueryChange, onA
           </div>
         </div>
 
+        {/* Si falla un refresh conservamos la última versión válida, pero no lo
+            ocultamos: el cliente puede reintentar sin perder el catálogo. */}
+        {errorCatalogo && catalogoValido && (
+          <div
+            className="mb-6 flex flex-col items-center justify-between gap-3 rounded-sm border border-amber-300/25 bg-amber-300/[0.06] px-4 py-3 text-center sm:flex-row sm:text-left"
+            role="status"
+          >
+            <p className="text-xs leading-relaxed text-amber-100/75">
+              Mostramos la última versión disponible, pero no pudimos comprobar cambios recientes.
+            </p>
+            <button
+              type="button"
+              onClick={onReintentar}
+              disabled={reintentando}
+              className="inline-flex shrink-0 items-center gap-2 text-[0.62rem] uppercase tracking-regal text-gold-champagne underline underline-offset-4 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${reintentando ? "animate-spin" : ""}`} />
+              {reintentando ? "Comprobando…" : "Reintentar"}
+            </button>
+          </div>
+        )}
+
         {/* Grid */}
         {cargando && perfumes.length === 0 ? (
           // Aún cargando el catálogo desde el server → skeleton premium (no el
           // mensaje de vacío, que haría creer que no hay productos).
           <CatalogoSkeleton />
+        ) : errorCatalogo && !catalogoValido ? (
+          <div
+            className="flex flex-col items-center px-4 py-20 text-center"
+            role="alert"
+          >
+            <WifiOff className="mb-4 h-10 w-10 text-amber-200/60" strokeWidth={1.25} />
+            <p className="text-sm text-ivory/80">No pudimos cargar el catálogo.</p>
+            <p className="mt-2 max-w-sm text-xs leading-relaxed text-ivory/45">
+              {errorCatalogo}
+            </p>
+            <button
+              type="button"
+              onClick={onReintentar}
+              disabled={reintentando}
+              className="btn-ghost-luxe mt-6 inline-flex items-center gap-2 !px-5 !py-2.5 !text-[0.65rem] disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${reintentando ? "animate-spin" : ""}`} />
+              {reintentando ? "Reintentando…" : "Volver a intentar"}
+            </button>
+          </div>
         ) : perfumes.length === 0 ? (
           // Catálogo realmente vacío (ya cargó y no hay productos activos).
           <div className="flex flex-col items-center py-20 text-center text-ivory/40">

@@ -1,4 +1,4 @@
-import { Perfume, CartItem, Cupon, CuponResult } from "@/types/database";
+import { Perfume, CartItem, CuponPublico } from "@/types/database";
 
 /**
  * Formatea un monto en Guaraníes paraguayos (Gs.) sin decimales.
@@ -120,11 +120,29 @@ export function buildWhatsAppUrl(nombrePerfume: string, numero: string): string 
  * opcionales (si el cliente los cargó) y el pago/envío se coordina por WhatsApp.
  */
 export function buildWhatsAppCheckoutUrl(
-  items: CartItem[],
+  items: Array<{
+    cantidad: number;
+    perfume: Pick<
+      Perfume,
+      "nombre" | "marca" | "volumen_ml" | "sku" | "precio_regular" | "precio_descuento" | "en_oferta"
+    >;
+  }>,
   numero: string,
-  extras?: { nombre?: string; ciudad?: string; direccion?: string; whatsapp?: string }
+  extras?: { nombre?: string; ciudad?: string; direccion?: string; whatsapp?: string },
+  resumenConfirmado?: {
+    subtotal: number;
+    descuento: number;
+    total: number;
+    codigoCupon?: string | null;
+    porcentajeCupon?: number | null;
+  }
 ): string {
-  const total = subtotalCarrito(items);
+  const subtotal = resumenConfirmado?.subtotal ?? items.reduce(
+    (acc, it) => acc + precioEfectivo(it.perfume) * it.cantidad,
+    0
+  );
+  const descuento = resumenConfirmado?.descuento ?? 0;
+  const total = resumenConfirmado?.total ?? Math.max(0, subtotal - descuento);
 
   const bloques: string[] = [
     "👑 *MAJALIS — NUEVO PEDIDO* 👑",
@@ -133,12 +151,19 @@ export function buildWhatsAppCheckoutUrl(
   ];
   items.forEach((it) => {
     bloques.push(
-      `• ${it.cantidad}x ${it.perfume.nombre} (${it.perfume.volumen_ml}ml) — Marca: ${it.perfume.marca}`
+      `• ${it.cantidad}x ${it.perfume.nombre} (${it.perfume.volumen_ml}ml) — Marca: ${it.perfume.marca} — ${formatGs(precioEfectivo(it.perfume) * it.cantidad)}`
     );
     if (it.perfume.sku) bloques.push(`  Código: \`${it.perfume.sku}\``);
   });
 
-  bloques.push("", "💰 *RESUMEN:*", `• Total: ${formatGs(total)}`);
+  bloques.push("", "💰 *RESUMEN:*", `• Subtotal: ${formatGs(subtotal)}`);
+  if (descuento > 0) {
+    const detalleCupon = resumenConfirmado?.codigoCupon
+      ? ` (${resumenConfirmado.codigoCupon}${resumenConfirmado.porcentajeCupon ? ` · ${resumenConfirmado.porcentajeCupon}%` : ""})`
+      : "";
+    bloques.push(`• Descuento${detalleCupon}: -${formatGs(descuento)}`);
+  }
+  bloques.push(`• *Total: ${formatGs(total)}*`);
 
   const hayDatos = extras && (extras.nombre || extras.ciudad || extras.direccion || extras.whatsapp);
   if (hayDatos) {
@@ -163,7 +188,7 @@ export function subtotalCarrito(items: CartItem[]): number {
 }
 
 /** Total aplicando cupón (si válido). */
-export function totalCarrito(items: CartItem[], cupon: Cupon | null): number {
+export function totalCarrito(items: CartItem[], cupon: CuponPublico | null): number {
   const subtotal = subtotalCarrito(items);
   if (!cupon) return subtotal;
   const descuento = Math.round((subtotal * cupon.porcentaje_descuento) / 100);
@@ -171,43 +196,7 @@ export function totalCarrito(items: CartItem[], cupon: Cupon | null): number {
 }
 
 /** Descuento absoluto en Gs. por aplicar un cupón. */
-export function descuentoCarrito(items: CartItem[], cupon: Cupon | null): number {
+export function descuentoCarrito(items: CartItem[], cupon: CuponPublico | null): number {
   if (!cupon) return 0;
   return Math.round((subtotalCarrito(items) * cupon.porcentaje_descuento) / 100);
-}
-
-/**
- * Valida un cupón contra una lista local de cupones válidos.
- * (El schema los define en Supabase; aquí se valida client-side con
- *  la lista que el Server Component pasa al cliente.)
- */
-export function validarCupon(
-  codigoIngresado: string,
-  cupones: Cupon[]
-): CuponResult {
-  const limpio = codigoIngresado.trim().toUpperCase();
-  if (!limpio) {
-    return { valido: false, cupon: null, mensaje: "Ingresa un código." };
-  }
-
-  const encontrado = cupones.find((c) => c.codigo.toUpperCase() === limpio);
-
-  if (!encontrado) {
-    return { valido: false, cupon: null, mensaje: "Este código no existe." };
-  }
-  if (!encontrado.activo) {
-    return { valido: false, cupon: null, mensaje: "Este código está inactivo." };
-  }
-  if (encontrado.fecha_expiracion && new Date(encontrado.fecha_expiracion) < new Date()) {
-    return { valido: false, cupon: null, mensaje: "Este código ha expirado." };
-  }
-  if (encontrado.usos_actuales >= encontrado.limite_usos) {
-    return { valido: false, cupon: null, mensaje: "Este código agotó sus usos." };
-  }
-
-  return {
-    valido: true,
-    cupon: encontrado,
-    mensaje: `Código aplicado: ${encontrado.porcentaje_descuento}% de descuento.`,
-  };
 }

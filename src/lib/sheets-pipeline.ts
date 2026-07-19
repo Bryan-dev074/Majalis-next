@@ -200,7 +200,7 @@ async function construirComparador(
   dolarMercado: number
 ): Promise<{ filas: (string | number)[][]; productos: number; tiendas: number }> {
   const datos =
-    (await sheets.spreadsheets.values.get({ spreadsheetId: GOOGLE_SHEET_ID, range: `'${PRODUCTOS_HOJA}'!A1:J400` })).data
+    (await sheets.spreadsheets.values.get({ spreadsheetId: GOOGLE_SHEET_ID, range: `'${PRODUCTOS_HOJA}'!A:J` })).data
       .values ?? [];
 
   const filas: (string | number)[][] = [];
@@ -269,24 +269,100 @@ export async function actualizarMonedaYComparador(): Promise<{
 
 /** Aplica el "Precio venta mín." de la tienda ganadora como precio_regular en Supabase. */
 export async function aplicarPreciosDesdeComparador(): Promise<{
-  ok: boolean; aplicados?: number; error?: string;
+  ok: boolean;
+  aplicados: number;
+  candidatos?: number;
+  fallidos?: number;
+  errores?: string[];
+  error?: string;
 }> {
   const sheets = await getSheetsClient();
   const datos =
-    (await sheets.spreadsheets.values.get({ spreadsheetId: GOOGLE_SHEET_ID, range: `${COMPARADOR_HOJA}!A2:L1000` })).data
+    (await sheets.spreadsheets.values.get({ spreadsheetId: GOOGLE_SHEET_ID, range: `'${COMPARADOR_HOJA}'!A2:L` })).data
       .values ?? [];
-  if (!datos.length) return { ok: false, error: "El comparador está vacío. Actualizá la moneda primero." };
+  if (!datos.length) {
+    return {
+      ok: false,
+      aplicados: 0,
+      error: "El comparador está vacío. Actualizá la moneda primero.",
+    };
+  }
+
+  // Validar todo antes de tocar Supabase. De esta forma una fila incompleta no
+  // deja una tanda aplicada a medias por un problema que ya estaba en la Sheet.
+  const ganadores = new Map<string, number>();
+  const erroresEntrada: string[] = [];
+  for (let i = 0; i < datos.length; i++) {
+    const fila = datos[i];
+    const comprar = String(fila[10] ?? "");
+    if (!comprar.includes("COMPRAR")) continue;
+
+    const id = String(fila[11] ?? "").trim();
+    const precio = typeof fila[8] === "number" ? fila[8] : aNumero(String(fila[8] ?? ""));
+    if (!id) {
+      erroresEntrada.push(`Fila ${i + 2}: la opción ganadora no tiene ID.`);
+      continue;
+    }
+    if (precio == null || !Number.isFinite(precio) || precio <= 0) {
+      erroresEntrada.push(`Fila ${i + 2}: el precio ganador de ${id} no es válido.`);
+      continue;
+    }
+    const anterior = ganadores.get(id);
+    if (anterior != null && anterior !== precio) {
+      erroresEntrada.push(`El producto ${id} tiene más de un precio ganador distinto.`);
+      continue;
+    }
+    ganadores.set(id, precio);
+  }
+
+  if (erroresEntrada.length > 0) {
+    return {
+      ok: false,
+      aplicados: 0,
+      candidatos: ganadores.size,
+      fallidos: erroresEntrada.length,
+      errores: erroresEntrada,
+      error: `No se aplicó ningún precio: hay ${erroresEntrada.length} fila(s) inválida(s) en el comparador. ${erroresEntrada[0]}`,
+    };
+  }
+  if (ganadores.size === 0) {
+    return {
+      ok: false,
+      aplicados: 0,
+      candidatos: 0,
+      error: "El comparador no tiene ninguna tienda ganadora para aplicar.",
+    };
+  }
 
   const supabase = supabaseAdmin();
   let aplicados = 0;
-  for (const f of datos) {
-    const comprar = String(f[10] ?? "");
-    const precio = Number(f[8]);
-    const id = String(f[11] ?? "");
-    if (comprar.includes("COMPRAR") && id && precio > 0) {
-      const { error } = await supabase.from("perfumes").update({ precio_regular: precio }).eq("id", id);
-      if (!error) aplicados++;
+  const errores: string[] = [];
+  for (const [id, precio] of ganadores) {
+    const { data, error } = await supabase
+      .from("perfumes")
+      .update({ precio_regular: precio })
+      .eq("id", id)
+      .select("id");
+    if (error) {
+      errores.push(`${id}: ${error.message}`);
+      continue;
     }
+    if (!data || data.length !== 1) {
+      errores.push(`${id}: no se encontró una única fila para actualizar.`);
+      continue;
+    }
+    aplicados++;
   }
-  return { ok: true, aplicados };
+
+  if (errores.length > 0) {
+    return {
+      ok: false,
+      aplicados,
+      candidatos: ganadores.size,
+      fallidos: errores.length,
+      errores,
+      error: `Actualización parcial: ${aplicados} precio(s) aplicado(s) y ${errores.length} fallido(s). ${errores[0]}`,
+    };
+  }
+  return { ok: true, aplicados, candidatos: ganadores.size, fallidos: 0 };
 }

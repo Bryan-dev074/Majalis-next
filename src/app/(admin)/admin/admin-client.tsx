@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, useCallback } from "react";
 import { FotoProducto } from "@/components/ui/foto-producto";
 import {
   Lock, Eye, EyeOff, LogOut, Plus, Minus, Pencil, Trash2,
@@ -127,8 +127,11 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
   const [cupones, setCupones] = useState<Cupon[]>(datos.cupones);
   const [top5, setTop5] = useState(datos.top5);
   const [modalPerfume, setModalPerfume] = useState<PerfumeInput | null>(null);
-  // Id del perfume cuyo stock se está mutando (para spinner en +/-)
-  const [stockPending, setStockPending] = useState<string | null>(null);
+  // IDs cuyo stock se está mutando (para bloquear doble clic sin impedir que
+  // se ajuste otro producto independiente).
+  const [stockPending, setStockPending] = useState<ReadonlySet<string>>(() => new Set());
+  const mutacionesPendientesRef = useRef(new Set<string>());
+  const recargaErrorRef = useRef<number | null>(null);
 
   // Tema claro / oscuro persistido
   const [dark, setDark] = useState(() => {
@@ -145,6 +148,29 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
     setTimeout(() => setToast(null), 3200);
   };
 
+  const mensajeExcepcion = (error: unknown, fallback: string) =>
+    error instanceof Error && error.message ? error.message : fallback;
+
+  // Si una mutación optimista falla, la única fuente autoritativa es el
+  // servidor. Mostramos el motivo y recargamos después de dar tiempo a leerlo;
+  // así nunca queda un toggle/contador visualmente distinto de Supabase.
+  const fallarYRecargar = (mensaje: string) => {
+    toast_("error", `${mensaje} Recargando el estado real…`);
+    if (recargaErrorRef.current == null) {
+      recargaErrorRef.current = window.setTimeout(() => window.location.reload(), 1800);
+    }
+  };
+
+  const iniciarMutacion = (clave: string): boolean => {
+    if (mutacionesPendientesRef.current.has(clave)) return false;
+    mutacionesPendientesRef.current.add(clave);
+    return true;
+  };
+
+  const terminarMutacion = (clave: string) => {
+    mutacionesPendientesRef.current.delete(clave);
+  };
+
   // Segmentar perfumes
   const stock = perfumes.filter((p) => !p.es_demo);
   const demos = perfumes.filter((p) => p.es_demo);
@@ -159,7 +185,9 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
 
   // ─── Handlers comunes ───
   const onStock = (id: string, delta: number) => {
-    setStockPending(id);
+    const clave = `stock:${id}`;
+    if (!iniciarMutacion(clave)) return;
+    setStockPending((prev) => new Set(prev).add(id));
     // Mutación optimista: el número cambia al instante en pantalla
     setPerfumes((prev) =>
       prev.map((p) => p.id === id
@@ -168,26 +196,45 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
       )
     );
     startTransition(async () => {
-      const res = await ajustarStockAction(id, delta);
-      setStockPending(null);
-      if (!res.ok) {
-        // Revertir si falla
-        setPerfumes((prev) =>
-          prev.map((p) => p.id === id
-            ? { ...p, stock_disponible: Math.max(0, p.stock_disponible - delta) }
-            : p
-          )
-        );
-        toast_("error", res.error ?? "Error al ajustar stock");
+      try {
+        const res = await ajustarStockAction(id, delta);
+        if (!res.ok) {
+          fallarYRecargar(res.error ?? "Error al ajustar stock.");
+          return;
+        }
+        if (res.stock != null) {
+          // La respuesta del CAS manda: corrige cualquier diferencia entre el
+          // snapshot del panel y el valor que realmente tenía Supabase.
+          setPerfumes((prev) =>
+            prev.map((p) => p.id === id ? { ...p, stock_disponible: res.stock! } : p)
+          );
+        }
+      } catch (error) {
+        fallarYRecargar(mensajeExcepcion(error, "No se pudo ajustar el stock."));
+      } finally {
+        terminarMutacion(clave);
+        setStockPending((prev) => {
+          const siguiente = new Set(prev);
+          siguiente.delete(id);
+          return siguiente;
+        });
       }
     });
   };
 
   const onToggle = (id: string, campo: "activo" | "destacado", valor: boolean) => {
+    const clave = `perfume:${id}:${campo}`;
+    if (!iniciarMutacion(clave)) return;
     setPerfumes((prev) => prev.map((p) => p.id === id ? { ...p, [campo]: valor } : p));
     startTransition(async () => {
-      const res = await togglePerfumeAction(id, campo, valor);
-      if (!res.ok) toast_("error", res.error ?? "Error");
+      try {
+        const res = await togglePerfumeAction(id, campo, valor);
+        if (!res.ok) fallarYRecargar(res.error ?? "No se pudo actualizar el producto.");
+      } catch (error) {
+        fallarYRecargar(mensajeExcepcion(error, "No se pudo actualizar el producto."));
+      } finally {
+        terminarMutacion(clave);
+      }
     });
   };
 
@@ -195,21 +242,40 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
     if (!confirm(`¿Eliminar "${p.nombre}"? Esta acción NO se puede deshacer.`)) return;
     setPerfumes((prev) => prev.filter((x) => x.id !== p.id));
     startTransition(async () => {
-      const res = await eliminarPerfumeAction(p.id);
-      if (res.ok) toast_("ok", "Perfume eliminado.");
-      else toast_("error", res.error ?? "Error");
+      try {
+        const res = await eliminarPerfumeAction(p.id);
+        if (res.ok) toast_("ok", "Perfume eliminado.");
+        else {
+          // Si Supabase sí borró pero falló una limpieza secundaria, mantener la
+          // eliminación optimista y mostrar el estado parcial sin llamarlo éxito.
+          if (res.partial) toast_("error", res.error ?? "La limpieza quedó incompleta.");
+          else fallarYRecargar(res.error ?? "No se pudo eliminar el perfume.");
+        }
+      } catch (error) {
+        fallarYRecargar(mensajeExcepcion(error, "No se pudo eliminar el perfume."));
+      }
     });
   };
 
-  const onGuardarPerfume = (input: PerfumeInput) => {
-    startTransition(async () => {
+  const onGuardarPerfume = async (input: PerfumeInput): Promise<void> => {
+    try {
       const res = await guardarPerfumeAction(input);
       if (res.ok) {
         toast_("ok", input.id ? "Perfume actualizado." : "Perfume creado.");
         setModalPerfume(null);
         window.location.reload();
-      } else toast_("error", res.error ?? "Error al guardar");
-    });
+      } else if (res.partial) {
+        // El registro ya existe en Supabase: cerrar evita que un segundo clic
+        // duplique una creación. Dar tiempo para leer el fallo antes de recargar.
+        toast_("error", res.error ?? "El guardado quedó incompleto.");
+        setModalPerfume(null);
+        window.setTimeout(() => window.location.reload(), 3200);
+      } else {
+        toast_("error", res.error ?? "Error al guardar");
+      }
+    } catch (error) {
+      toast_("error", mensajeExcepcion(error, "No se pudo guardar el perfume."));
+    }
   };
 
   // ─── Subida de imagen del producto a Supabase Storage ───
@@ -232,9 +298,13 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
     if (!confirm(`¿Ocultar los ${activos.length} perfumes de prueba de la tienda?`)) return;
     setPerfumes((prev) => prev.map((p) => p.es_demo ? { ...p, activo: false } : p));
     startTransition(async () => {
-      const res = await ocultarTodosAction(activos.map((p) => p.id));
-      if (res.ok) toast_("ok", "Perfumes de prueba ocultos.");
-      else toast_("error", res.error ?? "Error");
+      try {
+        const res = await ocultarTodosAction(activos.map((p) => p.id));
+        if (res.ok) toast_("ok", "Perfumes de prueba ocultos.");
+        else fallarYRecargar(res.error ?? "No se pudieron ocultar los perfumes de prueba.");
+      } catch (error) {
+        fallarYRecargar(mensajeExcepcion(error, "No se pudieron ocultar los perfumes de prueba."));
+      }
     });
   };
 
@@ -243,9 +313,13 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
     if (ocultos.length === 0) { toast_("ok", "Todos los demos ya están visibles."); return; }
     setPerfumes((prev) => prev.map((p) => p.es_demo ? { ...p, activo: true } : p));
     startTransition(async () => {
-      const res = await mostrarTodosAction(ocultos.map((p) => p.id));
-      if (res.ok) toast_("ok", "Perfumes de prueba restaurados.");
-      else toast_("error", res.error ?? "Error");
+      try {
+        const res = await mostrarTodosAction(ocultos.map((p) => p.id));
+        if (res.ok) toast_("ok", "Perfumes de prueba restaurados.");
+        else fallarYRecargar(res.error ?? "No se pudieron restaurar los perfumes de prueba.");
+      } catch (error) {
+        fallarYRecargar(mensajeExcepcion(error, "No se pudieron restaurar los perfumes de prueba."));
+      }
     });
   };
 
@@ -254,34 +328,58 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
     setTop5([]);
     setPerfumes((prev) => prev.map((p) => ({ ...p, clicks_mensuales: 0 })));
     startTransition(async () => {
-      const res = await resetearClicksAction();
-      if (res.ok) toast_("ok", "Contadores reseteados.");
-      else toast_("error", res.error ?? "Error");
+      try {
+        const res = await resetearClicksAction();
+        if (res.ok) toast_("ok", "Contadores reseteados.");
+        else fallarYRecargar(res.error ?? "No se pudieron resetear los contadores.");
+      } catch (error) {
+        fallarYRecargar(mensajeExcepcion(error, "No se pudieron resetear los contadores."));
+      }
     });
   };
 
   // Cupones
-  const onGuardarCupon = (input: CuponInput) => {
-    startTransition(async () => {
+  const onGuardarCupon = async (input: CuponInput): Promise<boolean> => {
+    try {
       const res = await guardarCuponAction(input);
-      if (res.ok) { toast_("ok", "Cupón guardado."); window.location.reload(); }
-      else toast_("error", res.error ?? "Error");
-    });
+      if (res.ok) {
+        toast_("ok", "Cupón guardado.");
+        window.location.reload();
+        return true;
+      }
+      toast_("error", res.error ?? "No se pudo guardar el cupón.");
+      return false;
+    } catch (error) {
+      toast_("error", mensajeExcepcion(error, "No se pudo guardar el cupón."));
+      return false;
+    }
   };
   const onToggleCupon = (id: string, activo: boolean) => {
+    const clave = `cupon:${id}:activo`;
+    if (!iniciarMutacion(clave)) return;
     setCupones((prev) => prev.map((c) => c.id === id ? { ...c, activo } : c));
     startTransition(async () => {
-      const res = await toggleCuponAction(id, activo);
-      if (!res.ok) toast_("error", res.error ?? "Error");
+      try {
+        const res = await toggleCuponAction(id, activo);
+        if (!res.ok) fallarYRecargar(res.error ?? "No se pudo actualizar el cupón.");
+      } catch (error) {
+        fallarYRecargar(mensajeExcepcion(error, "No se pudo actualizar el cupón."));
+      } finally {
+        terminarMutacion(clave);
+      }
     });
   };
   const onEliminarCupon = (c: Cupon) => {
     if (!confirm(`¿Eliminar el cupón ${c.codigo}?`)) return;
     setCupones((prev) => prev.filter((x) => x.id !== c.id));
     startTransition(async () => {
-      const res = await eliminarCuponAction(c.id);
-      if (res.ok) toast_("ok", "Cupón eliminado.");
-      else toast_("error", res.error ?? "Error");
+      try {
+        const res = await eliminarCuponAction(c.id);
+        if (res.ok) toast_("ok", "Cupón eliminado.");
+        else fallarYRecargar(res.error ?? "No se pudo eliminar el cupón.");
+      } catch (error) {
+        fallarYRecargar(mensajeExcepcion(error, "No se pudo eliminar el cupón."));
+      }
     });
   };
 
@@ -330,11 +428,28 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
               en Vercel → Settings → Environment Variables. Mirá <code>explicacion.md</code>.
             </div>
           </div>
-        ) : (
+        ) : datos.erroresCarga.length === 0 ? (
           <div className="adm-card mb-6 flex items-center gap-3 p-4 text-sm"
             style={{ borderColor: "var(--adm-green)", background: "var(--adm-green-bg)", color: "var(--adm-green)" }}>
             <CheckCircle2 className="h-5 w-5 shrink-0" />
             <span><strong>Base de datos conectada.</strong> Cambios globales en tiempo real.</span>
+          </div>
+        ) : null}
+
+        {datos.erroresCarga.length > 0 && (
+          <div
+            className="adm-card mb-6 flex items-start gap-3 p-4 text-sm"
+            style={{ borderColor: "var(--adm-red)", background: "var(--adm-red-bg)", color: "var(--adm-red)" }}
+            role="alert"
+          >
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+            <div>
+              <strong>El panel no pudo cargar todos los datos.</strong>
+              <ul className="mt-1 list-disc space-y-0.5 pl-5">
+                {datos.erroresCarga.map((error) => <li key={error}>{error}</li>)}
+              </ul>
+              <span className="mt-1 block">Recargá antes de tomar decisiones sobre el inventario.</span>
+            </div>
           </div>
         )}
 
@@ -369,7 +484,7 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
         </div>
 
         {/* ── BANNER DE INICIALIZACIÓN (cuando la base está vacía) ── */}
-        {datos.configurado && perfumes.length === 0 && (
+        {datos.configurado && datos.erroresCarga.length === 0 && perfumes.length === 0 && (
           <InicializarVacio toast={toast_} />
         )}
 
@@ -390,8 +505,20 @@ function PanelView({ datos }: { datos: DatosAdmin }) {
               const act = stock.filter((p) => p.activo);
               if (!act.length) return;
               if (!confirm(`¿Ocultar los ${act.length} perfumes de la tienda?`)) return;
+              const clave = "stock:ocultar-todos";
+              if (!iniciarMutacion(clave)) return;
               setPerfumes((prev) => prev.map((p) => (!p.es_demo ? { ...p, activo: false } : p)));
-              startTransition(async () => { await ocultarTodosAction(act.map((p) => p.id)); });
+              startTransition(async () => {
+                try {
+                  const res = await ocultarTodosAction(act.map((p) => p.id));
+                  if (res.ok) toast_("ok", "Productos ocultos de la tienda.");
+                  else fallarYRecargar(res.error ?? "No se pudieron ocultar los productos.");
+                } catch (error) {
+                  fallarYRecargar(mensajeExcepcion(error, "No se pudieron ocultar los productos."));
+                } finally {
+                  terminarMutacion(clave);
+                }
+              });
             }}
           />
         )}
@@ -546,7 +673,7 @@ function TablaStock({
   onNuevo: () => void;
   onEditar: (p: Perfume) => void;
   onOcultarTodos: () => void;
-  stockPending?: string | null;
+  stockPending?: ReadonlySet<string>;
 }) {
   const [query, setQuery] = useState("");
   const [filtroMarca, setFiltroMarca] = useState("todas");
@@ -675,9 +802,9 @@ function TablaStock({
                             onClick={() => onStock(p.id, -1)}
                             className="adm-stock-btn adm-stock-btn-minus"
                             title="Vendido (-1)"
-                            disabled={stockPending === p.id}
+                            disabled={stockPending?.has(p.id)}
                           >
-                            {stockPending === p.id
+                            {stockPending?.has(p.id)
                               ? <span className="adm-spinner" style={{ width: "0.7em", height: "0.7em", borderWidth: "1.5px" }} />
                               : <Minus className="h-3.5 w-3.5" />}
                           </button>
@@ -686,9 +813,9 @@ function TablaStock({
                             onClick={() => onStock(p.id, +1)}
                             className="adm-stock-btn adm-stock-btn-plus"
                             title="Reponer (+1)"
-                            disabled={stockPending === p.id}
+                            disabled={stockPending?.has(p.id)}
                           >
-                            {stockPending === p.id
+                            {stockPending?.has(p.id)
                               ? <span className="adm-spinner" style={{ width: "0.7em", height: "0.7em", borderWidth: "1.5px" }} />
                               : <Plus className="h-3.5 w-3.5" />}
                           </button>
@@ -1005,7 +1132,7 @@ function CuponesView({
   cupones, onGuardar, onToggle, onEliminar,
 }: {
   cupones: Cupon[];
-  onGuardar: (c: CuponInput) => void;
+  onGuardar: (c: CuponInput) => Promise<boolean>;
   onToggle: (id: string, activo: boolean) => void;
   onEliminar: (c: Cupon) => void;
 }) {
@@ -1098,7 +1225,10 @@ function CuponesView({
         <CuponForm
           inicial={editando}
           onCancel={() => setEditando(null)}
-          onGuardar={(c) => { onGuardar(c); setEditando(null); }}
+          onGuardar={async (c) => {
+            const guardado = await onGuardar(c);
+            if (guardado) setEditando(null);
+          }}
         />
       )}
     </div>
@@ -1113,7 +1243,7 @@ function PerfumeForm({
 }: {
   inicial: PerfumeInput;
   onCancel: () => void;
-  onGuardar: (p: PerfumeInput) => void;
+  onGuardar: (p: PerfumeInput) => Promise<void>;
   /**
    * Sube un archivo de imagen y devuelve la URL pública.
    * ⚠️ Implementado por PanelView. Hoy es un stub local (objectURL) que deja
@@ -1424,17 +1554,31 @@ function CuponForm({
 }: {
   inicial: CuponInput;
   onCancel: () => void;
-  onGuardar: (c: CuponInput) => void;
+  onGuardar: (c: CuponInput) => Promise<void>;
 }) {
   const [form, setForm] = useState<CuponInput>(inicial);
+  const [pending, startTransition] = useTransition();
   const set = <K extends keyof CuponInput>(k: K, v: CuponInput[K]) =>
     setForm((prev) => ({ ...prev, [k]: v }));
+  const fechaExpiracionLocal = (() => {
+    if (!form.fecha_expiracion) return "";
+    const fecha = new Date(form.fecha_expiracion);
+    if (!Number.isFinite(fecha.getTime())) return "";
+    // datetime-local no acepta zona horaria: mostrar el instante en la zona del
+    // navegador y convertir nuevamente a ISO al guardar.
+    return new Date(fecha.getTime() - fecha.getTimezoneOffset() * 60_000)
+      .toISOString()
+      .slice(0, 16);
+  })();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.6)" }}>
       <form
-        onSubmit={(e) => { e.preventDefault(); onGuardar(form); }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          startTransition(async () => onGuardar(form));
+        }}
         className="w-full max-w-md rounded-xl p-6 shadow-2xl"
         style={{ background: "var(--adm-surface)" }}
       >
@@ -1470,6 +1614,20 @@ function CuponForm({
                 className="adm-input mt-1" />
             </div>
           </div>
+          <div>
+            <label className="adm-label">Fecha de expiración (opcional)</label>
+            <span className="adm-help">Desde ese momento el código deja de aceptar pedidos</span>
+            <input
+              type="datetime-local"
+              value={fechaExpiracionLocal}
+              onChange={(e) => {
+                if (!e.target.value) return set("fecha_expiracion", null);
+                const fecha = new Date(e.target.value);
+                set("fecha_expiracion", Number.isFinite(fecha.getTime()) ? fecha.toISOString() : null);
+              }}
+              className="adm-input mt-1"
+            />
+          </div>
           <CheckField
             label="Activo"
             help="Si está marcado, los clientes pueden usarlo"
@@ -1479,7 +1637,9 @@ function CuponForm({
         </div>
         <div className="mt-6 flex justify-end gap-3">
           <button type="button" onClick={onCancel} className="adm-btn adm-btn-ghost">Cancelar</button>
-          <button type="submit" className="adm-btn adm-btn-primary">Guardar</button>
+          <button type="submit" disabled={pending} className="adm-btn adm-btn-primary">
+            {pending ? "Guardando…" : "Guardar"}
+          </button>
         </div>
       </form>
     </div>
@@ -1596,6 +1756,13 @@ function perfumeVacio(): PerfumeInput {
 function toInput(p: Perfume): PerfumeInput {
   return {
     id: p.id,
+    valores_originales: {
+      precio_regular: p.precio_regular,
+      precio_descuento: p.precio_descuento,
+      en_oferta: p.en_oferta,
+      stock_disponible: p.stock_disponible,
+      activo: p.activo,
+    },
     nombre: p.nombre,
     marca: p.marca,
     precio_regular: p.precio_regular,
@@ -1606,11 +1773,13 @@ function toInput(p: Perfume): PerfumeInput {
     activo: p.activo,
     url_imagen: p.url_imagen,
     descripcion: p.descripcion,
-    notas_olfativas: p.notas_olfativas,
+    notas_olfativas: p.notas_olfativas ?? { salida: [], corazon: [], fondo: [] },
     categoria: p.categoria,
     tiendas: p.tiendas ?? [],
-    sku: p.sku,
+    sku: p.sku ?? null,
     destacado: p.destacado,
-    es_dropi: false,
+    // El formulario no permite cambiar el origen. Conservarlo evita que editar
+    // nombre/foto/precio convierta silenciosamente un producto externo en local.
+    es_dropi: p.es_dropi ?? false,
   };
 }

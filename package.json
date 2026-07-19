@@ -2,7 +2,11 @@
   "name": "majalis-next",
   "version": "1.0.0",
   "private": true,
-  "description": "Sultan Oud Elixir — E-commerce de fragancias árabes de ultra-lujo para Paraguay",
+  "packageManager": "npm@10.9.3",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "description": "Majalis — E-commerce de fragancias premium para Paraguay",
   "//browserslist": "Navegadores modernos: evita que SWC transpile Array.at/flat/flatMap, Object.fromEntries/hasOwn, String.trimStart/End (PageSpeed: -12 KiB de polyfills que nadie necesita hoy).",
   "browserslist": [
     "chrome >= 91",
@@ -13,33 +17,38 @@
     "not dead"
   ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
     "start": "next start",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit",
+    "lint": "npm run typecheck",
+    "typecheck": "next typegen && tsc --noEmit",
     "verify": "npm run typecheck && npm run build"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
-    "googleapis": "^144.0.0",
+    "googleapis": "173.0.0",
     "gsap": "^3.12.5",
     "lucide-react": "^0.451.0",
-    "next": "14.2.15",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "next": "16.2.10",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
     "three": "^0.169.0"
   },
   "devDependencies": {
     "@types/node": "^22.7.4",
-    "@types/react": "^18.3.11",
-    "@types/react-dom": "^18.3.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
     "@types/three": "^0.169.0",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.13",
     "typescript": "^5.6.2"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.15"
+    }
   }
 }

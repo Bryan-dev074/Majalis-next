@@ -25,8 +25,8 @@ import type { sheets_v4 } from "googleapis";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const RANGO_DATOS = "A:D"; // id, código, nombre, marca de la planilla
-const RANGO_APPEND = "A1"; // ancla para el append
+const RANGO_DATOS = "'Hoja 1'!A:D"; // id, código, nombre, marca de la planilla
+const RANGO_APPEND = "'Hoja 1'!A1"; // ancla para el append
 
 // G (Cotización) referencia automáticamente el dólar de la pestaña "Cotizaciones"
 // (que actualiza solo el Apps Script). Así cada producto nuevo ya queda enganchado.
@@ -72,16 +72,25 @@ async function analizar(): Promise<Analisis> {
 
   // 2) Supabase: solo stock local
   const supabase = supabaseAdmin();
-  const { data, error } = await supabase
-    .from("perfumes")
-    .select("id, sku, nombre, marca")
-    .eq("es_dropi", false)
-    .eq("es_demo", false)
-    .order("created_at", { ascending: true });
-  if (error) throw new Error(error.message);
-  const productos = (data ?? []).filter(
-    (p) => !((p.sku ?? "").startsWith("DROPI-"))
-  ) as ProductoLocal[];
+  // PostgREST limita por defecto a 1.000 filas sin devolver error. Paginar con
+  // orden estable impide que el verificador declare sincronizado un subconjunto.
+  const productos: ProductoLocal[] = [];
+  const TAM_PAGINA = 1000;
+  for (let desde = 0; ; desde += TAM_PAGINA) {
+    const { data, error } = await supabase
+      .from("perfumes")
+      .select("id, sku, nombre, marca")
+      .eq("es_dropi", false)
+      .eq("es_demo", false)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(desde, desde + TAM_PAGINA - 1);
+    if (error) throw new Error(`No se pudo leer todo el stock local: ${error.message}`);
+
+    const pagina = (data ?? []) as ProductoLocal[];
+    productos.push(...pagina.filter((p) => !((p.sku ?? "").startsWith("DROPI-"))));
+    if (pagina.length < TAM_PAGINA) break;
+  }
 
   // 3) Clasificar
   const faltantes: ProductoLocal[] = [];
@@ -166,13 +175,21 @@ export async function POST() {
           formulaPrecioVenta(fila), formulaGanancia(fila),
         ];
       });
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: GOOGLE_SHEET_ID,
-        range: RANGO_APPEND,
-        valueInputOption: "USER_ENTERED",
-        insertDataOption: "INSERT_ROWS",
-        requestBody: { values: filas },
-      });
+      try {
+        await sheets.spreadsheets.values.append({
+          spreadsheetId: GOOGLE_SHEET_ID,
+          range: RANGO_APPEND,
+          valueInputOption: "USER_ENTERED",
+          insertDataOption: "INSERT_ROWS",
+          requestBody: { values: filas },
+        });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Error desconocido de Google Sheets";
+        return NextResponse.json(
+          { ok: false, sincronizado: false, totalLocal, agregados: 0, actualizados: 0, error: `No se agregaron los productos a la planilla: ${msg}` },
+          { status: 500 }
+        );
+      }
       agregados = filas.length;
     }
 
@@ -180,17 +197,72 @@ export async function POST() {
     //    RAW para que nombres/códigos nunca se interpreten como fórmula.
     let actualizados = 0;
     if (desactualizados.length > 0) {
-      await sheets.spreadsheets.values.batchUpdate({
-        spreadsheetId: GOOGLE_SHEET_ID,
-        requestBody: {
-          valueInputOption: "RAW",
-          data: desactualizados.map((p) => ({
-            range: `B${p.fila}:D${p.fila}`,
-            values: [[p.sku ?? "", p.nombre ?? "", p.marca ?? ""]],
-          })),
-        },
-      });
+      try {
+        await sheets.spreadsheets.values.batchUpdate({
+          spreadsheetId: GOOGLE_SHEET_ID,
+          requestBody: {
+            valueInputOption: "RAW",
+            data: desactualizados.map((p) => ({
+              range: `'Hoja 1'!B${p.fila}:D${p.fila}`,
+              values: [[p.sku ?? "", p.nombre ?? "", p.marca ?? ""]],
+            })),
+          },
+        });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Error desconocido de Google Sheets";
+        return NextResponse.json(
+          {
+            ok: false,
+            partial: agregados > 0,
+            sincronizado: false,
+            totalLocal,
+            agregados,
+            actualizados: 0,
+            error: agregados > 0
+              ? `Sincronización parcial: se agregaron ${agregados} producto(s), pero no se corrigieron ${desactualizados.length}: ${msg}`
+              : `No se corrigieron los productos desactualizados: ${msg}`,
+          },
+          { status: 500 }
+        );
+      }
       actualizados = desactualizados.length;
+    }
+
+    // Confirmar el estado real después de escribir. No asumir que una respuesta
+    // aceptada por Google equivale a que todo el inventario quedó sincronizado.
+    let pendientes;
+    try {
+      pendientes = await analizar();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Error desconocido al verificar";
+      return NextResponse.json(
+        {
+          ok: false,
+          partial: agregados + actualizados > 0,
+          sincronizado: false,
+          totalLocal,
+          agregados,
+          actualizados,
+          error: `Se escribieron cambios, pero no se pudo verificar el resultado final: ${msg}`,
+        },
+        { status: 500 }
+      );
+    }
+    if (pendientes.faltantes.length > 0 || pendientes.desactualizados.length > 0) {
+      return NextResponse.json(
+        {
+          ok: false,
+          partial: agregados + actualizados > 0,
+          sincronizado: false,
+          totalLocal: pendientes.totalLocal,
+          agregados,
+          actualizados,
+          faltantes: pendientes.faltantes.length,
+          desactualizados: pendientes.desactualizados.length,
+          error: `La verificación final encontró ${pendientes.faltantes.length} producto(s) sin enviar y ${pendientes.desactualizados.length} desactualizado(s).`,
+        },
+        { status: 409 }
+      );
     }
 
     return NextResponse.json({

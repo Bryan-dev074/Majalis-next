@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "es_PY",
   },
-  metadataBase: new URL("https://sulta-oud-elixir.vercel.app"),
+  metadataBase: new URL("https://www.majalis.com.py"),
 };
 
 /**
@@ -68,8 +68,12 @@ export default function RootLayout({
     >
       <body className="font-sans antialiased">
         {children}
-        <Analytics />
-        <SpeedInsights />
+        {process.env.VERCEL === "1" && (
+          <>
+            <Analytics />
+            <SpeedInsights />
+          </>
+        )}
       </body>
     </html>
   );

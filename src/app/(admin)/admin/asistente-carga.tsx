@@ -36,6 +36,7 @@ export default function AsistenteCarga({
 
   const [marca, setMarca] = useState("");
   const [ml, setMl] = useState<number>(100);
+  const [precioRegular, setPrecioRegular] = useState<number>(0);
   const [categorias, setCategorias] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [nSalida, setNSalida] = useState("");
@@ -107,10 +108,14 @@ export default function AsistenteCarga({
   }, []);
 
   const guardar = async () => {
+    if (!Number.isSafeInteger(precioRegular) || precioRegular < 1) {
+      toast?.("error", "Ingresá un precio regular válido antes de guardar.");
+      return;
+    }
     setGuardando(true);
     const input: PerfumeInput = {
       nombre: nombre.trim(), marca: marca.trim(),
-      precio_regular: 0, precio_descuento: null, en_oferta: false,
+      precio_regular: precioRegular, precio_descuento: null, en_oferta: false,
       stock_disponible: 0, volumen_ml: Number(ml) || 100, activo: true,
       url_imagen: urlImagen, descripcion: descripcion.trim(),
       notas_olfativas: { salida: desdeLista(nSalida), corazon: desdeLista(nCorazon), fondo: desdeLista(nFondo) },
@@ -122,7 +127,7 @@ export default function AsistenteCarga({
       if (res.ok) {
         toast?.("ok", `Producto "${nombre}" guardado en tu stock.`);
         setNombre(""); setDup({ candidatos: [], chequeado: false }); setHechoIA(false); setError(null);
-        setMarca(""); setMl(100); setCategorias(""); setDescripcion(""); setNSalida(""); setNCorazon(""); setNFondo("");
+        setMarca(""); setMl(100); setPrecioRegular(0); setCategorias(""); setDescripcion(""); setNSalida(""); setNCorazon(""); setNFondo("");
         setUrlImagen("");
       } else {
         toast?.("error", res.error ?? "Error al guardar.");
@@ -226,6 +231,18 @@ export default function AsistenteCarga({
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div><label className="adm-label">Marca</label><input value={marca} onChange={(e) => setMarca(e.target.value)} className="adm-input mt-1" /></div>
               <div><label className="adm-label">Volumen (ml)</label><input type="number" value={ml} onChange={(e) => setMl(Number(e.target.value))} className="adm-input mt-1" /></div>
+              <div>
+                <label className="adm-label">Precio regular (Gs.) *</label>
+                <input
+                  type="number"
+                  min={1}
+                  step={1000}
+                  value={precioRegular || ""}
+                  onChange={(e) => setPrecioRegular(e.target.value === "" ? 0 : Number(e.target.value))}
+                  className="adm-input mt-1"
+                  placeholder="Ej: 250000"
+                />
+              </div>
               <div className="md:col-span-2"><label className="adm-label">Categorías / familias (separadas por coma)</label><input value={categorias} onChange={(e) => setCategorias(e.target.value)} className="adm-input mt-1" /></div>
               <div className="md:col-span-2"><label className="adm-label">Descripción</label><textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} className="adm-input mt-1" rows={2} /></div>
               <div><label className="adm-label">Notas de salida</label><input value={nSalida} onChange={(e) => setNSalida(e.target.value)} className="adm-input mt-1" /></div>
@@ -248,7 +265,11 @@ export default function AsistenteCarga({
       {/* Guardar */}
       {hechoIA && (
         <div className="flex justify-end">
-          <button onClick={guardar} disabled={guardando} className="adm-btn adm-btn-gold">
+          <button
+            onClick={guardar}
+            disabled={guardando || !Number.isSafeInteger(precioRegular) || precioRegular < 1}
+            className="adm-btn adm-btn-gold"
+          >
             {guardando ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando…</> : <><Save className="h-4 w-4" /> Confirmar y Guardar</>}
           </button>
         </div>

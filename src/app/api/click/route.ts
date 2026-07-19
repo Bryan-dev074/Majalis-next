@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { leerJsonLimitado, validarPostMismoOrigen } from "@/lib/request-security";
 import { supabaseAdmin, adminConfigurado } from "@/lib/supabase-admin";
 
 /**
@@ -13,15 +14,28 @@ import { supabaseAdmin, adminConfigurado } from "@/lib/supabase-admin";
  */
 export const dynamic = "force-dynamic";
 
+const clicksRecientes = new Map<string, number>();
+const VENTANA_CLICK_MS = 60_000;
+
 export async function POST(req: NextRequest) {
-  let id: string;
-  try {
-    const body = await req.json();
-    id = String(body.id ?? "");
-  } catch {
+  const errorSolicitud = validarPostMismoOrigen(req);
+  if (errorSolicitud) return NextResponse.json({ ok: false }, { status: 403 });
+  const lectura = await leerJsonLimitado<{ id?: unknown }>(req, 2_048);
+  if (!lectura.ok) return NextResponse.json({ ok: false }, { status: lectura.status });
+  if (!lectura.valor || typeof lectura.valor !== "object" || Array.isArray(lectura.valor)) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
-  if (!id) return NextResponse.json({ ok: false }, { status: 400 });
+  const id = String(lectura.valor.id ?? "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+    return NextResponse.json({ ok: false }, { status: 400 });
+  }
+
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+  const clave = `${ip}:${id}`;
+  const ahora = Date.now();
+  if (ahora - (clicksRecientes.get(clave) ?? 0) < VENTANA_CLICK_MS) {
+    return NextResponse.json({ ok: true, repetido: true });
+  }
 
   // Si no hay service role, respondemos ok sin tocar la base (modo graceful).
   if (!adminConfigurado()) {
@@ -30,24 +44,16 @@ export async function POST(req: NextRequest) {
 
   try {
     const supabase = supabaseAdmin();
-    // Lectura-escritura atómica vía RPC-free: leemos y actualizamos.
-    const { data, error: errRead } = await supabase
-      .from("perfumes")
-      .select("clicks_mensuales")
-      .eq("id", id)
-      .single();
-
-    if (errRead || !data) {
-      return NextResponse.json({ ok: false }, { status: 404 });
-    }
-
-    const nuevo = Number(data.clicks_mensuales ?? 0) + 1;
-    const { error } = await supabase
-      .from("perfumes")
-      .update({ clicks_mensuales: nuevo })
-      .eq("id", id);
-
+    // Una sola sentencia UPDATE en Postgres: dos aperturas simultáneas ya no
+    // leen el mismo valor ni se pisan entre sí.
+    const { data, error } = await supabase.rpc("incrementar_click_perfume", {
+      p_id: id,
+    });
     if (error) return NextResponse.json({ ok: false }, { status: 500 });
+    if (data == null) return NextResponse.json({ ok: false }, { status: 404 });
+    const nuevo = Number(data);
+    if (clicksRecientes.size >= 10_000) clicksRecientes.clear();
+    clicksRecientes.set(clave, ahora);
     return NextResponse.json({ ok: true, clicks: nuevo });
   } catch {
     return NextResponse.json({ ok: false }, { status: 500 });

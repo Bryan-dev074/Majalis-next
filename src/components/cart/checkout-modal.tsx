@@ -4,13 +4,12 @@ import { useEffect, useState } from "react";
 import { X, MessageCircle, ShoppingBag, Tag, Check, Truck } from "lucide-react";
 import { useCart } from "@/hooks/use-cart";
 import { formatGs } from "@/lib/format";
-import { buildWhatsAppCheckoutUrl } from "@/lib/format";
 import {
   DeliveryProfile,
 } from "@/components/cart/delivery-profile";
 import { useDeliveryProfile } from "@/hooks/use-delivery-profile";
 import { useCerrarConAtras } from "@/hooks/use-cerrar-con-atras";
-import { WHATSAPP_NUMBER, PROMO_ENVIO } from "@/data/site-config";
+import { PROMO_ENVIO } from "@/data/site-config";
 
 interface CheckoutModalProps {
   abierto: boolean;
@@ -26,13 +25,28 @@ interface CheckoutModalProps {
  * - Avisa al botón flotante de WhatsApp para que se oculte mientras esté abierto.
  */
 export function CheckoutModal({ abierto, onClose }: CheckoutModalProps) {
-  const { items, subtotal, descuento, total, aplicarCodigo, quitarCupon, cuponAplicado, estadoCupon, vaciar } =
-    useCart();
+  const {
+    items,
+    subtotal,
+    descuento,
+    total,
+    aplicarCodigo,
+    quitarCupon,
+    cuponAplicado,
+    estadoCupon,
+    vaciar,
+    catalogoListoParaComprar,
+    verificandoCatalogo,
+    recargarCatalogo,
+  } = useCart();
   const { perfil: delivery } = useDeliveryProfile();
 
   const [codigo, setCodigo] = useState("");
   const [confirmado, setConfirmado] = useState(false);
   const [totalEnviado, setTotalEnviado] = useState(0);
+  const [validandoCupon, setValidandoCupon] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [errorCheckout, setErrorCheckout] = useState("");
 
   // Avisar al botón de WhatsApp cuando el modal esté abierto
   useEffect(() => {
@@ -52,25 +66,66 @@ export function CheckoutModal({ abierto, onClose }: CheckoutModalProps) {
 
   if (!abierto) return null;
 
-  const aplicar = () => {
+  const aplicar = async () => {
     if (!codigo.trim()) return;
-    aplicarCodigo(codigo);
+    setValidandoCupon(true);
+    await aplicarCodigo(codigo);
+    setValidandoCupon(false);
   };
 
-  const enviarWhatsApp = () => {
-    const url = buildWhatsAppCheckoutUrl(items, WHATSAPP_NUMBER, {
-      nombre: delivery.nombre,
-      ciudad: delivery.ciudad,
-      direccion: delivery.direccion,
-      whatsapp: delivery.whatsapp,
-    });
-    // Guardamos el total antes de vaciar para mostrarlo en la confirmación
-    setTotalEnviado(total);
-    window.open(url, "_blank", "noopener,noreferrer");
-    // Vaciamos el carrito automáticamente tras el pedido
-    vaciar();
-    setCodigo("");
-    setConfirmado(true);
+  const enviarWhatsApp = async () => {
+    if (!catalogoListoParaComprar || items.length === 0 || enviando) return;
+    setEnviando(true);
+    setErrorCheckout("");
+
+    // Abrimos la pestaña dentro del gesto del usuario para que el navegador no
+    // la bloquee mientras esperamos la validación server-side sin caché.
+    const popup = window.open("about:blank", "_blank");
+    if (popup) popup.opener = null;
+    try {
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          items: items.map((item) => ({ id: item.perfume.id, cantidad: item.cantidad })),
+          codigoCupon: cuponAplicado?.codigo ?? null,
+          totalEsperado: total,
+          delivery: {
+            nombre: delivery.nombre,
+            ciudad: delivery.ciudad,
+            direccion: delivery.direccion,
+            whatsapp: delivery.whatsapp,
+          },
+        }),
+      });
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        url?: string;
+        total?: number;
+        mensaje?: string;
+        precioCambio?: boolean;
+      };
+      if (!response.ok || !payload.ok || !payload.url?.startsWith("https://wa.me/")) {
+        popup?.close();
+        setErrorCheckout(payload.mensaje ?? "No pudimos verificar el pedido. Intentá de nuevo.");
+        if (response.status === 409 || payload.precioCambio) recargarCatalogo();
+        return;
+      }
+
+      const totalConfirmado = Number(payload.total);
+      setTotalEnviado(Number.isFinite(totalConfirmado) ? totalConfirmado : total);
+      if (popup) popup.location.replace(payload.url);
+      else window.location.assign(payload.url);
+      vaciar();
+      setCodigo("");
+      setConfirmado(true);
+    } catch {
+      popup?.close();
+      setErrorCheckout("No pudimos verificar el pedido ahora. Revisá tu conexión e intentá de nuevo.");
+    } finally {
+      setEnviando(false);
+    }
   };
 
   const continuarComprando = () => {
@@ -178,9 +233,10 @@ export function CheckoutModal({ abierto, onClose }: CheckoutModalProps) {
                   </div>
                   <button
                     onClick={aplicar}
+                    disabled={validandoCupon}
                     className="btn-ghost-luxe !px-4 !py-2 !text-[0.65rem]"
                   >
-                    Aplicar
+                    {validandoCupon ? "Validando…" : "Aplicar"}
                   </button>
                 </div>
                 {estadoCupon && (
@@ -250,12 +306,33 @@ export function CheckoutModal({ abierto, onClose }: CheckoutModalProps) {
               )}
 
               {/* CTA principal — WhatsApp */}
+              {!catalogoListoParaComprar && (
+                <div className="mt-4 rounded-sm border border-amber-400/25 bg-amber-400/[0.06] p-3 text-center">
+                  <p className="text-xs leading-relaxed text-amber-100/80">
+                    Falta confirmar que estos precios y el stock siguen vigentes.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={recargarCatalogo}
+                    disabled={verificandoCatalogo}
+                    className="mt-2 text-[0.62rem] uppercase tracking-regal text-gold-champagne underline underline-offset-4 disabled:opacity-50"
+                  >
+                    {verificandoCatalogo ? "Verificando…" : "Verificar precio y stock"}
+                  </button>
+                </div>
+              )}
+              {errorCheckout && (
+                <p className="mt-4 rounded-sm border border-red-400/25 bg-red-400/[0.06] p-3 text-center text-xs leading-relaxed text-red-100/80">
+                  {errorCheckout}
+                </p>
+              )}
               <button
                 onClick={enviarWhatsApp}
-                className="wa-checkout-btn mt-3 flex w-full items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-[#1faa52] to-[#25D366] px-5 py-4 text-sm font-bold uppercase tracking-wide text-white shadow-[0_10px_30px_-10px_rgba(37,211,102,0.7)] sm:text-[0.78rem]"
+                disabled={!catalogoListoParaComprar || items.length === 0 || enviando}
+                className="wa-checkout-btn mt-3 flex w-full items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-[#1faa52] to-[#25D366] px-5 py-4 text-sm font-bold uppercase tracking-wide text-white shadow-[0_10px_30px_-10px_rgba(37,211,102,0.7)] disabled:cursor-not-allowed disabled:opacity-45 sm:text-[0.78rem]"
               >
                 <MessageCircle className="h-5 w-5 shrink-0" strokeWidth={2.2} />
-                <span className="leading-tight">Enviar pedido por WhatsApp</span>
+                <span className="leading-tight">{enviando ? "Verificando pedido…" : "Enviar pedido por WhatsApp"}</span>
               </button>
 
               <p className="mt-4 text-center text-[0.6rem] uppercase tracking-regal text-ivory/50">

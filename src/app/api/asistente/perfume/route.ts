@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sesionValida } from "@/lib/supabase-admin";
 import { cacheGet, cacheSet, claveCache, verificarRitmo, fetchConReintento } from "@/lib/asistente-cache";
+import { leerJsonLimitado, validarPostMismoOrigen } from "@/lib/request-security";
 
 /**
  * POST /api/asistente/perfume
@@ -39,19 +40,21 @@ export async function POST(req: NextRequest) {
   if (!(await sesionValida())) {
     return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
   }
+  const errorSolicitud = validarPostMismoOrigen(req);
+  if (errorSolicitud) return NextResponse.json({ ok: false, error: errorSolicitud }, { status: 403 });
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ ok: false, error: "Falta GEMINI_API_KEY en el servidor." }, { status: 500 });
   }
 
-  let nombre = "";
-  try {
-    nombre = String((await req.json()).nombre ?? "").trim();
-  } catch {
-    return NextResponse.json({ ok: false, error: "Body inválido." }, { status: 400 });
-  }
+  const lectura = await leerJsonLimitado<{ nombre?: unknown }>(req, 2_048);
+  if (!lectura.ok) return NextResponse.json({ ok: false, error: lectura.mensaje }, { status: lectura.status });
+  const nombre = String(lectura.valor.nombre ?? "").trim();
   if (nombre.length < 3) {
     return NextResponse.json({ ok: false, error: "Nombre demasiado corto." }, { status: 400 });
+  }
+  if (nombre.length > 200) {
+    return NextResponse.json({ ok: false, error: "Nombre demasiado largo." }, { status: 400 });
   }
 
   // 1) Caché (misma consulta → sin gastar créditos).

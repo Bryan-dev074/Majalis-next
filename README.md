@@ -1,51 +1,76 @@
-# Sultan Oud Elixir — Next.js
+# Majalis
 
-E-commerce de fragancias árabes de ultra-lujo para Paraguay.
-Importación directa de Dubai · Pago al recibir · Pedidos por WhatsApp.
+Tienda online de perfumes para Paraguay: catálogo, búsqueda, ficha de producto,
+carrito y cierre de pedido por WhatsApp. Producción: [majalis.com.py](https://www.majalis.com.py/).
+
+## Repositorios y responsabilidades
+
+- **Este repositorio (`Majalis-next`)**: experiencia pública de compra y panel
+  administrativo propio de la tienda.
+- **[`Dashboard-Comparacde`](https://github.com/Bryan-dev074/Dashboard-Comparacde)**:
+  catálogo maestro, comparación de tiendas, scraper, cálculo de costos/precios,
+  CRM de clientes y operación programada.
+- Ambos usan el mismo proyecto Supabase. El historial canónico de migraciones
+  vive en `Dashboard-Comparacde/supabase/migrations`; cualquier copia local en
+  este repo existe solo para dejar trazabilidad del cambio que consume Majalis.
+
+## Cómo fluye un precio
+
+1. Los scrapers de `Dashboard-Comparacde/scraper` consultan las tiendas y guardan
+   las fuentes válidas en `productos.atributos.precios_tienda`.
+2. El cálculo toma el costo real más barato (Gs o USD), IVA de compra si está
+   activo y los componentes configurables del negocio.
+3. La publicación vinculada por `producto_id` recibe el precio calculado en
+   `perfumes.precio_regular`.
+4. Majalis lee únicamente las columnas públicas necesarias mediante
+   `/api/catalogo`. El listado viaja compacto (tarjetas, filtros, precio y stock);
+   descripción, notas y SKU se solicitan solo al abrir `/api/catalogo/[id]`.
+   Antes de confirmar un pedido vuelve a validar precio, stock
+   y visibilidad para no enviar por WhatsApp datos vencidos. Los cupones también
+   se validan y consumen de forma atómica en el servidor; el navegador nunca
+   decide por sí solo el descuento final.
+
+La automatización no corre dentro de Vercel: Windows Task Scheduler la ejecuta
+en la PC operativa a las 07:30 y 15:00, con revalidaciones y auditoría separadas.
 
 ## Stack
 
-- **Next.js 14** (App Router) + **TypeScript** estricto + **Tailwind CSS**
-- **Three.js / React Three Fiber** — fondo 3D orgánico de partículas
-- **GSAP** — micro-interacciones y fichas de producto cinemáticas
-- **lucide-react** — iconografía
-- **Supabase** — base de datos de perfumes, cupones, perfiles y pedidos
+- Next.js 16 (App Router) + React 19 + TypeScript
+- Tailwind CSS, GSAP, Three.js y lucide-react
+- Supabase/Postgres
+- Vercel Analytics y Speed Insights
 
-## Puesta en marcha
+## Desarrollo
 
 ```bash
-# 1. Instalar dependencias (incl. Three.js, GSAP, Lucide, Supabase)
-bash skills.sh
-
-# 2. Modo desarrollo
+npm ci
 npm run dev
-
-# 3. Verificación estricta de tipos + build
 npm run verify
 ```
 
-## Base de datos (Supabase)
+`npm run verify` genera los tipos de rutas, ejecuta TypeScript y crea el build de
+producción.
 
-1. Abre el SQL Editor en tu proyecto de Supabase.
-2. Pega y ejecuta `schema.sql` (raíz del repo).
-3. Esto crea las tablas `perfumes`, `cupones`, `perfiles_usuario`, `pedidos`
-   e inserta los 11 perfumes base con notas olfativas en JSON.
+## Variables de entorno
 
-Credenciales (públicas, ya en `.env.local`):
+Consultar `.env.example` y configurar los valores reales solo en `.env.local` y
+Vercel. Como mínimo:
 
+```text
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+NEXT_PUBLIC_WHATSAPP_NUMBER
 ```
-NEXT_PUBLIC_SUPABASE_URL=https://fpzmdezcmbyplbdngcke.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_bHgBBQYPKg3QgHkL5H24MQ_yjB0pQw4
-```
 
-## Flujo de pedido
+`SUPABASE_SERVICE_ROLE_KEY` es exclusivamente de servidor: nunca debe llevar el
+prefijo `NEXT_PUBLIC_`, aparecer en logs ni entrar al bundle del navegador.
 
-El botón principal de compra abre WhatsApp nativo hacia `595982064334`
-con el mensaje: **"Quiero hacer un pedido del perfume [Nombre]"**.
+## Despliegue
 
-## Despliegue en Vercel
+Vercel construye este proyecto desde la rama `main`. Antes de publicar, ejecutar
+`npm run verify`; los cambios de base deben añadirse primero al historial
+canónico del repositorio del dashboard.
 
-1. Conecta el repo a Vercel.
-2. Añade las variables `NEXT_PUBLIC_SUPABASE_URL`,
-   `NEXT_PUBLIC_SUPABASE_ANON_KEY` y `NEXT_PUBLIC_WHATSAPP_NUMBER`.
-3. Deploy automático en `main`.
+[`vercel.json`](vercel.json) ubica las funciones en `gru1` (São Paulo), la misma
+región que el Supabase compartido, para reducir la latencia de `/api/catalogo`.
