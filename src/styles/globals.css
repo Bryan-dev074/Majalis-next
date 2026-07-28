@@ -39,7 +39,15 @@
    ---------------------------------------------------------------------------- */
 @layer base {
   html {
-    scroll-behavior: smooth;
+    /* ⚠️ NO poner `scroll-behavior: smooth` acá (27-jul). Aplicado al html afecta
+       a TODO scroll, incluida la restauración de posición de Next y cualquier
+       scrollIntoView: el navegador deja una animación de scroll en curso y, si el
+       usuario arrastra la barra mientras tanto, al SOLTAR la animación retoma su
+       destino y la página "vuelve sola" a donde estaba (reporte del dueño:
+       "si se mantiene con el mouse para subir, al soltar vuelve a estar abajo").
+       No hace falta: las 10 llamadas que quieren scroll suave ya pasan
+       `behavior: "smooth"` explícito, y no hay ni un enlace ancla href="#" que
+       dependa del CSS. */
     background-color: var(--obsidian);
   }
 
@@ -473,11 +481,20 @@
     min-width: 7.5rem;
     padding: 1.1rem 1.4rem 1.15rem;
   }
+  /* ⚠️ 27-jul: estas tres declaraciones estaban SUELTAS dentro del @media, fuera
+     de todo selector (la llave de .coleccion cerraba una línea antes). Era CSS
+     inválido: los navegadores las descartaban en silencio —por eso el carrusel de
+     colecciones NO enganchaba en móvil pese al scroll-snap-type del contenedor— y
+     Turbopack directamente ROMPÍA EL BUILD ("Unexpected end of input"), así que el
+     próximo deploy iba a fallar. Se meten en .coleccion, que es donde iban. */
   @media (max-width: 899px) {
-    .coleccion { min-width: 0; padding: 1rem 0.95rem 1.05rem; }
-    scroll-snap-align: center;
-    color: rgba(234, 227, 210, 0.6);
-    transition: color 0.35s ease;
+    .coleccion {
+      min-width: 0;
+      padding: 1rem 0.95rem 1.05rem;
+      scroll-snap-align: center;
+      color: rgba(234, 227, 210, 0.6);
+      transition: color 0.35s ease;
+    }
   }
   /* separador hairline entre columnas (señalética de boutique) */
   .coleccion + .coleccion::before {

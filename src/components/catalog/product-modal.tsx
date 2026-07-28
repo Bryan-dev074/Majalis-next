@@ -103,9 +103,17 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
     });
   }, [perfume?.id]);
 
-  // Bloquear scroll del body cuando abre + avisar al botón de WhatsApp
+  // Bloquear scroll del body cuando abre + avisar al botón de WhatsApp.
+  // ⚠️ Depende de ABIERTO/CERRADO, no del objeto `perfume` (misma trampa que la
+  // timeline de más abajo): el CatalogProvider refresca el catálogo y regenera
+  // los objetos con nueva identidad, así que con [perfume] este efecto se
+  // desmontaba y remontaba en loop — soltando y volviendo a poner el bloqueo de
+  // scroll y disparando el evento del botón de WhatsApp en true/false/true sin
+  // parar. Con [abierto] el bloqueo se pone UNA vez al abrir y se saca al cerrar,
+  // y cambiar de un producto a otro no lo toca.
+  const abierto = !!perfume;
   useEffect(() => {
-    if (!perfume) return;
+    if (!abierto) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     window.dispatchEvent(
@@ -117,7 +125,7 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
         new CustomEvent("sultan:producto-modal", { detail: false })
       );
     };
-  }, [perfume]);
+  }, [abierto]);
 
   // Botón "atrás" del teléfono cierra el modal (no navega fuera / no cierra la app).
   useCerrarConAtras(!!perfume, onClose);

@@ -51,6 +51,18 @@ cambiás algo relevante acá, actualizala también).
   objeto — el CatalogProvider regenera identidades al refrescar y con `[perfume]`
   la animación se reiniciaba en loop dejando los `.nota-chip` en opacity 0
   ("la pirámide no aparece"). Ídem para cualquier animación futura con datos del provider.
+  Mismo motivo en el BLOQUEO DE SCROLL del modal: depende de `[abierto]` (= `!!perfume`),
+  no del objeto — con `[perfume]` soltaba y reponía `body.overflow` en loop.
+- ⚠️ NUNCA `scroll-behavior: smooth` en `html` (27-jul). Aplicado global afecta a TODO scroll,
+  incluida la restauración de posición: el navegador deja una animación en curso y, si el usuario
+  arrastra la barra, al SOLTAR la animación retoma su destino y la página "vuelve sola" abajo
+  (reporte del dueño). Las 10 llamadas que quieren scroll suave ya pasan `behavior:"smooth"`
+  explícito y no hay ningún `href="#"`, así que la regla global no aportaba nada.
+- ⚠️ TURBOPACK ES ESTRICTO CON EL CSS: declaraciones sueltas dentro de un `@media` (fuera de
+  todo selector) los navegadores las descartan en silencio, pero el build FALLA con "Unexpected
+  end of input" y el deploy no sale. Pasó en `.coleccion` (27-jul): el carrusel de colecciones
+  llevaba tiempo sin enganchar en móvil por eso. Si el build se rompe en un `}` que se ve bien,
+  buscá declaraciones huérfanas ANTES de esa línea, no la llave.
 - Cinta "100% originales" del navbar: aparece ~6s y se auto-oculta (estado
   `cintaVisible`). Catálogo móvil: 2 por fila. Marquee de marcas: tipográfico
   (marcas-marquee.tsx), sin logos PNG a propósito.
