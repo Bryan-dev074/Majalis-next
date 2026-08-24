@@ -232,6 +232,71 @@
     transform: scale(0.98);
   }
 
+  /* CTA de WhatsApp — hereda la mecánica del .btn-luxe (relleno magnético,
+     glow y press) porque tiene que sentirse de la MISMA familia, no un botón
+     pegado de otra web.
+
+     El oro es "la única familia cromática de acento" de la marca, así que el
+     botón NO es verde: un pill verde saturado sobre obsidiana+oro le pelea a
+     todo lo demás. El canal lo dice el glifo, y el verde entra como un guiño:
+     en reposo el globito es verde PROFUNDO sobre el oro (se lee como tinta,
+     no como logo pegado) y al pasar el mouse, cuando el relleno oscuro barre
+     la superficie, se PRENDE en el verde de WhatsApp. Ese encendido es el
+     único momento de color ajeno en toda la ficha. */
+  .btn-whatsapp-luxe {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(120deg, var(--gold-dark), var(--gold) 50%, var(--gold-light));
+    color: #0a0908;
+    border-radius: 9999px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    transition: color 0.4s ease, transform 0.3s ease, box-shadow 0.4s ease;
+    box-shadow: 0 0 30px -8px rgba(212, 175, 55, 0.45);
+    isolation: isolate;
+  }
+  .btn-whatsapp-luxe::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: #0a0908;
+    transform: scaleX(0);
+    transform-origin: right center;
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: -1;
+  }
+  .btn-whatsapp-luxe:hover::after {
+    transform: scaleX(1);
+    transform-origin: left center;
+  }
+  .btn-whatsapp-luxe:hover {
+    color: var(--gold);
+    /* Doble aro: el oro de la casa + un halo verde apenas insinuado. */
+    box-shadow: 0 0 0 1px var(--gold), 0 0 40px -5px rgba(212, 175, 55, 0.55),
+      0 0 34px -10px rgba(37, 211, 102, 0.55);
+  }
+  .btn-whatsapp-luxe:active {
+    transform: scale(0.98);
+  }
+  /* El glifo: tinta verde oscura sobre el oro → verde WhatsApp al encenderse. */
+  .btn-whatsapp-luxe .wa-glifo {
+    color: #0d5c4f;
+    transition: color 0.4s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .btn-whatsapp-luxe:hover .wa-glifo {
+    color: #25d366;
+    transform: rotate(-12deg) scale(1.12);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .btn-whatsapp-luxe,
+    .btn-whatsapp-luxe::after,
+    .btn-whatsapp-luxe .wa-glifo {
+      transition: none !important;
+    }
+    .btn-whatsapp-luxe:hover .wa-glifo { transform: none; }
+  }
   /* Botón fantasma con borde de luz dorada líquida */
   .btn-ghost-luxe {
     position: relative;

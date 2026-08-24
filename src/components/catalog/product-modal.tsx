@@ -378,7 +378,7 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
 
             {/* Selector cantidad + CTA */}
             {!agotado && (
-              <div className="modal-cta mt-6 flex flex-wrap items-center gap-3">
+              <div className="modal-cta mt-6 flex shrink-0 flex-wrap items-center gap-3">
                 <div className="flex items-center gap-1 rounded-full border border-gold/25 bg-obsidian/40 p-1">
                   <button
                     onClick={() => setCantidad((c) => Math.max(1, c - 1))}
@@ -403,53 +403,55 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
                   </button>
                 </div>
 
-                <button
-                  onClick={() => {
-                    agregar(perfume, cantidad);
-                    onClose();
-                  }}
-                  className="btn-luxe min-w-[8rem] flex-1 !text-[0.65rem]"
-                >
-                  Agregar al carrito
-                </button>
-
-                {/* COMPRAR POR WHATSAPP — en la MISMA fila que el carrito.
-                    Antes iba debajo y en pantallas de portátil quedaba tapado por
-                    el corte del modal: había que scrollear para descubrirlo, así
-                    que el camino más directo a la venta era el más escondido.
-                    Con flex-wrap, en móvil baja solo y ocupa el ancho completo. */}
-                {catalogoListoParaComprar && (
+                {/* ACCIÓN PRINCIPAL: comprar por WhatsApp. Ocupa el lugar de honor
+                    —al lado del selector de cantidad— porque es como se vende de
+                    verdad; el carrito pasa abajo como alternativa. Así ninguno de
+                    los dos pelea por el mismo lugar ni parte su texto en tres
+                    líneas, que era lo que afeaba la ficha. */}
+                {catalogoListoParaComprar ? (
                   <a
                     href={buildWhatsAppUrl(perfume.nombre, WHATSAPP_NUMBER)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group/wa flex min-w-[8rem] flex-1 self-stretch items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[#25D366]/40 px-3 py-3 text-[0.65rem] font-medium uppercase tracking-[0.12em] text-[#25D366] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-[#25D366] hover:bg-[#25D366]/[0.07] hover:shadow-[0_0_24px_-6px_rgba(37,211,102,0.6)]"
+                    className="btn-whatsapp-luxe flex min-w-[13rem] flex-1 shrink-0 items-center justify-center gap-2.5 whitespace-nowrap px-6 py-4"
                   >
-                    <MessageCircle
-                      className="h-4 w-4 shrink-0 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/wa:-rotate-12 group-hover/wa:scale-110"
-                      strokeWidth={1.5}
-                    />
-                    {/* Etiqueta corta: la columna del modal mide ~459px y con el
-                        texto largo el botón no entraba en la fila del carrito y
-                        caía abajo del corte (había que scrollear para verlo).
-                        El verde + el globito ya dicen que es WhatsApp. */}
-                    WhatsApp
+                    <MessageCircle className="wa-glifo h-4 w-4 shrink-0" strokeWidth={2} />
+                    Comprar por WhatsApp
                   </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={recargar}
+                    disabled={verificando}
+                    className="btn-ghost-luxe flex min-w-[13rem] flex-1 items-center justify-center gap-2.5 whitespace-nowrap !py-4 disabled:opacity-50"
+                  >
+                    <MessageCircle className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+                    {verificando ? "Verificando…" : "Verificar y comprar"}
+                  </button>
                 )}
               </div>
             )}
 
-            {!agotado && !catalogoListoParaComprar ? (
+            {/* ALTERNATIVA: sumar al carrito para pedir varios de una. Va en su
+                propia línea, a ancho completo y en tono secundario: es la misma
+                jerarquía que usa el resto del sitio (oro lleno = acción
+                principal, contorno = alternativa). */}
+            {!agotado && (
               <button
-                type="button"
-                onClick={recargar}
-                disabled={verificando}
-                className="modal-cta mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-amber-300/30 py-3 text-[0.65rem] uppercase tracking-regal text-amber-100/75 transition-all hover:border-amber-300/50 disabled:opacity-50"
+                onClick={() => {
+                  agregar(perfume, cantidad);
+                  onClose();
+                }}
+                className="btn-ghost-luxe modal-cta mt-3 flex w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap !py-3.5"
               >
-                <MessageCircle className="h-4 w-4" strokeWidth={1.5} />
-                {verificando ? "Verificando precio y stock…" : "Verificar antes de pedir"}
+                <Plus className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+                Agregar al carrito
               </button>
-            ) : (
+            )}
+
+            {/* AGOTADO: el único camino es avisarle cuando vuelva. El "verificar
+                antes de pedir" ya vive arriba, en el lugar del CTA principal. */}
+            {agotado && (
               <a
                 href={buildWhatsAppUrl(
                   `${perfume.nombre} (solicito aviso de reingreso)`,
@@ -457,10 +459,10 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="modal-cta mt-3 flex items-center justify-center gap-2 rounded-full border border-gold/25 py-3 text-[0.65rem] uppercase tracking-regal text-ivory/70 transition-all hover:border-gold/50 hover:text-gold-champagne"
+                className="btn-ghost-luxe modal-cta mt-3 flex w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap !py-3.5"
               >
-                <Bell className="h-4 w-4" strokeWidth={1.5} />
-                Solicitar notificación de reingreso
+                <Bell className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+                Avisame cuando vuelva
               </a>
             )}
 
