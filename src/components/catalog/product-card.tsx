@@ -1,11 +1,12 @@
 "use client";
 
 import { memo } from "react";
-import { Plus, Sparkles, Crown } from "lucide-react";
+import { Plus, Sparkles, Crown, MessageCircle } from "lucide-react";
 import { FotoProducto } from "@/components/ui/foto-producto";
 import { Perfume } from "@/types/database";
-import { formatGs, precioEfectivo, concentracionDe } from "@/lib/format";
+import { formatGs, precioEfectivo, concentracionDe, buildWhatsAppUrl } from "@/lib/format";
 import { UMBRAL_PREMIUM } from "@/lib/categorias";
+import { WHATSAPP_NUMBER } from "@/data/site-config";
 import { useCart } from "@/hooks/use-cart";
 
 interface ProductCardProps {
@@ -26,7 +27,7 @@ interface ProductCardProps {
 // cuyo `perfume` no cambió no vuelven a renderizar (los callbacks ya son
 // estables con useCallback). Menos trabajo por cada tecla.
 export const ProductCard = memo(function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
-  const { agregar } = useCart();
+  const { agregar, catalogoListoParaComprar, verificandoCatalogo, recargarCatalogo } = useCart();
   const agotado = perfume.stock_disponible <= 0;
   const enOferta = perfume.en_oferta && perfume.precio_descuento != null;
   const precio = precioEfectivo(perfume);
@@ -181,6 +182,50 @@ export const ProductCard = memo(function ProductCard({ perfume, onAbrirDetalle }
             )
           )}
         </div>
+
+        {/* Comprar por WhatsApp — SIEMPRE visible (también en móvil, donde no hay
+            hover y los CTA de la foto no existen). Es el camino más corto entre
+            ver el perfume y escribirnos.
+            Respeta el mismo candado que el modal y el checkout: si el catálogo no
+            está verificado hace menos de 10 min, primero verifica precio y stock
+            en vez de mandar al cliente a pedir con un precio viejo. */}
+        {!agotado && (
+          <div className="mt-3 sm:mt-4">
+            {catalogoListoParaComprar ? (
+              <a
+                href={buildWhatsAppUrl(perfume.nombre, WHATSAPP_NUMBER)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                aria-label={`Comprar ${perfume.nombre} por WhatsApp`}
+                className="group/wa flex w-full items-center justify-center gap-2 rounded-full border border-[#25D366]/35 py-2.5 text-[0.6rem] font-medium uppercase tracking-regal text-[#25D366] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-[#25D366] hover:bg-[#25D366]/[0.07] hover:shadow-[0_0_22px_-6px_rgba(37,211,102,0.55)] sm:text-[0.65rem]"
+              >
+                <MessageCircle
+                  className="h-3.5 w-3.5 shrink-0 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/wa:-rotate-12 group-hover/wa:scale-110"
+                  strokeWidth={1.75}
+                />
+                {/* En móvil la tarjeta mide ~158px: con el tracking regal, el
+                    texto completo se parte en dos líneas y queda apretado. El
+                    ícono verde ya dice por dónde se compra. */}
+                <span className="sm:hidden">Comprar</span>
+                <span className="hidden sm:inline">Comprar por WhatsApp</span>
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  recargarCatalogo();
+                }}
+                disabled={verificandoCatalogo}
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-gold/25 py-2.5 text-[0.6rem] font-medium uppercase tracking-regal text-ivory/70 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-gold/50 hover:text-ivory disabled:opacity-50 sm:text-[0.65rem]"
+              >
+                <MessageCircle className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+                {verificandoCatalogo ? "Verificando…" : <><span className="sm:hidden">Verificar</span><span className="hidden sm:inline">Verificar y comprar</span></>}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </article>
   );

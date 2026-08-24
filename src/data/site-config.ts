@@ -60,8 +60,11 @@ export const REDES_SOCIALES: RedSocial[] = [
  */
 export const PROMO_ENVIO = {
   activo: true,
-  titulo: "Envío incluido",
-  detalle: "Gratis en todos los pedidos hasta el 01/08",
+  titulo: "Envío gratis",
+  // SIN fecha de vencimiento (24-ago-2026, pedido del dueño: "que diga nomás que
+  // es envío gratis y ya"). Antes decía "hasta el 01/08" y esa fecha llevaba
+  // 23 días vencida a la vista del cliente en el checkout.
+  detalle: "En todos los pedidos",
 };
 
 /**
