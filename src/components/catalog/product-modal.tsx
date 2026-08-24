@@ -408,25 +408,38 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
                     agregar(perfume, cantidad);
                     onClose();
                   }}
-                  className="btn-luxe flex-1 !text-[0.65rem]"
+                  className="btn-luxe min-w-[8rem] flex-1 !text-[0.65rem]"
                 >
                   Agregar al carrito
                 </button>
+
+                {/* COMPRAR POR WHATSAPP — en la MISMA fila que el carrito.
+                    Antes iba debajo y en pantallas de portátil quedaba tapado por
+                    el corte del modal: había que scrollear para descubrirlo, así
+                    que el camino más directo a la venta era el más escondido.
+                    Con flex-wrap, en móvil baja solo y ocupa el ancho completo. */}
+                {catalogoListoParaComprar && (
+                  <a
+                    href={buildWhatsAppUrl(perfume.nombre, WHATSAPP_NUMBER)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group/wa flex min-w-[8rem] flex-1 self-stretch items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[#25D366]/40 px-3 py-3 text-[0.65rem] font-medium uppercase tracking-[0.12em] text-[#25D366] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-[#25D366] hover:bg-[#25D366]/[0.07] hover:shadow-[0_0_24px_-6px_rgba(37,211,102,0.6)]"
+                  >
+                    <MessageCircle
+                      className="h-4 w-4 shrink-0 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/wa:-rotate-12 group-hover/wa:scale-110"
+                      strokeWidth={1.5}
+                    />
+                    {/* Etiqueta corta: la columna del modal mide ~459px y con el
+                        texto largo el botón no entraba en la fila del carrito y
+                        caía abajo del corte (había que scrollear para verlo).
+                        El verde + el globito ya dicen que es WhatsApp. */}
+                    WhatsApp
+                  </a>
+                )}
               </div>
             )}
 
-            {/* CTA WhatsApp directo */}
-            {!agotado && catalogoListoParaComprar ? (
-              <a
-                href={buildWhatsAppUrl(perfume.nombre, WHATSAPP_NUMBER)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="modal-cta mt-3 flex items-center justify-center gap-2 rounded-full border border-[#25D366]/40 py-3 text-[0.7rem] font-medium uppercase tracking-regal text-[#25D366] transition-all hover:border-[#25D366] hover:bg-[#25D366]/5 hover:shadow-[0_0_24px_-6px_rgba(37,211,102,0.6)]"
-              >
-                <MessageCircle className="h-4 w-4" strokeWidth={1.5} />
-                Pedir ahora por WhatsApp
-              </a>
-            ) : !agotado ? (
+            {!agotado && !catalogoListoParaComprar ? (
               <button
                 type="button"
                 onClick={recargar}
