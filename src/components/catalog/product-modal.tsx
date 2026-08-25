@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { FotoProducto } from "@/components/ui/foto-producto";
-import { X, Plus, Minus, MessageCircle, Bell, Sparkles, Share2, Check } from "lucide-react";
+import { X, Plus, Minus, Bell, Sparkles, Share2, Check } from "lucide-react";
 import type { FragranceNotes, Perfume } from "@/types/database";
-import { formatGs, precioEfectivo, buildWhatsAppUrl, concentracionDe } from "@/lib/format";
+import { formatGs, precioEfectivo, buildWhatsAppUrl, buildWhatsAppCheckoutUrl, concentracionDe } from "@/lib/format";
 import { WHATSAPP_NUMBER } from "@/data/site-config";
 import { useCart } from "@/hooks/use-cart";
 import { useCerrarConAtras } from "@/hooks/use-cerrar-con-atras";
 import { useCatalog } from "@/hooks/use-catalog";
+import { WhatsappGlifo } from "@/components/ui/whatsapp-glifo";
 import { NoteIcon } from "./note-icon";
 
 interface ProductModalProps {
@@ -419,12 +420,19 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
                     líneas, que era lo que afeaba la ficha. */}
                 {catalogoListoParaComprar ? (
                   <a
-                    href={buildWhatsAppUrl(perfume.nombre, WHATSAPP_NUMBER)}
+                    /* MISMO mensaje que el checkout del carrito, con este perfume
+                       y la cantidad elegida. Se reusa el generador del carrito en
+                       vez de escribir otra plantilla: si mañana cambia el formato
+                       del pedido, cambia en los dos lados a la vez. */
+                    href={buildWhatsAppCheckoutUrl(
+                      [{ cantidad, perfume }],
+                      WHATSAPP_NUMBER
+                    )}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn-whatsapp-luxe flex min-w-[13rem] flex-1 shrink-0 items-center justify-center gap-2.5 whitespace-nowrap px-6 py-4"
                   >
-                    <MessageCircle className="wa-glifo h-4 w-4 shrink-0" strokeWidth={2} />
+                    <WhatsappGlifo className="wa-glifo h-4 w-4 shrink-0" />
                     Comprar por WhatsApp
                   </a>
                 ) : (
@@ -434,7 +442,7 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
                     disabled={verificando}
                     className="btn-ghost-luxe flex min-w-[13rem] flex-1 items-center justify-center gap-2.5 whitespace-nowrap !py-4 disabled:opacity-50"
                   >
-                    <MessageCircle className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+                    <WhatsappGlifo className="h-4 w-4 shrink-0" />
                     {verificando ? "Verificando…" : "Verificar y comprar"}
                   </button>
                 )}
