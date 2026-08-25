@@ -297,6 +297,69 @@
     }
     .btn-whatsapp-luxe:hover .wa-glifo { transform: none; }
   }
+  /* Acción SECUNDARIA de la ficha — "Agregar al carrito".
+
+     Antes usaba .btn-ghost-luxe: borde dorado al 35% sobre obsidiana. Sobre
+     negro puro eso se desvanece tanto que el dueño lo reportó como "no
+     pusiste el agregar al carrito" — estaba ahí, pero no se leía. Un botón
+     que no se ve es un botón que no existe.
+
+     Ahora tiene CUERPO: relleno de humo con una veta dorada sutil y una
+     hairline de oro al 55%. Sigue siendo claramente subordinado al CTA lleno
+     de oro (no compite), pero se lee como un botón de verdad. Al hover la
+     veta se abre y el "+" gira: el mismo vocabulario de movimiento del sitio. */
+  .btn-carrito-luxe {
+    position: relative;
+    overflow: hidden;
+    border-radius: 9999px;
+    border: 1px solid rgba(212, 175, 55, 0.55);
+    background: linear-gradient(180deg, rgba(26, 23, 20, 0.95), rgba(10, 9, 8, 0.95));
+    color: var(--gold-champagne);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    font-weight: 500;
+    transition: border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease,
+      transform 0.3s ease;
+    isolation: isolate;
+  }
+  .btn-carrito-luxe::after {
+    /* Veta de luz dorada que barre al pasar el mouse (eco del relleno
+       magnético del .btn-luxe, pero en tono menor: es la acción secundaria). */
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent 20%, rgba(212, 175, 55, 0.16) 50%, transparent 80%);
+    transform: translateX(-100%);
+    transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: -1;
+  }
+  .btn-carrito-luxe:hover::after {
+    transform: translateX(100%);
+  }
+  .btn-carrito-luxe:hover {
+    border-color: var(--gold);
+    color: var(--gold-champagne);
+    box-shadow: 0 0 26px -8px rgba(212, 175, 55, 0.55), inset 0 0 20px -14px var(--gold);
+  }
+  .btn-carrito-luxe:active {
+    transform: scale(0.98);
+  }
+  .btn-carrito-luxe .carrito-mas {
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .btn-carrito-luxe:hover .carrito-mas {
+    transform: rotate(90deg);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .btn-carrito-luxe,
+    .btn-carrito-luxe::after,
+    .btn-carrito-luxe .carrito-mas {
+      transition: none !important;
+    }
+    .btn-carrito-luxe:hover .carrito-mas { transform: none; }
+    .btn-carrito-luxe:hover::after { transform: translateX(-100%); }
+  }
   /* Botón fantasma con borde de luz dorada líquida */
   .btn-ghost-luxe {
     position: relative;

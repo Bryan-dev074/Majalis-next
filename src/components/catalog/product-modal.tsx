@@ -148,12 +148,21 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
       const chips = Array.from(
         notasRef.current?.querySelectorAll(".nota-chip") ?? []
       );
+      // Los CTA también entran al seguro. Son los ÚLTIMOS de su stagger, que es
+      // exactamente la posición donde ya nos mordió este bug con los .nota-chip:
+      // si la timeline se reinicia o se corta a mitad, el último elemento puede
+      // quedarse en opacity 0 PARA SIEMPRE — y un "Agregar al carrito" invisible
+      // es un botón que no existe para el cliente.
+      const ctas = Array.from(
+        innerRef.current?.querySelectorAll(".modal-cta") ?? []
+      );
       const tl = gsap.timeline({
         defaults: { ease: "power3.out" },
         // Seguro: pase lo que pase con la timeline, al final TODO queda visible.
         onComplete: () => {
-          if (capas.length + chips.length > 0) {
-            gsap.set([...capas, ...chips], { clearProps: "opacity,transform" });
+          const todos = [...capas, ...chips, ...ctas];
+          if (todos.length > 0) {
+            gsap.set(todos, { clearProps: "opacity,transform" });
           }
         },
       });
@@ -442,9 +451,9 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
                   agregar(perfume, cantidad);
                   onClose();
                 }}
-                className="btn-ghost-luxe modal-cta mt-3 flex w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap !py-3.5"
+                className="btn-carrito-luxe modal-cta mt-3 flex w-full shrink-0 items-center justify-center gap-2.5 whitespace-nowrap py-4"
               >
-                <Plus className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+                <Plus className="carrito-mas h-3.5 w-3.5 shrink-0" strokeWidth={2} />
                 Agregar al carrito
               </button>
             )}
