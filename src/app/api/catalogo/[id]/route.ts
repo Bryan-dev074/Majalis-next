@@ -21,7 +21,9 @@ export async function GET(
 
     return NextResponse.json(perfume, {
       headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        // Una ficha que se ocultó no puede seguir vendiéndose durante SWR.
+        // Las imágenes y el listado conservan sus propias cachés.
+        "Cache-Control": "no-store",
       },
     });
   } catch {

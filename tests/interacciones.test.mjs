@@ -38,6 +38,59 @@ test('checkout incluye indicaciones aunque sean el único dato de entrega', () =
   assert.match(mensaje, /Indicaciones: Portón azul/);
 });
 
+test('detalle consulta stock sin caché y devuelve null si el producto se ocultó', async () => {
+  const solicitudes = [];
+  const uuid = '3a274f66-e90d-4f0c-8da0-9e0eb249def3';
+  let disponible = true;
+  const catalogo = cargar('src/lib/catalog.ts', {
+    process: { env: { NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-only', NODE_ENV: 'production' } },
+    AbortController, setTimeout, clearTimeout, URLSearchParams, console,
+    fetch: async (url, opciones) => {
+      solicitudes.push({ url, opciones });
+      return { ok: true, json: async () => disponible ? [{ id: uuid, nombre: 'Kaaf', stock_disponible: 2 }] : [] };
+    },
+  }, { '@/data/fallback-perfumes': { FALLBACK_PERFUMES: [] } });
+  assert.equal((await catalogo.fetchDetalleCatalogo(uuid)).stock_disponible, 2);
+  disponible = false;
+  assert.equal(await catalogo.fetchDetalleCatalogo(uuid), null);
+  assert.equal(solicitudes.length, 2);
+  for (const { url, opciones } of solicitudes) {
+    assert.equal(opciones.cache, 'no-store');
+    assert.equal(opciones.next, undefined);
+    assert.equal(new URL(url).searchParams.get('activo'), 'eq.true');
+  }
+});
+
+test('endpoint de detalle no publica stock en caché CDN', async () => {
+  const route = cargar('src/app/api/catalogo/[id]/route.ts', {}, {
+    'next/server': { NextResponse: { json: (body, init) => ({ body, ...init }) } },
+    '@/lib/catalog': { fetchDetalleCatalogo: async () => ({ id: 'test', stock_disponible: 2 }) },
+  });
+  const respuesta = await route.GET({}, { params: Promise.resolve({ id: 'test' }) });
+  assert.equal(respuesta.headers['Cache-Control'], 'no-store');
+});
+
+test('catálogo usa una sola caché CDN de 60 s, sin rejuvenecer un snapshot SWR', async () => {
+  const opciones = [];
+  const catalogo = cargar('src/lib/catalog.ts', {
+    process: { env: { NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-only', NODE_ENV: 'production' } },
+    AbortController, setTimeout, clearTimeout, URLSearchParams, console,
+    fetch: async (_url, opts) => {
+      opciones.push(opts);
+      return { ok: true, headers: new Headers({ 'content-range': '0-0/1' }), json: async () => [{ id: 'test', stock_disponible: 2 }] };
+    },
+  }, { '@/data/fallback-perfumes': { FALLBACK_PERFUMES: [] } });
+  await catalogo.fetchCatalogo();
+  assert.equal(opciones.length, 2);
+  assert.ok(opciones.every(opts => opts.cache === 'no-store' && !opts.next));
+  const route = cargar('src/app/api/catalogo/route.ts', {}, {
+    'next/server': { NextResponse: { json: (body, init) => ({ body, ...init }) } },
+    '@/lib/catalog': { fetchCatalogo: async () => ({ version: 2, productos: [] }) },
+  });
+  const respuesta = await route.GET();
+  assert.equal(respuesta.headers['Cache-Control'], 'public, max-age=0, s-maxage=60, must-revalidate');
+});
+
 function navegadorOverlay() {
   const tareas = [];
   const listeners = new Map();

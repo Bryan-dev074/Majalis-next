@@ -18,7 +18,9 @@ export async function GET() {
       headers: {
         // Los precios cambian durante el día; 60 s mantiene frescura práctica y
         // evita volver a consultar 5 páginas de Supabase por cada visitante.
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        // Una única capa con TTL estricto: no rejuvenecer datos antiguos de
+        // otra caché SWR ni seguir sirviendo stock vencido durante su refresco.
+        "Cache-Control": "public, max-age=0, s-maxage=60, must-revalidate",
       },
     });
   } catch {

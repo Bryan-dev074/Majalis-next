@@ -222,7 +222,7 @@ export async function fetchCatalogo(): Promise<CatalogoCompactoPayload> {
             method: "HEAD",
             headers: { ...headers, Prefer: "count=exact" },
             signal: controller.signal,
-            next: { revalidate: 60 },
+            cache: "no-store",
           }
         );
         if (!res.ok) return null;
@@ -239,7 +239,7 @@ export async function fetchCatalogo(): Promise<CatalogoCompactoPayload> {
       try {
         const res = await fetch(
           `${url}/rest/v1/perfumes?select=${CAMPOS_RESUMEN}&activo=eq.true&order=destacado.desc,marca.asc,nombre.asc,id.asc&limit=${PAGE}&offset=${offset}`,
-          { headers, signal: controller.signal, next: { revalidate: 60 } }
+          { headers, signal: controller.signal, cache: "no-store" }
         );
         if (!res.ok) {
           console.error("[fetchCatalogo] Supabase respondió", res.status, "offset", offset);
@@ -291,9 +291,8 @@ export async function fetchCatalogo(): Promise<CatalogoCompactoPayload> {
 /**
  * Obtiene la ficha pública completa de un único producto activo.
  *
- * Precio y stock también vienen en esta respuesta para que la ficha sea
- * autónoma, aunque el cliente da prioridad al resumen global más reciente al
- * fusionar ambas versiones.
+ * Precio y stock se leen de la base en cada apertura. La caché de notas puede
+ * acelerar el dibujo, pero nunca confirmar disponibilidad de un producto oculto.
  */
 export async function fetchDetalleCatalogo(id: string): Promise<Perfume | null> {
   const limpio = id.trim();
@@ -337,7 +336,7 @@ export async function fetchDetalleCatalogo(id: string): Promise<Perfume | null> 
         Accept: "application/json",
       },
       signal: controller.signal,
-      next: { revalidate: 60 },
+      cache: "no-store",
     });
     if (!res.ok) {
       throw new Error(`Supabase respondió ${res.status} al consultar detalle`);

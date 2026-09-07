@@ -11,6 +11,10 @@ import {
   ReactNode,
 } from "react";
 import type { Perfume } from "@/types/database";
+import {
+  actualizarProductoVerificado, protegerCatalogoConFichas, fusionarFichaFresca,
+  type CorreccionCatalogo,
+} from "@/lib/catalog-integrity";
 import type {
   CatalogoCompactoPayload,
   ResumenCatalogoCompacto,
@@ -20,6 +24,7 @@ interface ProductDetailContextValue {
   detalle: Perfume | null;
   abrirDetalle: (p: Perfume | null) => void;
   detalleCargando: boolean;
+  detalleVerificado: boolean;
   errorDetalle: string | null;
   reintentarDetalle: () => void;
 }
@@ -51,7 +56,7 @@ const ProductDetailContext = createContext<ProductDetailContextValue | null>(nul
 // Claves compartidas con el panel /admin (modo local)
 const OCULTOS_KEY = "sultan-admin-ocultos";
 const DESTACADOS_KEY = "sultan-admin-destacados";
-const DETALLE_CACHE_MS = 5 * 60 * 1000;
+const DETALLE_VERIFICADO_MS = 5 * 60 * 1000;
 
 interface DetalleCacheado {
   perfume: Perfume;
@@ -201,6 +206,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   const [perfumesBase, setPerfumesBase] = useState<Perfume[]>([]);
   const [detalle, setDetalle] = useState<Perfume | null>(null);
   const [detalleCargando, setDetalleCargando] = useState(false);
+  const [detalleVerificadoEn, setDetalleVerificadoEn] = useState<number | null>(null);
   const [errorDetalle, setErrorDetalle] = useState<string | null>(null);
   const [cargado, setCargado] = useState(false);
   const [catalogoValido, setCatalogoValido] = useState(false);
@@ -214,6 +220,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   const detalleCacheRef = useRef(new Map<string, DetalleCacheado>());
   const detalleAbortRef = useRef<AbortController | null>(null);
   const detalleSolicitudRef = useRef(0);
+  const correccionesRef = useRef(new Map<string, CorreccionCatalogo>());
 
   const recargar = useCallback(() => {
     setToken((t) => t + 1);
@@ -237,7 +244,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         // catálogo quedó sin productos activos, la tienda debe verse vacía,
         // NO con el seed de respaldo (esos demos no se gestionan desde /admin).
         if (!cancelado) {
-          setPerfumesBase(perfumesRecibidos);
+          setPerfumesBase(protegerCatalogoConFichas(perfumesRecibidos, correccionesRef.current));
           setCatalogoValido(true);
           setCatalogoVerificadoEn(Date.now());
           setAhora(Date.now());
@@ -308,7 +315,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [perfumesBase, token]);
 
-  const cargarDetalle = useCallback((resumen: Perfume, forzar = false) => {
+  const cargarDetalle = useCallback((resumen: Perfume) => {
     detalleAbortRef.current?.abort();
     detalleAbortRef.current = null;
     const numeroSolicitud = ++detalleSolicitudRef.current;
@@ -318,19 +325,16 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     // fusiona la ficha cacheada sin sacrificar precio/stock recientes.
     setDetalle(cacheado ? fusionarDetalle(resumen, cacheado.perfume) : resumen);
     setErrorDetalle(null);
-
-    if (
-      !forzar &&
-      cacheado &&
-      Date.now() - cacheado.verificadoEn <= DETALLE_CACHE_MS
-    ) {
-      setDetalleCargando(false);
-      return;
-    }
+    setDetalleVerificadoEn(null);
 
     const controller = new AbortController();
     detalleAbortRef.current = controller;
     setDetalleCargando(true);
+    let timeoutAlcanzado = false;
+    const limite = window.setTimeout(() => {
+      timeoutAlcanzado = true;
+      controller.abort();
+    }, 15000);
 
     void (async () => {
       try {
@@ -339,41 +343,62 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
           { cache: "no-store", signal: controller.signal }
         );
         const payload: unknown = await response.json().catch(() => null);
+        if (numeroSolicitud !== detalleSolicitudRef.current) return;
+        if (response.status === 404) {
+          const agotado = { ...resumen, activo: false, stock_disponible: 0 };
+          const verificadoEn = Date.now();
+          correccionesRef.current.set(resumen.id, { perfume: agotado, verificadoEn });
+          detalleCacheRef.current.delete(resumen.id);
+          setPerfumesBase((prev) => actualizarProductoVerificado(prev, agotado));
+          setDetalle((actual) => actual?.id === resumen.id ? { ...actual, activo: false, stock_disponible: 0 } : actual);
+          setDetalleVerificadoEn(verificadoEn);
+          setErrorDetalle(null);
+          return;
+        }
         if (!response.ok) {
-          throw new Error(
-            response.status === 404
-              ? "Este producto ya no está disponible."
-              : "No pudimos cargar la ficha completa."
-          );
+          throw new Error("No pudimos verificar precio y stock. Reintentá.");
         }
         if (
           typeof payload !== "object" ||
           payload === null ||
           (payload as { id?: unknown }).id !== resumen.id
+          || typeof (payload as Perfume).activo !== "boolean"
+          || !Number.isSafeInteger((payload as Perfume).stock_disponible)
+          || (payload as Perfume).stock_disponible < 0
+          || !Number.isFinite((payload as Perfume).precio_regular)
+          || (payload as Perfume).precio_regular < 0
+          || ((payload as Perfume).activo && (payload as Perfume).stock_disponible > 0 && (payload as Perfume).precio_regular <= 0)
+          || typeof (payload as Perfume).en_oferta !== "boolean"
+          || ((payload as Perfume).precio_descuento !== null && (!Number.isFinite((payload as Perfume).precio_descuento) || (payload as Perfume).precio_descuento! <= 0))
         ) {
           throw new Error("La ficha del producto llegó incompleta.");
         }
         if (numeroSolicitud !== detalleSolicitudRef.current) return;
 
         const ficha = payload as Perfume;
+        const verificadoEn = Date.now();
         detalleCacheRef.current.set(resumen.id, {
           perfume: ficha,
-          verificadoEn: Date.now(),
+          verificadoEn,
         });
+        correccionesRef.current.set(resumen.id, { perfume: ficha, verificadoEn });
+        setPerfumesBase((prev) => actualizarProductoVerificado(prev, ficha));
         setDetalle((actual) =>
-          actual?.id === resumen.id ? fusionarDetalle(actual, ficha) : actual
+          actual?.id === resumen.id ? fusionarFichaFresca(actual, ficha) : actual
         );
+        setDetalleVerificadoEn(verificadoEn);
         setErrorDetalle(null);
       } catch (error) {
-        if (controller.signal.aborted || numeroSolicitud !== detalleSolicitudRef.current) {
+        if (numeroSolicitud !== detalleSolicitudRef.current || controller.signal.aborted && !timeoutAlcanzado) {
           return;
         }
         setErrorDetalle(
-          error instanceof Error
+          timeoutAlcanzado ? "La verificación tardó demasiado. Reintentá." : error instanceof Error
             ? error.message
             : "No pudimos cargar la ficha completa."
         );
       } finally {
+        window.clearTimeout(limite);
         if (numeroSolicitud === detalleSolicitudRef.current) {
           setDetalleCargando(false);
           if (detalleAbortRef.current === controller) detalleAbortRef.current = null;
@@ -393,13 +418,14 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       detalleSolicitudRef.current += 1;
       setDetalle(null);
       setDetalleCargando(false);
+      setDetalleVerificadoEn(null);
       setErrorDetalle(null);
     },
     [cargarDetalle]
   );
 
   const reintentarDetalle = useCallback(() => {
-    if (detalle) cargarDetalle(detalle, true);
+    if (detalle) cargarDetalle(detalle);
   }, [cargarDetalle, detalle]);
 
   useEffect(
@@ -418,7 +444,11 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     setDetalle((actual) => {
       if (!actual) return null;
       const vigente = porId.get(actual.id);
-      return vigente ? fusionarDetalle(vigente, actual) : null;
+      // Una baja confirmada queda visible como agotado; no cerrar el modal ni
+      // permitir que un listado anterior resucite precio/stock de esa ficha.
+      return vigente ? fusionarDetalle(vigente, actual)
+        : actual.activo === false && actual.stock_disponible === 0 ? actual
+        : { ...actual, activo: false, stock_disponible: 0 };
     });
   }, [catalogoValido, perfumes]);
 
@@ -466,8 +496,11 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
 
   // Abrir/cargar una ficha no vuelve a dibujar catálogo, marcas y carrito.
   const detalleValue = useMemo(
-    () => ({ detalle, abrirDetalle, detalleCargando, errorDetalle, reintentarDetalle }),
-    [detalle, abrirDetalle, detalleCargando, errorDetalle, reintentarDetalle]
+    () => ({
+      detalle, abrirDetalle, detalleCargando, errorDetalle, reintentarDetalle,
+      detalleVerificado: detalleVerificadoEn !== null && ahora - detalleVerificadoEn <= DETALLE_VERIFICADO_MS,
+    }),
+    [detalle, abrirDetalle, detalleCargando, errorDetalle, reintentarDetalle, detalleVerificadoEn, ahora]
   );
 
   return (

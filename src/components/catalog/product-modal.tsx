@@ -9,6 +9,7 @@ import { WHATSAPP_NUMBER } from "@/data/site-config";
 import { useCartActions } from "@/hooks/use-cart";
 import { useCerrarConAtras } from "@/hooks/use-cerrar-con-atras";
 import { useCatalog, useProductDetail } from "@/hooks/use-catalog";
+import { fichaComprable } from "@/lib/catalog-integrity";
 import { WhatsappGlifo } from "@/components/ui/whatsapp-glifo";
 import { NoteIcon } from "./note-icon";
 
@@ -41,6 +42,7 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
   } = useCatalog();
   const {
     detalleCargando,
+    detalleVerificado,
     errorDetalle,
     reintentarDetalle,
   } = useProductDetail();
@@ -72,7 +74,9 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
     }
   }
 
-  const agotado = perfume ? perfume.stock_disponible <= 0 : false;
+  const agotado = perfume ? perfume.activo === false || perfume.stock_disponible <= 0 : false;
+  const stockConfirmado = fichaComprable(perfume, detalleVerificado, detalleCargando, errorDetalle);
+  const puedeComprar = stockConfirmado && catalogoListoParaComprar;
   const enOferta =
     perfume && perfume.en_oferta && perfume.precio_descuento != null;
 
@@ -292,7 +296,8 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
               <span>{perfume.volumen_ml} ml</span>
               <span className="h-3 w-px bg-gold/30" />
               <span>
-                {agotado ? "Agotado temporalmente" : "Unidades disponibles"}
+                {detalleCargando ? "Verificando precio y stock…" : agotado ? "Agotado temporalmente"
+                  : stockConfirmado ? "Unidades disponibles" : "Stock pendiente de verificar"}
               </span>
             </div>
 
@@ -345,7 +350,7 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
                     verdad; el carrito pasa abajo como alternativa. Así ninguno de
                     los dos pelea por el mismo lugar ni parte su texto en tres
                     líneas, que era lo que afeaba la ficha. */}
-                {catalogoListoParaComprar ? (
+                {puedeComprar ? (
                   <a
                     /* MISMO mensaje que el checkout del carrito, con este perfume
                        y la cantidad elegida. Se reusa el generador del carrito en
@@ -365,12 +370,15 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
                 ) : (
                   <button
                     type="button"
-                    onClick={recargar}
-                    disabled={verificando}
+                    onClick={() => {
+                      if (!stockConfirmado) reintentarDetalle();
+                      if (!catalogoListoParaComprar) recargar();
+                    }}
+                    disabled={detalleCargando || verificando}
                     className="btn-ghost-luxe flex min-w-[13rem] flex-1 items-center justify-center gap-2.5 whitespace-nowrap !py-4 disabled:opacity-50"
                   >
                     <WhatsappGlifo className="h-4 w-4 shrink-0" />
-                    {verificando ? "Verificando…" : "Verificar y comprar"}
+                    {detalleCargando || verificando ? "Verificando…" : "Verificar y comprar"}
                   </button>
                 )}
               </div>
@@ -383,10 +391,12 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
             {!agotado && (
               <button
                 onClick={() => {
+                  if (!puedeComprar) return;
                   agregar(perfume, cantidad);
                   onClose();
                 }}
-                className="btn-carrito-luxe modal-cta mt-3 flex w-full shrink-0 items-center justify-center gap-2.5 whitespace-nowrap py-4"
+                disabled={!puedeComprar}
+                className="btn-carrito-luxe modal-cta mt-3 flex w-full shrink-0 items-center justify-center gap-2.5 whitespace-nowrap py-4 disabled:cursor-wait disabled:opacity-50"
               >
                 <Plus className="carrito-mas h-3.5 w-3.5 shrink-0" strokeWidth={2} />
                 Agregar al carrito

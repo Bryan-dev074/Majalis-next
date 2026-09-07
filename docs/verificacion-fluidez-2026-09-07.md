@@ -32,6 +32,22 @@ Pruebas manuales automatizadas en navegador:
 
 ## Protección ante regresiones
 
-`npm test` ejecuta seis pruebas sobre el código real transpileado: búsquedas, indicaciones de entrega, historial anidado, cambio ficha→carrito, montaje doble y cursor. `npm run verify` ejecuta pruebas, TypeScript y build; el workflow existente de GitHub ya lo exige en pushes y PRs.
+`npm test` ejecuta pruebas sobre el código real transpileado: búsquedas, indicaciones de entrega, historial anidado, cambio ficha→carrito, montaje doble, cursor y frescura de stock. `npm run verify` ejecuta pruebas, TypeScript y build; el workflow existente de GitHub ya lo exige en pushes y PRs.
 
 Antes de cambiar animaciones, contextos o checkout, repetir además el recorrido de navegador anterior. No añadir demoras de entrada a botones de compra ni quitar la validación server-side de precio/stock.
+
+## Hallazgo final: disponibilidad antigua por caché
+
+La comprobación de producción encontró que `/api/catalogo/3a274f66-e90d-4f0c-8da0-9e0eb249def3` todavía devolvía Kaaf base con stock 2, aunque Supabase lo había ocultado y puesto en stock 0 a las 16:14 UTC. No había reaparecido en la base: el primer visitante podía recibir la entrada antigua de la caché de datos de Next mientras se regeneraba.
+
+Se eliminó la doble caché SWR para inventario:
+
+- El listado conserva una sola caché CDN de 60 segundos, con revalidación obligatoria al vencer; consulta la base sin otra caché interna.
+- Cada apertura de ficha lee precio/stock de la base sin caché CDN ni de datos. La ficha se dibuja inmediatamente con la información visual disponible y muestra `Verificando precio y stock…`; sólo habilita compra después de la respuesta válida.
+- La ficha fresca prevalece sobre precios del listado anterior. Un 404 la muestra agotada y la retira del listado y del carrito; una respuesta fallida deja las acciones pendientes de verificación, sin afirmar disponibilidad.
+- Las correcciones se conservan localmente durante diez minutos para que una respuesta anterior del listado no deshaga una baja recién comprobada. Una nueva apertura vuelve a verificar.
+- Las fotos mantienen su caché: esta corrección no fuerza a descargar de nuevo las imágenes del catálogo.
+
+La guía de caché de Vercel se utilizó para separar caché CDN y caché de datos y evitar servir inventario obsoleto durante una revalidación en segundo plano. Las pruebas reproducen respuestas sucesivas disponible→oculto, headers de ambas rutas, precio fresco, baja 404 y protección contra un listado anterior.
+
+Verificación adicional en navegador con el build final: introduciendo 500 ms de demora de red, la ficha quedó visible a los 22 ms con verificación pendiente, sin afirmar disponibilidad. Un 200 habilitó la compra; un 404 simulado la dejó agotada, retiró la tarjeta y vació el item persistido del carrito; un 503 mantuvo las acciones deshabilitadas con opción de reintentar. Estas respuestas simuladas no modificaron la base de datos.
