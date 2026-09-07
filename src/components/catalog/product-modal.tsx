@@ -1,15 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { gsap } from "gsap";
 import { FotoProducto } from "@/components/ui/foto-producto";
 import { X, Plus, Minus, Bell, Sparkles, Share2, Check } from "lucide-react";
 import type { FragranceNotes, Perfume } from "@/types/database";
 import { formatGs, precioEfectivo, buildWhatsAppUrl, buildWhatsAppCheckoutUrl, concentracionDe } from "@/lib/format";
 import { WHATSAPP_NUMBER } from "@/data/site-config";
-import { useCart } from "@/hooks/use-cart";
+import { useCartActions } from "@/hooks/use-cart";
 import { useCerrarConAtras } from "@/hooks/use-cerrar-con-atras";
-import { useCatalog } from "@/hooks/use-catalog";
+import { useCatalog, useProductDetail } from "@/hooks/use-catalog";
 import { WhatsappGlifo } from "@/components/ui/whatsapp-glifo";
 import { NoteIcon } from "./note-icon";
 
@@ -27,27 +26,28 @@ const CAPAS: { key: Capa; label: string; descripcion: string }[] = [
 const MAX_CANTIDAD_ITEM = 99;
 
 /**
- * Vista cinemática inmersiva del producto.
- * - Entrada con timeline GSAP (envoltura + imagen + texto + notas en stagger).
+ * Ficha de producto con precio y acciones disponibles desde el primer render.
+ * - Entrada corta del contenedor, sin demorar la imagen, los botones ni las notas.
  * - Desglose de notas olfativas en 3 capas con iconos minimalistas.
  * - CTA WhatsApp directo + agregar al carrito.
  * - Estado "Agotado" sofisticado con solicitud de reingreso.
  */
 export function ProductModal({ perfume, onClose }: ProductModalProps) {
-  const { agregar } = useCart();
+  const { agregar } = useCartActions();
   const {
     catalogoListoParaComprar,
     verificando,
     recargar,
+  } = useCatalog();
+  const {
     detalleCargando,
     errorDetalle,
     reintentarDetalle,
-  } = useCatalog();
+  } = useProductDetail();
   const [cantidad, setCantidad] = useState(1);
   const [copiado, setCopiado] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
-  const notasRef = useRef<HTMLDivElement>(null);
 
   // COMPARTIR: link directo a este perfume (?perfume=<id>, lo abre el provider).
   // Usa el menú nativo del teléfono (navigator.share); en PC copia el link.
@@ -104,24 +104,15 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
     });
   }, [perfume?.id]);
 
-  // Bloquear scroll del body cuando abre + avisar al botón de WhatsApp.
-  // ⚠️ Depende de ABIERTO/CERRADO, no del objeto `perfume` (misma trampa que la
-  // timeline de más abajo): el CatalogProvider refresca el catálogo y regenera
-  // los objetos con nueva identidad, así que con [perfume] este efecto se
-  // desmontaba y remontaba en loop — soltando y volviendo a poner el bloqueo de
-  // scroll y disparando el evento del botón de WhatsApp en true/false/true sin
-  // parar. Con [abierto] el bloqueo se pone UNA vez al abrir y se saca al cerrar,
-  // y cambiar de un producto a otro no lo toca.
+  // El lock de scroll compartido vive en useCerrarConAtras. Este aviso solo
+  // oculta el botón flotante, y no se repite cuando llega la ficha ampliada.
   const abierto = !!perfume;
   useEffect(() => {
     if (!abierto) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     window.dispatchEvent(
       new CustomEvent("sultan:producto-modal", { detail: true })
     );
     return () => {
-      document.body.style.overflow = prev;
       window.dispatchEvent(
         new CustomEvent("sultan:producto-modal", { detail: false })
       );
@@ -131,91 +122,27 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
   // Botón "atrás" del teléfono cierra el modal (no navega fuera / no cierra la app).
   useCerrarConAtras(!!perfume, onClose);
 
-  // Timeline GSAP de entrada.
-  // ⚠️ Depende del ID (no del objeto): el CatalogProvider refresca el catálogo y
-  // regenera los objetos con nueva identidad → con [perfume] la timeline se
-  // reiniciaba en loop y los .nota-chip (lo ÚLTIMO de la timeline) nunca llegaban
-  // a hacerse visibles: "la pirámide olfativa no aparece". Con el id, anima UNA
-  // vez por producto abierto.
+  // Una sola animación del contenedor: el precio y los CTA no esperan una
+  // secuencia de varios segundos. La carga de detalles no reinicia la entrada.
   useEffect(() => {
-    if (!perfume || !innerRef.current) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) return;
-
-    const ctx = gsap.context(() => {
-      const capas = Array.from(
-        notasRef.current?.querySelectorAll(".nota-capa") ?? []
-      );
-      const chips = Array.from(
-        notasRef.current?.querySelectorAll(".nota-chip") ?? []
-      );
-      // Los CTA también entran al seguro. Son los ÚLTIMOS de su stagger, que es
-      // exactamente la posición donde ya nos mordió este bug con los .nota-chip:
-      // si la timeline se reinicia o se corta a mitad, el último elemento puede
-      // quedarse en opacity 0 PARA SIEMPRE — y un "Agregar al carrito" invisible
-      // es un botón que no existe para el cliente.
-      const ctas = Array.from(
-        innerRef.current?.querySelectorAll(".modal-cta") ?? []
-      );
-      const tl = gsap.timeline({
-        defaults: { ease: "power3.out" },
-        // Seguro: pase lo que pase con la timeline, al final TODO queda visible.
-        onComplete: () => {
-          const todos = [...capas, ...chips, ...ctas];
-          if (todos.length > 0) {
-            gsap.set(todos, { clearProps: "opacity,transform" });
-          }
-        },
-      });
-      tl.from(".modal-veil", { opacity: 0, duration: 0.4 })
-        .from(".modal-image", { scale: 1.1, opacity: 0, duration: 1 }, "-=0.2")
-        .from(
-          ".modal-eyebrow",
-          { y: 20, opacity: 0, duration: 0.6 },
-          "-=0.7"
-        )
-        .from(".modal-title", { y: 30, opacity: 0, duration: 0.7 }, "-=0.5")
-        .from(".modal-desc", { y: 20, opacity: 0, duration: 0.6 }, "-=0.5")
-        .from(
-          ".modal-price",
-          { y: 20, opacity: 0, duration: 0.6 },
-          "-=0.4"
-        )
-        .from(
-          ".modal-cta",
-          { y: 20, opacity: 0, duration: 0.6, stagger: 0.1 },
-          "-=0.4"
-        );
-
-      // Notas olfativas: aparecen en stagger por capa
-      if (capas.length > 0) {
-        tl.from(
-          capas,
-          { y: 30, opacity: 0, duration: 0.7, stagger: 0.18 },
-          "-=0.3"
-        );
-        if (chips.length > 0) {
-          tl.from(
-            chips,
-            { y: 14, opacity: 0, duration: 0.4, stagger: 0.04 },
-            "-=0.4"
-          );
-        }
-      }
-    }, rootRef);
-
-    return () => { ctx.revert(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- id a propósito (ver comentario arriba)
+    if (!perfume?.id || !innerRef.current) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const animacion = innerRef.current.animate(
+      [{ transform: "translateY(8px)", opacity: 0.85 }, { transform: "translateY(0)", opacity: 1 }],
+      { duration: 180, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" }
+    );
+    return () => animacion.cancel();
   }, [perfume?.id]);
 
   // ESC para cerrar
   useEffect(() => {
+    if (!abierto) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [abierto, onClose]);
 
   if (!perfume) return null;
 
@@ -228,14 +155,14 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
   return (
     <div
       ref={rootRef}
-      className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto py-4 md:items-center md:py-8"
+      className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto overscroll-contain py-4 md:items-center md:py-8"
       role="dialog"
       aria-modal="true"
       aria-label={perfume.nombre}
     >
       {/* Velo */}
       <div
-        className="modal-veil fixed inset-0 bg-obsidian/95 backdrop-blur-xl"
+        className="modal-veil fixed inset-0 bg-obsidian/95"
         onClick={onClose}
       />
 
@@ -252,7 +179,7 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
                 src={perfume.url_imagen}
                 alt={perfume.nombre}
                 variante="original"
-                className="modal-image object-cover object-top"
+                className="modal-image object-contain"
                 priority
               />
             ) : (
@@ -484,7 +411,7 @@ export function ProductModal({ perfume, onClose }: ProductModalProps) {
             )}
 
             {/* Notas olfativas — desglose cinemático en 3 capas */}
-            <div ref={notasRef} className="mt-8 border-t border-gold/15 pt-6">
+            <div className="mt-8 border-t border-gold/15 pt-6">
               <div className="mb-5 flex items-center justify-between gap-3">
                 <h3 className="eyebrow text-[0.65rem]">Pirámide olfativa</h3>
                 {detalleCargando && tieneNotas && (

@@ -5,7 +5,7 @@ import { FotoProducto } from "@/components/ui/foto-producto";
 import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
 import { Perfume } from "@/types/database";
 import { concentracionDe, formatGs, precioEfectivo } from "@/lib/format";
-import { useCart } from "@/hooks/use-cart";
+import { useCartActions } from "@/hooks/use-cart";
 
 interface FavoritosProps {
   perfumes: Perfume[];
@@ -17,7 +17,7 @@ interface FavoritosProps {
  */
 export function Favoritos({ perfumes, onAbrirDetalle }: FavoritosProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { agregar } = useCart();
+  const { agregar } = useCartActions();
 
   const scroll = (delta: number) => {
     scrollRef.current?.scrollBy({ left: delta, behavior: "smooth" });

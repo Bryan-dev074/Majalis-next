@@ -1,11 +1,13 @@
 import { Perfume, CartItem, CuponPublico } from "@/types/database";
 
+const formatoGuaranies = new Intl.NumberFormat("es-PY");
+
 /**
  * Formatea un monto en Guaraníes paraguayos (Gs.) sin decimales.
  */
 export function formatGs(valor: number): string {
   const entero = Math.round(valor || 0);
-  return `Gs. ${new Intl.NumberFormat("es-PY").format(entero)}`;
+  return `Gs. ${formatoGuaranies.format(entero)}`;
 }
 
 /**
@@ -34,6 +36,9 @@ export function normalizarBusqueda(s: string): string {
 /** Palabras vacías que NO exigen coincidencia (las tiendas las ponen o sacan
  *  a gusto: "Club de Nuit" vs "Club Nuit"). */
 const STOPWORDS_BUSQUEDA = new Set(["de", "del", "la", "le", "el", "los", "las", "y", "the", "of", "and"]);
+const fichasBuscables = new WeakMap<object, string>();
+let ultimaConsulta = "";
+let ultimosTokens: string[] = [];
 
 /**
  * Búsqueda por TOKENS sobre marca + nombre + categoría: cada palabra "real" de
@@ -53,8 +58,12 @@ export function coincideBusqueda(
   consulta: string
 ): boolean {
   // "10 ml" → "10ml" (un solo token de volumen)
-  const cruda = normalizarBusqueda(consulta).replace(/(\d+)\s+ml\b/g, "$1ml");
-  const tokens = cruda.split(" ").filter((t) => t && !STOPWORDS_BUSQUEDA.has(t));
+  if (consulta !== ultimaConsulta) {
+    ultimaConsulta = consulta;
+    const cruda = normalizarBusqueda(consulta).replace(/(\d+)\s+ml\b/g, "$1ml");
+    ultimosTokens = cruda.split(" ").filter((t) => t && !STOPWORDS_BUSQUEDA.has(t));
+  }
+  const tokens = ultimosTokens;
   if (!tokens.length) return true;
   // La ficha buscable incluye TIPO (kit/desodorante/miniatura), nicho,
   // concentración y volumen — "10ml", "kit lattafa" o "nicho oud" funcionan.
@@ -64,22 +73,26 @@ export function coincideBusqueda(
     kit: "kit set estuche",
     perfume: "perfume",
   };
-  const ficha = normalizarBusqueda(
-    [
-      p.marca,
-      p.nombre,
-      (p.categoria ?? []).join(" "),
-      TIPO_TXT[p.tipo_producto ?? "perfume"] ?? "",
-      p.es_nicho ? "nicho" : "",
-      p.concentracion ?? "",
-      p.volumen_ml ? `${p.volumen_ml}ml` : "",
-    ].join(" ")
-  );
+  let ficha = fichasBuscables.get(p);
+  if (ficha === undefined) {
+    ficha = normalizarBusqueda(
+      [
+        p.marca,
+        p.nombre,
+        (p.categoria ?? []).join(" "),
+        TIPO_TXT[p.tipo_producto ?? "perfume"] ?? "",
+        p.es_nicho ? "nicho" : "",
+        p.concentracion ?? "",
+        p.volumen_ml ? `${p.volumen_ml}ml` : "",
+      ].join(" ")
+    );
+    fichasBuscables.set(p, ficha);
+  }
   return tokens.every((t) => {
     // token de VOLUMEN ("10ml") → coincidencia EXACTA de mililitros
     const ml = t.match(/^(\d{1,3})ml$/);
     if (ml) return Number(p.volumen_ml) === Number(ml[1]);
-    return ficha.includes(t);
+    return ficha!.includes(t);
   });
 }
 
@@ -128,7 +141,7 @@ export function buildWhatsAppCheckoutUrl(
     >;
   }>,
   numero: string,
-  extras?: { nombre?: string; ciudad?: string; direccion?: string; whatsapp?: string },
+  extras?: { nombre?: string; ciudad?: string; direccion?: string; whatsapp?: string; indicaciones?: string },
   resumenConfirmado?: {
     subtotal: number;
     descuento: number;
@@ -165,7 +178,7 @@ export function buildWhatsAppCheckoutUrl(
   }
   bloques.push(`• *Total: ${formatGs(total)}*`);
 
-  const hayDatos = extras && (extras.nombre || extras.ciudad || extras.direccion || extras.whatsapp);
+  const hayDatos = extras && (extras.nombre || extras.ciudad || extras.direccion || extras.whatsapp || extras.indicaciones);
   if (hayDatos) {
     bloques.push(
       "",
@@ -175,6 +188,7 @@ export function buildWhatsAppCheckoutUrl(
       `• Dirección: ${extras?.direccion || "—"}`,
       `• Teléfono: ${extras?.whatsapp || "—"}`
     );
+    if (extras?.indicaciones) bloques.push(`• Indicaciones: ${extras.indicaciones}`);
   }
 
   bloques.push("", "¿Me confirman disponibilidad para coordinar el pago y el envío? 🙏");

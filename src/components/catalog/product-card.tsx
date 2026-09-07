@@ -6,7 +6,7 @@ import { FotoProducto } from "@/components/ui/foto-producto";
 import { Perfume } from "@/types/database";
 import { formatGs, precioEfectivo, concentracionDe } from "@/lib/format";
 import { UMBRAL_PREMIUM } from "@/lib/categorias";
-import { useCart } from "@/hooks/use-cart";
+import { useCartActions } from "@/hooks/use-cart";
 
 interface ProductCardProps {
   perfume: Perfume;
@@ -26,7 +26,7 @@ interface ProductCardProps {
 // cuyo `perfume` no cambió no vuelven a renderizar (los callbacks ya son
 // estables con useCallback). Menos trabajo por cada tecla.
 export const ProductCard = memo(function ProductCard({ perfume, onAbrirDetalle }: ProductCardProps) {
-  const { agregar } = useCart();
+  const { agregar } = useCartActions();
   const agotado = perfume.stock_disponible <= 0;
   const enOferta = perfume.en_oferta && perfume.precio_descuento != null;
   const precio = precioEfectivo(perfume);

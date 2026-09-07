@@ -2,107 +2,67 @@
 
 import { useEffect, useRef } from "react";
 
-/**
- * Cursor premium con físicas líquidas.
- *
- * Dos elementos:
- *  - núcleo dorado sólido que sigue el puntero con un retardo mínimo.
- *  - halo líquido que persigue con interpolación (lerp), generando la
- *    sensación de "goma/elástico" propia de interfaces de lujo.
- *
- * Se agranda al pasar sobre elementos interactivos ([data-cursor="luxe"]
- * o a/button). Respeta reduced-motion y se desactiva en pantallas táctiles.
- */
+/** Cursor dorado: posición directa, sin resorte ni transición de movimiento. */
 export function LiquidCursor() {
   const coreRef = useRef<HTMLDivElement>(null);
   const haloRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // No activar en dispositivos sin puntero fino
-    if (!window.matchMedia("(pointer: fine)").matches) return;
-    const reduceMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-
+    const finePointer = window.matchMedia("(pointer: fine)");
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const core = coreRef.current;
     const halo = haloRef.current;
     if (!core || !halo) return;
 
-    let mouseX = window.innerWidth / 2;
-    let mouseY = window.innerHeight / 2;
-    let haloX = mouseX;
-    let haloY = mouseY;
-    let scale = 1;
-    let targetScale = 1;
-    let frame = 0;
-    let running = false;
+    let x = 0;
+    let y = 0;
     let pressed = false;
-    let lastHit = 0;
-
-    const lerp = reduceMotion ? 1 : 0.18;
-    const scaleStep = reduceMotion ? 1 : 0.15;
-
-    const asentado = () =>
-      Math.abs(mouseX - haloX) < 0.1 &&
-      Math.abs(mouseY - haloY) < 0.1 &&
-      Math.abs(targetScale - scale) < 0.01;
-
-    const loop = (t: number) => {
-      // Hit-test throttled a ~9 Hz FUERA del mousemove (que dispara 60-120/s y
-      // forzaba un recálculo de layout sincrónico en cada evento).
-      if (t - lastHit > 110) {
-        lastHit = t;
-        const el = document.elementFromPoint(mouseX, mouseY);
-        const interactive = el?.closest(
-          'a, button, [data-cursor="luxe"], input, [role="button"]'
-        );
-        targetScale = pressed ? 0.7 : interactive ? 2.1 : 1;
-      }
-      haloX += (mouseX - haloX) * lerp;
-      haloY += (mouseY - haloY) * lerp;
-      scale += (targetScale - scale) * scaleStep;
-      halo.style.transform = `translate(${haloX - 20}px, ${haloY - 20}px) scale(${scale})`;
-      // Descansar cuando todo quedó quieto: no seguir pidiendo rAF eternamente
-      // (antes corría 60fps para siempre aunque el mouse estuviera parado).
-      if (asentado()) {
-        running = false;
+    let interactive = false;
+    const hide = () => {
+      core.style.visibility = "hidden";
+      halo.style.visibility = "hidden";
+    };
+    const draw = () => {
+      core.style.transform = `translate3d(${x - 4}px, ${y - 4}px, 0)`;
+      halo.style.transform = `translate3d(${x - 20}px, ${y - 20}px, 0) scale(${pressed ? 0.7 : interactive ? 1.45 : 1})`;
+    };
+    const onMove = (event: PointerEvent) => {
+      if (event.pointerType === "touch" || !finePointer.matches || reducedMotion.matches) {
+        hide();
         return;
       }
-      frame = requestAnimationFrame(loop);
+      x = event.clientX;
+      y = event.clientY;
+      draw();
+      core.style.visibility = "visible";
+      halo.style.visibility = "visible";
     };
-    const arrancar = () => {
-      if (!running) {
-        running = true;
-        frame = requestAnimationFrame(loop);
-      }
+    const onOver = (event: PointerEvent) => {
+      interactive = event.target instanceof Element && Boolean(event.target.closest(
+        'a, button, [data-cursor="luxe"], input, select, textarea, [role="button"]'
+      ));
+      draw();
     };
-
-    const onMove = (e: MouseEvent) => {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
-      // El núcleo sigue casi instantáneamente (una sola escritura de transform).
-      core.style.transform = `translate(${mouseX - 4}px, ${mouseY - 4}px)`;
-      arrancar();
-    };
-    const onDown = () => {
-      pressed = true;
-      targetScale = 0.7;
-      arrancar();
-    };
-    const onUp = () => {
-      pressed = false;
-      arrancar();
-    };
-
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mousedown", onDown);
-    window.addEventListener("mouseup", onUp);
-
+    const onDown = () => { pressed = true; draw(); };
+    const onUp = () => { pressed = false; draw(); };
+    const onOut = (event: PointerEvent) => { if (!event.relatedTarget) hide(); };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener("pointerover", onOver, { passive: true });
+    window.addEventListener("pointerdown", onDown, { passive: true });
+    window.addEventListener("pointerup", onUp, { passive: true });
+    window.addEventListener("pointerout", onOut, { passive: true });
+    window.addEventListener("blur", hide);
+    finePointer.addEventListener("change", hide);
+    reducedMotion.addEventListener("change", hide);
     return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mousedown", onDown);
-      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerover", onOver);
+      window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointerout", onOut);
+      window.removeEventListener("blur", hide);
+      finePointer.removeEventListener("change", hide);
+      reducedMotion.removeEventListener("change", hide);
     };
   }, []);
 

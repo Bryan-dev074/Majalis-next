@@ -33,8 +33,12 @@ function leerPerfil(): DeliveryProfileData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return VACIO;
-    const parsed = JSON.parse(raw);
-    return { ...VACIO, ...parsed };
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return VACIO;
+    const datos = parsed as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.keys(VACIO).map((key) => [key, typeof datos[key] === "string" ? datos[key] : ""])
+    ) as unknown as DeliveryProfileData;
   } catch {
     return VACIO;
   }
@@ -57,16 +61,25 @@ export function useDeliveryProfile() {
   }, []);
 
   const actualizar = useCallback((parcial: Partial<DeliveryProfileData>) => {
-    setPerfil((prev) => {
-      const next = { ...prev, ...parcial };
+    setPerfil((prev) => ({ ...prev, ...parcial }));
+  }, []);
+
+  useEffect(() => {
+    if (!listo) return;
+    const guardar = () => {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(perfil));
       } catch {
         /* storage inaccesible o lleno */
       }
-      return next;
-    });
-  }, []);
+    };
+    const pendiente = window.setTimeout(guardar, 250);
+    window.addEventListener("pagehide", guardar);
+    return () => {
+      window.clearTimeout(pendiente);
+      window.removeEventListener("pagehide", guardar);
+    };
+  }, [listo, perfil]);
 
   return { perfil, actualizar, listo };
 }

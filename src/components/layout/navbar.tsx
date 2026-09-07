@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Search, ShoppingBag, Menu, X, ArrowRight } from "lucide-react";
 import { FotoProducto } from "@/components/ui/foto-producto";
 import { useCart } from "@/hooks/use-cart";
@@ -27,6 +27,7 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const queryDiferida = useDeferredValue(query);
   const [menuMobile, setMenuMobile] = useState(false);
   const [sugerenciasAbiertas, setSugerenciasAbiertas] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
@@ -67,9 +68,14 @@ export function Navbar({ perfumes, onSeleccionarPerfume }: NavbarProps) {
   // Sugerencias en vivo (máx 6) — búsqueda por TOKENS sin acentos: cada palabra
   // tiene que aparecer en marca+nombre+categoría ("armaf club de nuit int" ✓).
   const sugerencias = useMemo(() => {
-    if (!query.trim()) return [];
-    return perfumes.filter((p) => coincideBusqueda(p, query)).slice(0, 6);
-  }, [query, perfumes]);
+    if (!queryDiferida.trim()) return [];
+    const resultados: Perfume[] = [];
+    for (const perfume of perfumes) {
+      if (coincideBusqueda(perfume, queryDiferida)) resultados.push(perfume);
+      if (resultados.length === 6) break;
+    }
+    return resultados;
+  }, [queryDiferida, perfumes]);
 
   const emitirBusqueda = (q: string) => {
     window.dispatchEvent(new CustomEvent("sultan:search", { detail: q }));

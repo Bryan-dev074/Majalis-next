@@ -16,19 +16,19 @@ import type {
   ResumenCatalogoCompacto,
 } from "@/lib/catalog";
 
+interface ProductDetailContextValue {
+  detalle: Perfume | null;
+  abrirDetalle: (p: Perfume | null) => void;
+  detalleCargando: boolean;
+  errorDetalle: string | null;
+  reintentarDetalle: () => void;
+}
+
 interface CatalogContextValue {
   /** Lista completa de perfumes del catálogo (solo activos / no ocultos). */
   perfumes: Perfume[];
-  /** Perfume seleccionado para el modal de detalle (null = cerrado). */
-  detalle: Perfume | null;
   /** Establece / cierra el modal de detalle. */
   abrirDetalle: (p: Perfume | null) => void;
-  /** La ficha ampliada (notas y SKU) se está cargando bajo demanda. */
-  detalleCargando: boolean;
-  /** Error de la ficha ampliada; el resumen del producto sigue visible. */
-  errorDetalle: string | null;
-  /** Reintenta la ficha ampliada del producto abierto. */
-  reintentarDetalle: () => void;
   /** Refresca el catálogo (útil tras cambios en /admin). */
   recargar: () => void;
   /** Si ya terminó de cargar el catálogo desde el server. */
@@ -46,6 +46,7 @@ interface CatalogContextValue {
 }
 
 const CatalogContext = createContext<CatalogContextValue | null>(null);
+const ProductDetailContext = createContext<ProductDetailContextValue | null>(null);
 
 // Claves compartidas con el panel /admin (modo local)
 const OCULTOS_KEY = "sultan-admin-ocultos";
@@ -441,11 +442,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       perfumes,
-      detalle,
       abrirDetalle,
-      detalleCargando,
-      errorDetalle,
-      reintentarDetalle,
       recargar,
       cargado,
       catalogoValido,
@@ -456,11 +453,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     }),
     [
       perfumes,
-      detalle,
       abrirDetalle,
-      detalleCargando,
-      errorDetalle,
-      reintentarDetalle,
       recargar,
       cargado,
       catalogoValido,
@@ -471,8 +464,18 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     ]
   );
 
+  // Abrir/cargar una ficha no vuelve a dibujar catálogo, marcas y carrito.
+  const detalleValue = useMemo(
+    () => ({ detalle, abrirDetalle, detalleCargando, errorDetalle, reintentarDetalle }),
+    [detalle, abrirDetalle, detalleCargando, errorDetalle, reintentarDetalle]
+  );
+
   return (
-    <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>
+    <CatalogContext.Provider value={value}>
+      <ProductDetailContext.Provider value={detalleValue}>
+        {children}
+      </ProductDetailContext.Provider>
+    </CatalogContext.Provider>
   );
 }
 
@@ -481,5 +484,11 @@ export function useCatalog(): CatalogContextValue {
   if (!ctx) {
     throw new Error("useCatalog debe usarse dentro de <CatalogProvider>");
   }
+  return ctx;
+}
+
+export function useProductDetail(): ProductDetailContextValue {
+  const ctx = useContext(ProductDetailContext);
+  if (!ctx) throw new Error("useProductDetail debe usarse dentro de <CatalogProvider>");
   return ctx;
 }

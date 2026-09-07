@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Info, EyeOff } from "lucide-react";
-import { useDeliveryProfile } from "@/hooks/use-delivery-profile";
 
 export type DeliveryData = import("@/hooks/use-delivery-profile").DeliveryProfileData;
 
@@ -12,8 +11,12 @@ export type DeliveryData = import("@/hooks/use-delivery-profile").DeliveryProfil
  * Se persiste automáticamente en localStorage (no hay que rellenar de nuevo).
  * Incluye tooltip animado de lujo que explica la discreción del paquete.
  */
-export function DeliveryProfile() {
-  const { perfil: value, actualizar } = useDeliveryProfile();
+interface DeliveryProfileProps {
+  value: DeliveryData;
+  actualizar: (parcial: Partial<DeliveryData>) => void;
+}
+
+export function DeliveryProfile({ value, actualizar }: DeliveryProfileProps) {
   const [tooltipOpen, setTooltipOpen] = useState(false);
   const set = <K extends keyof DeliveryData>(k: K, v: DeliveryData[K]) =>
     actualizar({ [k]: v });

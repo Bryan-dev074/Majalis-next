@@ -42,6 +42,10 @@ interface CartContextValue {
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
+type CartActions = Pick<CartContextValue,
+  "agregar" | "quitar" | "cambiarCantidad" | "vaciar" | "aplicarCodigo" | "quitarCupon" | "setAbrirCart"
+>;
+const CartActionsContext = createContext<CartActions | null>(null);
 
 const STORAGE_KEY = "sultan-cart-v1";
 const MAX_CANTIDAD_ITEM = 99;
@@ -196,11 +200,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // Persistir al cambiar (solo tras hidratación para no pisar estado server)
   useEffect(() => {
     if (!hidratado) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch {
-      /* storage lleno o inaccesible */
-    }
+    const guardar = () => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      } catch {
+        /* storage lleno o inaccesible */
+      }
+    };
+    // Escribir después de pintar el carrito, no durante su apertura. Al salir
+    // se guarda inmediatamente aunque aún no haya vencido el pequeño debounce.
+    const pendiente = window.setTimeout(guardar, 150);
+    window.addEventListener("pagehide", guardar);
+    return () => {
+      window.clearTimeout(pendiente);
+      window.removeEventListener("pagehide", guardar);
+    };
   }, [items, hidratado]);
 
   // El localStorage puede contener un precio/stock viejo. Cada vez que llega
@@ -208,10 +222,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // campos de detalle que no viajan en el listado (notas/SKU) se conservan.
   useEffect(() => {
     if (!hidratado || !catalogoCargado || !catalogoValido) return;
-    const porId = new Map(perfumes.map((p) => [p.id, p]));
     setItems((prev) =>
+      prev.length === 0 ? prev :
       prev.flatMap((it) => {
-        const fresco = porId.get(it.perfume.id);
+        const fresco = perfumesPorId.get(it.perfume.id);
         if (!fresco || fresco.activo === false || fresco.stock_disponible <= 0) return [];
         return [{
           perfume: fusionarConCatalogo(fresco, it.perfume),
@@ -219,7 +233,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }];
       })
     );
-  }, [catalogoCargado, catalogoValido, hidratado, perfumes]);
+  }, [catalogoCargado, catalogoValido, hidratado, perfumesPorId]);
 
   const agregar = useCallback((perfume: Perfume, cantidad = 1) => {
     const vigente = perfumesPorId.get(perfume.id);
@@ -288,12 +302,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return false;
       }
       setEstadoCupon("Verificando código…");
+      const controller = new AbortController();
+      const limite = window.setTimeout(() => controller.abort(), 15000);
       try {
         const response = await fetch("/api/cupon", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ codigo: limpio }),
           cache: "no-store",
+          signal: controller.signal,
         });
         const payload = (await response.json()) as {
           ok?: boolean;
@@ -307,6 +324,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
       } catch {
         setEstadoCupon("No pudimos validar el código ahora. Intentá de nuevo.");
+      } finally {
+        window.clearTimeout(limite);
       }
       setCuponAplicado(null);
       return false;
@@ -318,6 +337,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setCuponAplicado(null);
     setEstadoCupon("");
   }, []);
+
+  // Las tarjetas solo necesitan acciones. Abrir/cerrar el drawer, escribir un
+  // cupón o cambiar cantidades no debe volver a renderizar todo el catálogo.
+  const acciones = useMemo<CartActions>(() => ({
+    agregar, quitar, cambiarCantidad, vaciar, aplicarCodigo, quitarCupon, setAbrirCart,
+  }), [agregar, quitar, cambiarCantidad, vaciar, aplicarCodigo, quitarCupon]);
 
   const derivados = useMemo(() => {
     const cantidadTotal = items.reduce((acc, it) => acc + it.cantidad, 0);
@@ -373,7 +398,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     ]
   );
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  return (
+    <CartActionsContext.Provider value={acciones}>
+      <CartContext.Provider value={value}>{children}</CartContext.Provider>
+    </CartActionsContext.Provider>
+  );
 }
 
 export function useCart(): CartContextValue {
@@ -381,5 +410,11 @@ export function useCart(): CartContextValue {
   if (!ctx) {
     throw new Error("useCart debe usarse dentro de <CartProvider>");
   }
+  return ctx;
+}
+
+export function useCartActions(): CartActions {
+  const ctx = useContext(CartActionsContext);
+  if (!ctx) throw new Error("useCartActions debe usarse dentro de <CartProvider>");
   return ctx;
 }

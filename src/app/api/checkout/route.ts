@@ -170,6 +170,7 @@ export async function POST(request: Request) {
         ciudad: textoCorto(delivery.ciudad, 100),
         direccion: textoCorto(delivery.direccion, 300),
         whatsapp: textoCorto(delivery.whatsapp, 50),
+        indicaciones: textoCorto(delivery.indicaciones, 500),
       },
       {
         subtotal,

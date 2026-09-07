@@ -39,7 +39,7 @@ export function CheckoutModal({ abierto, onClose }: CheckoutModalProps) {
     verificandoCatalogo,
     recargarCatalogo,
   } = useCart();
-  const { perfil: delivery } = useDeliveryProfile();
+  const { perfil: delivery, actualizar: actualizarDelivery } = useDeliveryProfile();
 
   const [codigo, setCodigo] = useState("");
   const [confirmado, setConfirmado] = useState(false);
@@ -50,16 +50,28 @@ export function CheckoutModal({ abierto, onClose }: CheckoutModalProps) {
 
   // Avisar al botón de WhatsApp cuando el modal esté abierto
   useEffect(() => {
+    if (!abierto) {
+      setConfirmado(false);
+      setErrorCheckout("");
+    }
     window.dispatchEvent(
       new CustomEvent("sultan:checkout-modal", { detail: abierto })
     );
     if (!abierto) return;
+    const cerrarConEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.stopImmediatePropagation();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", cerrarConEscape, true);
     return () => {
+      window.removeEventListener("keydown", cerrarConEscape, true);
       window.dispatchEvent(
         new CustomEvent("sultan:checkout-modal", { detail: false })
       );
     };
-  }, [abierto]);
+  }, [abierto, onClose]);
 
   // Botón "atrás" cierra el checkout (queda apilado sobre el carrito).
   useCerrarConAtras(abierto, onClose);
@@ -82,11 +94,14 @@ export function CheckoutModal({ abierto, onClose }: CheckoutModalProps) {
     // la bloquee mientras esperamos la validación server-side sin caché.
     const popup = window.open("about:blank", "_blank");
     if (popup) popup.opener = null;
+    const controller = new AbortController();
+    const limite = window.setTimeout(() => controller.abort(), 20000);
     try {
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
+        signal: controller.signal,
         body: JSON.stringify({
           items: items.map((item) => ({ id: item.perfume.id, cantidad: item.cantidad })),
           codigoCupon: cuponAplicado?.codigo ?? null,
@@ -96,6 +111,7 @@ export function CheckoutModal({ abierto, onClose }: CheckoutModalProps) {
             ciudad: delivery.ciudad,
             direccion: delivery.direccion,
             whatsapp: delivery.whatsapp,
+            indicaciones: delivery.indicaciones,
           },
         }),
       });
@@ -124,6 +140,7 @@ export function CheckoutModal({ abierto, onClose }: CheckoutModalProps) {
       popup?.close();
       setErrorCheckout("No pudimos verificar el pedido ahora. Revisá tu conexión e intentá de nuevo.");
     } finally {
+      window.clearTimeout(limite);
       setEnviando(false);
     }
   };
@@ -135,13 +152,13 @@ export function CheckoutModal({ abierto, onClose }: CheckoutModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[85] flex items-start justify-center overflow-y-auto p-4 md:items-center"
+      className="fixed inset-0 z-[85] flex items-start justify-center overflow-y-auto overscroll-contain p-4 md:items-center"
       role="dialog"
       aria-modal="true"
       aria-label="Finalizar pedido"
     >
       <div
-        className="absolute inset-0 bg-obsidian/95 backdrop-blur-xl"
+        className="fixed inset-0 bg-obsidian/95"
         onClick={continuarComprando}
       />
 
@@ -263,7 +280,7 @@ export function CheckoutModal({ abierto, onClose }: CheckoutModalProps) {
 
               {/* Perfil delivery */}
               <div className="mb-5">
-                <DeliveryProfile />
+                <DeliveryProfile value={delivery} actualizar={actualizarDelivery} />
               </div>
 
               {/* Totales */}

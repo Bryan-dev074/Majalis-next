@@ -162,12 +162,10 @@
     transition: border-color 0.5s ease, transform 0.5s ease,
       box-shadow 0.5s ease;
   }
-  /* El vidrio real (blur) queda SOLO en desktop, donde no cuesta scroll. */
+  /* Evitar 24 filtros sobre el fondo animado también en escritorio. */
   @media (min-width: 1024px) {
     .glass-luxe {
-      background: var(--glass);
-      backdrop-filter: blur(14px) saturate(120%);
-      -webkit-backdrop-filter: blur(14px) saturate(120%);
+      background: rgba(20, 17, 13, 0.88);
     }
   }
 
@@ -959,8 +957,9 @@
   background: var(--gold-light);
   pointer-events: none;
   z-index: 9999;
-  mix-blend-mode: screen;
-  transition: transform 0.08s ease;
+  visibility: hidden;
+  will-change: transform;
+  transition: none;
 }
 
 .cursor-halo {
@@ -973,10 +972,12 @@
   border: 1px solid rgba(212, 175, 55, 0.45);
   pointer-events: none;
   z-index: 9998;
-  mix-blend-mode: screen;
+  visibility: hidden;
+  will-change: transform;
+  transition: none;
 }
 
-@media (pointer: coarse) {
+@media (pointer: coarse), (prefers-reduced-motion: reduce) {
   .cursor-core,
   .cursor-halo {
     display: none;

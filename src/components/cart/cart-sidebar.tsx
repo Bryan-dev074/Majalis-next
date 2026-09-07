@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FotoProducto } from "@/components/ui/foto-producto";
 import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight } from "lucide-react";
 import { useCart } from "@/hooks/use-cart";
@@ -29,14 +29,25 @@ export function CartSidebar() {
 
   const [checkoutAbierto, setCheckoutAbierto] = useState(false);
 
-  const cerrarDrawer = () => {
+  const cerrarDrawer = useCallback(() => {
+    setCheckoutAbierto(false);
     setAbrirCart(false);
-  };
+  }, [setAbrirCart]);
+  const cerrarCheckout = useCallback(() => setCheckoutAbierto(false), []);
 
   // El botón "atrás" cierra el carrito. El carrito queda ABIERTO detrás del checkout
   // (que lo tapa entero) → anidación real: la pila cierra primero el checkout y con
   // otro "atrás" el carrito, sin carreras de historial.
   useCerrarConAtras(abrirCart, cerrarDrawer);
+
+  useEffect(() => {
+    if (!abrirCart || checkoutAbierto) return;
+    const cerrarConEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") cerrarDrawer();
+    };
+    window.addEventListener("keydown", cerrarConEscape);
+    return () => window.removeEventListener("keydown", cerrarConEscape);
+  }, [abrirCart, checkoutAbierto, cerrarDrawer]);
 
   const abrirCheckout = () => {
     setCheckoutAbierto(true);
@@ -46,8 +57,8 @@ export function CartSidebar() {
     <>
       {/* Overlay */}
       <div
-        className={`fixed inset-0 z-[60] bg-obsidian/80 backdrop-blur-sm transition-opacity duration-500 ${
-          abrirCart ? "opacity-100" : "pointer-events-none opacity-0"
+        className={`fixed inset-0 z-[60] bg-obsidian/80 transition-opacity duration-200 motion-reduce:transition-none ${
+          abrirCart && !checkoutAbierto ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
         onClick={cerrarDrawer}
         aria-hidden="true"
@@ -55,9 +66,14 @@ export function CartSidebar() {
 
       {/* Drawer */}
       <aside
-        className={`fixed right-0 top-0 z-[70] flex h-full w-full max-w-md flex-col border-l border-gold/15 bg-coal/98 backdrop-blur-2xl transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          abrirCart ? "translate-x-0" : "translate-x-full"
+        className={`fixed right-0 top-0 z-[70] flex h-full w-full max-w-md flex-col border-l border-gold/15 bg-coal transition-transform duration-200 ease-out motion-reduce:transition-none ${
+          abrirCart ? "translate-x-0" : "pointer-events-none translate-x-full"
         }`}
+        style={{ visibility: checkoutAbierto ? "hidden" : undefined }}
+        role="dialog"
+        aria-modal={abrirCart && !checkoutAbierto ? true : undefined}
+        aria-hidden={!abrirCart || checkoutAbierto}
+        inert={!abrirCart || checkoutAbierto}
         aria-label="Carrito de compras"
       >
         {/* Cabecera */}
@@ -80,7 +96,7 @@ export function CartSidebar() {
         </div>
 
         {/* Items */}
-        <div className="flex-1 overflow-y-auto px-5 py-5">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-5">
           {items.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center text-ivory/40">
               <ShoppingBag className="mb-5 h-12 w-12 opacity-20" strokeWidth={1} />
@@ -232,7 +248,7 @@ export function CartSidebar() {
       {/* Checkout modal */}
       <CheckoutModal
         abierto={checkoutAbierto}
-        onClose={() => setCheckoutAbierto(false)}
+        onClose={cerrarCheckout}
       />
     </>
   );

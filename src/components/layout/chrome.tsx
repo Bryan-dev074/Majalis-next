@@ -1,13 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useCallback } from "react";
 
 import { Navbar } from "@/components/layout/navbar";
-import { useCatalog } from "@/hooks/use-catalog";
+import { useCatalog, useProductDetail } from "@/hooks/use-catalog";
 
-// El modal (y con él GSAP, ~30 KB gz) se carga recién al abrir un producto,
-// no en el primer load de la home. Se muestra condicional, así que diferirlo
-// no cambia el comportamiento.
+// Bundle separado del HTML inicial. Se prepara en cliente para que el primer
+// clic no espere la descarga del componente; sin producto no pinta UI.
 const ProductModal = dynamic(
   () => import("@/components/catalog/product-modal").then((m) => m.ProductModal),
   { ssr: false }
@@ -20,11 +20,17 @@ const ProductModal = dynamic(
  * Es Client porque usa el hook useCatalog.
  */
 export function Chrome() {
-  const { perfumes, detalle, abrirDetalle } = useCatalog();
+  const { perfumes, abrirDetalle } = useCatalog();
   return (
     <>
       <Navbar perfumes={perfumes} onSeleccionarPerfume={abrirDetalle} />
-      <ProductModal perfume={detalle} onClose={() => abrirDetalle(null)} />
+      <DetalleGlobal />
     </>
   );
+}
+
+function DetalleGlobal() {
+  const { detalle, abrirDetalle } = useProductDetail();
+  const cerrar = useCallback(() => abrirDetalle(null), [abrirDetalle]);
+  return <ProductModal perfume={detalle} onClose={cerrar} />;
 }

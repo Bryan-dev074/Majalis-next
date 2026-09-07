@@ -194,9 +194,13 @@ export function ParticleField() {
       mouseY = e.clientY - window.innerHeight / 2;
     };
     const onClick = (e: MouseEvent) => {
+      if (reduceMotion || document.body.style.overflow === "hidden" ||
+        (e.target instanceof Element && e.target.closest('button, a, input, select, textarea, article, [role="dialog"]'))) return;
       spawnRipple(e.clientX, e.clientY);
     };
     const onTouch = (e: TouchEvent) => {
+      if (reduceMotion || document.body.style.overflow === "hidden" ||
+        (e.target instanceof Element && e.target.closest('button, a, input, select, textarea, article, [role="dialog"]'))) return;
       if (e.touches[0]) spawnRipple(e.touches[0].clientX, e.touches[0].clientY);
     };
 
@@ -212,14 +216,15 @@ export function ParticleField() {
     // mientras hay una explosión de toque/click ACTIVA se dibuja a fondo (60fps)
     // para que ESA animación se vea fluida. Antes el toque quedaba capado a
     // 30fps y se veía entrecortado.
-    const idleInterval = esMovil ? 1 / 30 : 0;
+    const idleInterval = esMovil ? 1 / 30 : 1 / 60;
     let lastRender = -1;
 
     const animate = () => {
-      frameId = requestAnimationFrame(animate);
-      // Pestaña oculta → no gastar GPU/batería (belt-and-suspenders sobre el
-      // throttle que ya hace el navegador).
-      if (document.hidden) return;
+      frameId = 0;
+      // El campo queda quieto detrás de las fichas/carrito: toda la capacidad
+      // de dibujo se dedica al panel con el que está interactuando el usuario.
+      if (document.hidden || document.body.style.overflow === "hidden") return;
+      if (!reduceMotion) frameId = requestAnimationFrame(animate);
       const t = clock.getElapsedTime();
       // Con explosión activa (ripples) → sin límite (fluido); quieto → 30fps.
       const minInterval = ripples.length > 0 ? 0 : idleInterval;
@@ -304,17 +309,27 @@ export function ParticleField() {
     };
     animate();
 
+    const retomar = () => {
+      if (!frameId && !document.hidden && document.body.style.overflow !== "hidden") animate();
+    };
+    document.addEventListener("visibilitychange", retomar);
+    const overlays = new MutationObserver(retomar);
+    overlays.observe(document.body, { attributes: true, attributeFilter: ["style"] });
+
     // ----- Resize -----
     const onResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
+      if (reduceMotion) renderer.render(scene, camera);
     };
     window.addEventListener("resize", onResize);
 
     // ----- Cleanup -----
     return () => {
       cancelAnimationFrame(frameId);
+      overlays.disconnect();
+      document.removeEventListener("visibilitychange", retomar);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("click", onClick);
       window.removeEventListener("touchstart", onTouch);
